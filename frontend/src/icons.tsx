@@ -1,0 +1,36 @@
+import type { SVGProps } from "react";
+
+type IconProps = SVGProps<SVGSVGElement>;
+const base = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
+
+export const SearchIcon = (p: IconProps) => <svg {...base} {...p}><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>;
+export const MenuIcon = (p: IconProps) => <svg {...base} {...p}><path d="M4 7h16M4 12h16M4 17h16"/></svg>;
+export const CloseIcon = (p: IconProps) => <svg {...base} {...p}><path d="m6 6 12 12M18 6 6 18"/></svg>;
+export const PlayIcon = (p: IconProps) => <svg {...base} {...p} fill="currentColor" stroke="none"><path d="M8 5.2v13.6c0 .8.9 1.3 1.6.9l10-6.8c.6-.4.6-1.3 0-1.7l-10-6.8A1 1 0 0 0 8 5.2Z"/></svg>;
+export const PauseIcon = (p: IconProps) => <svg {...base} {...p} fill="currentColor" stroke="none"><rect x="7" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>;
+export const NextIcon = (p: IconProps) => <svg {...base} {...p} fill="currentColor" stroke="none"><path d="M6 5.5v13l9-6.5-9-6.5Zm10 0h2v13h-2z"/></svg>;
+export const PreviousIcon = (p: IconProps) => <svg {...base} {...p} fill="currentColor" stroke="none"><path d="M18 5.5v13L9 12l9-6.5Zm-12 0h2v13H6z"/></svg>;
+export const ShuffleIcon = (p: IconProps) => <svg {...base} {...p}><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>;
+export const RepeatIcon = (p: IconProps) => <svg {...base} {...p}><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg>;
+export const VolumeIcon = (p: IconProps) => <svg {...base} {...p}><path d="M11 5 6 9H3v6h3l5 4V5ZM15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></svg>;
+export const QueueIcon = (p: IconProps) => <svg {...base} {...p}><path d="M4 6h12M4 11h12M4 16h8"/><path d="m17 15 4 3-4 3v-6Z"/></svg>;
+export const MoreIcon = (p: IconProps) => <svg {...base} {...p}><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></svg>;
+export const ArrowIcon = (p: IconProps) => <svg {...base} {...p}><path d="M5 12h14m-6-6 6 6-6 6"/></svg>;
+export const HeadphonesIcon = (p: IconProps) => <svg {...base} {...p}><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14a2 2 0 0 1 2-2h1v7H6a2 2 0 0 1-2-2v-3ZM20 14a2 2 0 0 0-2-2h-1v7h1a2 2 0 0 0 2-2v-3Z"/></svg>;
+export const UploadIcon = (p: IconProps) => <svg {...base} {...p}><path d="M12 16V4m-5 5 5-5 5 5M5 20h14"/></svg>;
+export const CheckIcon = (p: IconProps) => <svg {...base} {...p}><path d="m5 12 4 4L19 6"/></svg>;
+export const HomeIcon = (p: IconProps) => <svg {...base} {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>;
+export const CompassIcon = (p: IconProps) => <svg {...base} {...p}><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>;
+export const LibraryIcon = (p: IconProps) => <svg {...base} {...p}><path d="m16 6 4 14M12 6v14M8 8v12M4 4v16a2 2 0 0 0 2 2h14"/></svg>;
+export const HeartIcon = (p: IconProps) => <svg {...base} {...p}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>;
+export const HeartFillIcon = (p: IconProps) => <svg {...base} {...p} fill="currentColor" stroke="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>;
+export const DiscIcon = (p: IconProps) => <svg {...base} {...p}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>;
+export const BellIcon = (p: IconProps) => <svg {...base} {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>;
+export const PlusIcon = (p: IconProps) => <svg {...base} {...p}><path d="M5 12h14M12 5v14"/></svg>;
+export const ChevronLeftIcon = (p: IconProps) => <svg {...base} {...p}><path d="m15 18-6-6 6-6"/></svg>;
+export const ChevronRightIcon = (p: IconProps) => <svg {...base} {...p}><path d="m9 18 6-6-6-6"/></svg>;
+export const UserIcon = (p: IconProps) => <svg {...base} {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+export const FileTextIcon = (p: IconProps) => <svg {...base} {...p}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>;
+export const TrashIcon = (p: IconProps) => <svg {...base} {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
+export const FilterIcon = (p: IconProps) => <svg {...base} {...p}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
+
