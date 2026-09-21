@@ -1,0 +1,7 @@
+# Temporary directory
+tmp/
+/tmp/
+
+# OS metadata
+Thumbs.db
+.DS_Store

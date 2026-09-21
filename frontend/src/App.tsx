@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
 import { MusicPlayer } from "./components/MusicPlayer";
-import { MarketingLayout } from "./layouts/MarketingLayout";
+import { DashboardLayout } from "./layouts/DashboardLayout";
 import { MusicAppShell } from "./layouts/MusicAppShell";
 import { AlbumDetailsPage } from "./pages/AlbumDetailsPage";
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from "./pages/AuthPages";
@@ -10,6 +10,7 @@ import { CreatorProfilePage } from "./pages/CreatorProfilePage";
 import { ExplorePage } from "./pages/ExplorePage";
 import { GenresPage } from "./pages/GenresPage";
 import { LibraryPage } from "./pages/LibraryPage";
+import { AdminDashboardPage, DashboardAccessDenied, StaffDashboardPage } from "./pages/OperationsDashboardPage";
 import { SearchPage } from "./pages/SearchPage";
 import { StudioPage } from "./pages/StudioPage";
 import { TrackDetailsPage } from "./pages/TrackDetailsPage";
@@ -34,15 +35,24 @@ export default function App() {
 
   const isAuthenticated = Boolean(user);
 
-  const handleLoginSuccess = (role: "USER" | "STAFF" | "ADMIN") => {
+  const handleLoginSuccess = ({ email }: { email: string; password: string }) => {
+    // Tạm mô phỏng vai trò do backend trả về sau khi xác thực tài khoản.
+    const normalizedEmail = email.toLowerCase();
+    const role: CurrentUser["role"] = normalizedEmail.startsWith("admin")
+      ? "ADMIN"
+      : normalizedEmail.startsWith("staff")
+        ? "STAFF"
+        : "USER";
     const loggedInUser: CurrentUser = {
       ...demoUser,
+      email: normalizedEmail,
+      displayName: role === "ADMIN" ? "Admin SoundWave" : role === "STAFF" ? "Staff SoundWave" : demoUser.displayName,
       role,
     };
     setUser(loggedInUser);
     localStorage.setItem("soundwave_user", JSON.stringify(loggedInUser));
     localStorage.setItem("soundwave_demo_user", "authenticated");
-    window.location.hash = "#/";
+    window.location.hash = role === "ADMIN" ? "#/admin/dashboard" : role === "STAFF" ? "#/staff/dashboard" : "#/";
   };
 
   const handleLogout = () => {
@@ -202,11 +212,20 @@ export default function App() {
   const queryParams = useMemo(() => new URLSearchParams(queryString || ""), [queryString]);
 
   // Determine layout type
-  const isMarketingRoute =
+  const isAuthRoute =
     pathname === "/login" ||
     pathname === "/register" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password";
+  const isDashboardRoute = pathname.startsWith("/admin") || pathname.startsWith("/staff");
+  const isMusicRoute = !isAuthRoute && !isDashboardRoute;
+
+  useEffect(() => {
+    if (isDashboardRoute) {
+      audio.pause();
+      setPlaying(false);
+    }
+  }, [audio, isDashboardRoute]);
 
   // Render Page Content
   const renderContent = () => {
@@ -358,6 +377,18 @@ export default function App() {
       );
     }
 
+    if (pathname === "/admin" || pathname === "/admin/dashboard") {
+      return user?.role === "ADMIN"
+        ? <AdminDashboardPage onNavigate={navigate} />
+        : <DashboardAccessDenied onNavigate={navigate} />;
+    }
+
+    if (pathname === "/staff" || pathname === "/staff/dashboard") {
+      return user?.role === "STAFF" || user?.role === "ADMIN"
+        ? <StaffDashboardPage onNavigate={navigate} />
+        : <DashboardAccessDenied onNavigate={navigate} />;
+    }
+
     // Default fallback to Explore
     return (
       <ExplorePage
@@ -370,11 +401,18 @@ export default function App() {
   };
 
   return (
-    <div className={!isMarketingRoute ? "app-root app-root--has-player" : "app-root"}>
-      {isMarketingRoute ? (
-        <MarketingLayout isAuthenticated={isAuthenticated} hasPlayer={false}>
+    <div className={isMusicRoute ? "app-root app-root--has-player" : "app-root"}>
+      {isAuthRoute ? (
+        renderContent()
+      ) : isDashboardRoute ? (
+        <DashboardLayout
+          activeRoute={pathname}
+          user={user}
+          onNavigate={navigate}
+          onLogout={handleLogout}
+        >
           {renderContent()}
-        </MarketingLayout>
+        </DashboardLayout>
       ) : (
         <MusicAppShell
           activeRoute={pathname}
@@ -398,7 +436,7 @@ export default function App() {
       )}
 
       {/* Global Music Player fixed at bottom */}
-      {!isMarketingRoute && currentTrack && (
+      {isMusicRoute && currentTrack && (
         <MusicPlayer
           track={currentTrack}
           queue={queue}

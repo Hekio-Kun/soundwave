@@ -57,6 +57,7 @@ export function MusicAppShell({
         onNavigate={onNavigate}
         onCreatePlaylist={onCreatePlaylist}
         isAuthenticated={isAuthenticated}
+        userRole={user?.role}
       />
 
       {/* 2. Main Workspace (Top bar + Dynamic Content) */}
@@ -91,7 +92,7 @@ export function MusicAppShell({
       />
 
       {/* 4. Mobile Bottom Navigation */}
-      <MobileBottomNav activeRoute={activeRoute} onNavigate={onNavigate} />
+      <MobileBottomNav activeRoute={activeRoute} onNavigate={onNavigate} userRole={user?.role} />
     </div>
   );
 }

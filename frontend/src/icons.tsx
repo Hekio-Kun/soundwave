@@ -33,4 +33,15 @@ export const UserIcon = (p: IconProps) => <svg {...base} {...p}><path d="M19 21v
 export const FileTextIcon = (p: IconProps) => <svg {...base} {...p}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>;
 export const TrashIcon = (p: IconProps) => <svg {...base} {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>;
 export const FilterIcon = (p: IconProps) => <svg {...base} {...p}><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>;
-
+export const DashboardIcon = (p: IconProps) => <svg {...base} {...p}><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>;
+export const UsersIcon = (p: IconProps) => <svg {...base} {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+export const ShieldIcon = (p: IconProps) => <svg {...base} {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>;
+export const FlagIcon = (p: IconProps) => <svg {...base} {...p}><path d="M5 22V4M5 4h11l-1 4 3 3H5"/></svg>;
+export const ChartIcon = (p: IconProps) => <svg {...base} {...p}><path d="M3 3v18h18"/><path d="m7 16 4-5 4 3 5-7"/></svg>;
+export const ClockIcon = (p: IconProps) => <svg {...base} {...p}><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>;
+export const TrendingUpIcon = (p: IconProps) => <svg {...base} {...p}><path d="m3 17 6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>;
+export const AlertIcon = (p: IconProps) => <svg {...base} {...p}><path d="M10.3 3.7 2.2 18a2 2 0 0 0 1.8 3h16a2 2 0 0 0 1.8-3L13.7 3.7a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>;
+export const ActivityIcon = (p: IconProps) => <svg {...base} {...p}><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>;
+export const EyeIcon = (p: IconProps) => <svg {...base} {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>;
+export const MailIcon = (p: IconProps) => <svg {...base} {...p}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>;
+export const LockIcon = (p: IconProps) => <svg {...base} {...p}><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg>;

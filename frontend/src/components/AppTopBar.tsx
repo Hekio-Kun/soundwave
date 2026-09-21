@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { BellIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, SearchIcon, UploadIcon, UserIcon } from "../icons";
+import { BellIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, DashboardIcon, SearchIcon, ShieldIcon, UploadIcon, UserIcon } from "../icons";
 import type { CurrentUser } from "../types";
 
 type Props = {
@@ -30,6 +30,10 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
   const handleForward = () => {
     window.history.forward();
   };
+
+  const hasDashboardAccess = user?.role === "ADMIN" || user?.role === "STAFF";
+  const workspaceRoute = user?.role === "ADMIN" ? "/admin/dashboard" : user?.role === "STAFF" ? "/staff/dashboard" : "/studio";
+  const workspaceLabel = hasDashboardAccess ? "Mở Dashboard" : "Tải nhạc lên";
 
   return (
     <header className="app-topbar">
@@ -66,11 +70,11 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
       <div className="topbar-actions">
         <button
           className="button button-ghost button-small topbar-upload-btn"
-          onClick={() => onNavigate("/studio")}
-          aria-label="Đăng tải bài hát"
+          onClick={() => onNavigate(workspaceRoute)}
+          aria-label={workspaceLabel}
         >
-          <UploadIcon width={16} height={16} />
-          <span>Tải nhạc lên</span>
+          {user?.role === "ADMIN" ? <ShieldIcon width={16} height={16} /> : user?.role === "STAFF" ? <DashboardIcon width={16} height={16} /> : <UploadIcon width={16} height={16} />}
+          <span>{workspaceLabel}</span>
         </button>
 
         {isAuthenticated && (
@@ -127,6 +131,18 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
                   <span className="user-role-tag">Vai trò: {user.role}</span>
                 </div>
                 <hr className="dropdown-divider" />
+                {user.role === "ADMIN" || user.role === "STAFF" ? (
+                  <button
+                    className="dropdown-item"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      onNavigate(user.role === "ADMIN" ? "/admin/dashboard" : "/staff/dashboard");
+                    }}
+                  >
+                    <DashboardIcon width={16} height={16} />
+                    <span>{user.role === "ADMIN" ? "Dashboard quản trị" : "Dashboard kiểm duyệt"}</span>
+                  </button>
+                ) : null}
                 <button
                   className="dropdown-item"
                   onClick={() => {

@@ -23,6 +23,7 @@ export function SoundWaveHeader({ isAuthenticated, hasPlayer }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileSearch, setMobileSearch] = useState(false);
   const [query, setQuery] = useState("");
+  const activePath = (window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash).split("?")[0];
 
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
@@ -67,8 +68,8 @@ export function SoundWaveHeader({ isAuthenticated, hasPlayer }: Props) {
             </button>
           ) : (
             <>
-              <button className="button button-ghost login-button" onClick={() => go("/login")}>Đăng nhập</button>
-              <button className="button button-primary signup-button" onClick={() => go("/register")}>Đăng ký</button>
+              <button className={`button button-ghost login-button ${activePath === "/login" ? "auth-header-active" : ""}`} aria-current={activePath === "/login" ? "page" : undefined} onClick={() => go("/login")}>Đăng nhập</button>
+              <button className={`button button-primary signup-button ${activePath === "/register" ? "auth-header-active" : ""}`} aria-current={activePath === "/register" ? "page" : undefined} onClick={() => go("/register")}>Đăng ký</button>
             </>
           )}
           <button className="mobile-menu-button icon-button" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "Đóng menu" : "Mở menu"} aria-expanded={menuOpen}>

@@ -155,6 +155,21 @@ Bấm tên bài mở Track Details. Bấm creator mở User/Creator Profile. Kh�
 - Disable submit khi request đang xử lý.
 - Không xóa dữ liệu người dùng đã nhập khi API lỗi.
 
+#### Quy tắc thông báo validation
+
+- Tuyệt đối không sử dụng thông báo validation mặc định của trình duyệt cho các form của SoundWave.
+- Không dựa riêng vào `required`, `type="email"`, `minLength`, `maxLength` hoặc `pattern` để trình duyệt tự hiển thị popup lỗi.
+- Form có validation tùy chỉnh phải dùng `noValidate` và kiểm tra dữ liệu trong submit handler hoặc validation schema dùng chung.
+- Không dùng `window.alert()` để thông báo lỗi nhập liệu.
+- Khi người dùng submit form không hợp lệ, phải hiển thị một hộp cảnh báo chung ở đầu form và thông báo cụ thể ngay dưới từng field bị lỗi.
+- Field lỗi phải có trạng thái trực quan thống nhất: label và nội dung lỗi màu `#B42318`, viền đỏ, nền đỏ rất nhạt và icon cảnh báo khi phù hợp.
+- Nội dung lỗi phải cụ thể bằng tiếng Việt, ví dụ `Bạn chưa nhập địa chỉ email.`; không dùng thông báo chung chung như `Invalid value` hoặc hiển thị raw API error.
+- Sau khi validation thất bại, focus phải tự chuyển đến field lỗi đầu tiên để hỗ trợ bàn phím và trình đọc màn hình.
+- Field lỗi phải có `aria-invalid="true"`; thông báo lỗi phải được liên kết bằng `aria-describedby`.
+- Hộp cảnh báo chung dùng `role="alert"` hoặc `aria-live="polite"` để công nghệ hỗ trợ nhận biết thay đổi.
+- Khi người dùng chỉnh lại một field, chỉ xóa lỗi của field đó; không xóa dữ liệu hoặc lỗi của các field khác.
+- Lỗi validation phía client và lỗi nghiệp vụ/API phải được phân biệt. Lỗi API hiển thị bằng nội dung thân thiện, không làm mất dữ liệu đã nhập.
+
 ### 4.7 Modal
 
 - Chỉ dùng modal cho quyết định cần tập trung hoặc hành động ngắn.
@@ -336,6 +351,7 @@ Một màn hình chỉ được xem là hoàn thành khi:
 [ ] Có loading / empty / error state
 [ ] Responsive 375 / 768 / 1024 / 1440
 [ ] Keyboard và aria-label hoạt động
+[ ] Form không dùng thông báo validation mặc định của trình duyệt
 [ ] Không có horizontal overflow ngoài vùng cho phép
 [ ] Player không che nội dung
 [ ] npm run typecheck thành công

@@ -1,13 +1,15 @@
-import { CompassIcon, DiscIcon, HeartIcon, LibraryIcon, PlusIcon, SearchIcon, UploadIcon } from "../icons";
+import { CompassIcon, DashboardIcon, DiscIcon, HeartIcon, LibraryIcon, PlusIcon, SearchIcon, ShieldIcon, UploadIcon } from "../icons";
+import type { CurrentUser } from "../types";
 
 type Props = {
   activeRoute: string;
   onNavigate: (route: string) => void;
   onCreatePlaylist: () => void;
   isAuthenticated: boolean;
+  userRole?: CurrentUser["role"];
 };
 
-export function Sidebar({ activeRoute, onNavigate, onCreatePlaylist, isAuthenticated }: Props) {
+export function Sidebar({ activeRoute, onNavigate, onCreatePlaylist, isAuthenticated, userRole }: Props) {
   const isCurrent = (route: string) => activeRoute === route || (route !== "/" && activeRoute.startsWith(route));
 
   return (
@@ -20,6 +22,39 @@ export function Sidebar({ activeRoute, onNavigate, onCreatePlaylist, isAuthentic
       </div>
 
       <nav className="sidebar-nav">
+        {userRole === "ADMIN" ? (
+          <div className="nav-group">
+            <span className="nav-group-title">QUẢN TRỊ HỆ THỐNG</span>
+            <button
+              className={`nav-item ${isCurrent("/admin") ? "nav-item--active" : ""}`}
+              onClick={() => onNavigate("/admin/dashboard")}
+            >
+              <ShieldIcon />
+              <span>Tổng quan quản trị</span>
+              <small className="sidebar-badge">ADMIN</small>
+            </button>
+            <button
+              className={`nav-item ${isCurrent("/staff") ? "nav-item--active" : ""}`}
+              onClick={() => onNavigate("/staff/dashboard")}
+            >
+              <DashboardIcon />
+              <span>Trung tâm kiểm duyệt</span>
+            </button>
+          </div>
+        ) : userRole === "STAFF" ? (
+          <div className="nav-group">
+            <span className="nav-group-title">KHÔNG GIAN STAFF</span>
+            <button
+              className={`nav-item ${isCurrent("/staff") ? "nav-item--active" : ""}`}
+              onClick={() => onNavigate("/staff/dashboard")}
+            >
+              <DashboardIcon />
+              <span>Bảng kiểm duyệt</span>
+              <small className="sidebar-badge">STAFF</small>
+            </button>
+          </div>
+        ) : null}
+
         <div className="nav-group">
           <span className="nav-group-title">KHÁM PHÁ</span>
           <button

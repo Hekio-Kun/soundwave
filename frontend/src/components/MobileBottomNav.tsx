@@ -1,11 +1,13 @@
-import { CompassIcon, DiscIcon, LibraryIcon, SearchIcon, UploadIcon } from "../icons";
+import { CompassIcon, DashboardIcon, DiscIcon, LibraryIcon, SearchIcon, UploadIcon } from "../icons";
+import type { CurrentUser } from "../types";
 
 type Props = {
   activeRoute: string;
   onNavigate: (route: string) => void;
+  userRole?: CurrentUser["role"];
 };
 
-export function MobileBottomNav({ activeRoute, onNavigate }: Props) {
+export function MobileBottomNav({ activeRoute, onNavigate, userRole }: Props) {
   const isCurrent = (route: string) => activeRoute === route || (route !== "/" && activeRoute.startsWith(route));
 
   return (
@@ -42,13 +44,23 @@ export function MobileBottomNav({ activeRoute, onNavigate }: Props) {
         <span>Thư viện</span>
       </button>
 
-      <button
-        className={`mobile-nav-item ${isCurrent("/studio") ? "mobile-nav-item--active" : ""}`}
-        onClick={() => onNavigate("/studio")}
-      >
-        <UploadIcon width={20} height={20} />
-        <span>Studio</span>
-      </button>
+      {userRole === "ADMIN" || userRole === "STAFF" ? (
+        <button
+          className={`mobile-nav-item ${isCurrent(userRole === "ADMIN" ? "/admin" : "/staff") ? "mobile-nav-item--active" : ""}`}
+          onClick={() => onNavigate(userRole === "ADMIN" ? "/admin/dashboard" : "/staff/dashboard")}
+        >
+          <DashboardIcon width={20} height={20} />
+          <span>Dashboard</span>
+        </button>
+      ) : (
+        <button
+          className={`mobile-nav-item ${isCurrent("/studio") ? "mobile-nav-item--active" : ""}`}
+          onClick={() => onNavigate("/studio")}
+        >
+          <UploadIcon width={20} height={20} />
+          <span>Studio</span>
+        </button>
+      )}
     </nav>
   );
 }
