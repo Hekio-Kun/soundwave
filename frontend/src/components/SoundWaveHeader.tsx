@@ -12,7 +12,7 @@ const go = (path: string) => {
 
 export function SoundWaveLogo() {
   return (
-    <button className="brand" onClick={() => go("/")} aria-label="Về trang chủ SoundWave">
+    <button className="brand" onClick={() => go("/")} aria-label="Go to SoundWave home">
       <img className="brand-mark" src="/soundwave-logo.png" alt="SoundWave" />
       <span>SoundWave</span>
     </button>
@@ -36,10 +36,10 @@ export function SoundWaveHeader({ isAuthenticated, hasPlayer }: Props) {
       <div className="header-inner">
         <SoundWaveLogo />
 
-        <nav className={`main-nav ${menuOpen ? "main-nav--open" : ""}`} aria-label="Điều hướng chính">
-          <a href="#/" className="nav-active" onClick={() => setMenuOpen(false)}>Khám phá</a>
-          <a href="#/library" onClick={() => setMenuOpen(false)}>Thư viện</a>
-          <a href="#/genres" onClick={() => setMenuOpen(false)}>Thể loại</a>
+        <nav className={`main-nav ${menuOpen ? "main-nav--open" : ""}`} aria-label="Main navigation">
+          <a href="#/" className="nav-active" onClick={() => setMenuOpen(false)}>Explore</a>
+          <a href="#/library" onClick={() => setMenuOpen(false)}>Library</a>
+          <a href="#/genres" onClick={() => setMenuOpen(false)}>Genres</a>
         </nav>
 
         <form className={`header-search ${mobileSearch ? "header-search--open" : ""}`} onSubmit={submitSearch} role="search">
@@ -47,32 +47,32 @@ export function SoundWaveHeader({ isAuthenticated, hasPlayer }: Props) {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Tìm bài hát, album hoặc người đăng"
-            aria-label="Tìm kiếm nhạc"
+            placeholder="Search tracks, albums, or creators"
+            aria-label="Search music"
           />
           {mobileSearch && (
-            <button type="button" className="icon-button search-close" onClick={() => setMobileSearch(false)} aria-label="Đóng tìm kiếm">
+            <button type="button" className="icon-button search-close" onClick={() => setMobileSearch(false)} aria-label="Close search">
               <CloseIcon />
             </button>
           )}
         </form>
 
         <div className="header-actions">
-          <button className="mobile-search-button icon-button" onClick={() => setMobileSearch(true)} aria-label="Mở tìm kiếm">
+          <button className="mobile-search-button icon-button" onClick={() => setMobileSearch(true)} aria-label="Open search">
             <SearchIcon />
           </button>
           {isAuthenticated ? (
-            <button className="profile-button" onClick={() => go("/profile")} aria-label="Mở hồ sơ của bạn">
+            <button className="profile-button" onClick={() => go("/profile")} aria-label="Open your profile">
               <span>LA</span>
               <b>Lê An</b>
             </button>
           ) : (
             <>
-              <button className={`button button-ghost login-button ${activePath === "/login" ? "auth-header-active" : ""}`} aria-current={activePath === "/login" ? "page" : undefined} onClick={() => go("/login")}>Đăng nhập</button>
-              <button className={`button button-primary signup-button ${activePath === "/register" ? "auth-header-active" : ""}`} aria-current={activePath === "/register" ? "page" : undefined} onClick={() => go("/register")}>Đăng ký</button>
+              <button className={`button button-ghost login-button ${activePath === "/login" ? "auth-header-active" : ""}`} aria-current={activePath === "/login" ? "page" : undefined} onClick={() => go("/login")}>Login</button>
+              <button className={`button button-primary signup-button ${activePath === "/register" ? "auth-header-active" : ""}`} aria-current={activePath === "/register" ? "page" : undefined} onClick={() => go("/register")}>Register</button>
             </>
           )}
-          <button className="mobile-menu-button icon-button" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "Đóng menu" : "Mở menu"} aria-expanded={menuOpen}>
+          <button className="mobile-menu-button icon-button" onClick={() => setMenuOpen((open) => !open)} aria-label={menuOpen ? "Close menu" : "Open menu"} aria-expanded={menuOpen}>
             {menuOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
         </div>

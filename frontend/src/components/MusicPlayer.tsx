@@ -112,9 +112,9 @@ export function MusicPlayer({
   });
 
   return (
-    <aside className="music-player" aria-label="Trình phát nhạc">
+    <aside className={`music-player ${playing ? "music-player--playing" : ""}`} aria-label="Music player">
       <div className="player-track">
-        <img src={track.coverUrl ?? undefined} alt={`Ảnh bìa ${track.title}`} />
+        <img src={track.coverUrl ?? undefined} alt={`${track.title} cover`} />
         <div>
           <a href={`#/track/${track.id}`}>{track.title}</a>
           <a href={`#/creator/${track.creator.userId}`}>{track.creator.displayName}</a>
@@ -123,31 +123,31 @@ export function MusicPlayer({
 
       <div className="player-center">
         <div className="player-controls">
-          <button className={`player-icon ${shuffle ? "player-icon--active" : ""}`} onClick={() => setShuffle((value) => !value)} aria-label={shuffle ? "Tắt phát ngẫu nhiên" : "Bật phát ngẫu nhiên"}><ShuffleIcon /></button>
-          <button className="player-icon" onClick={previous} aria-label="Bài trước"><PreviousIcon /></button>
-          <button className="player-play" onClick={() => onPlayingChange(!playing)} aria-label={playing ? "Tạm dừng" : "Phát"}>
+          <button className={`player-icon ${shuffle ? "player-icon--active" : ""}`} onClick={() => setShuffle((value) => !value)} aria-label={shuffle ? "Turn shuffle off" : "Turn shuffle on"}><ShuffleIcon /></button>
+          <button className="player-icon" onClick={previous} aria-label="Previous"><PreviousIcon /></button>
+          <button className="player-play" onClick={() => onPlayingChange(!playing)} aria-label={playing ? "Pause" : "Play"}>
             {playing ? <PauseIcon /> : <PlayIcon />}
           </button>
-          <button className="player-icon" onClick={() => onTrackChange(nextTrack(), true)} aria-label="Bài tiếp theo"><NextIcon /></button>
-          <button className={`player-icon ${repeat ? "player-icon--active" : ""}`} onClick={() => setRepeat((value) => !value)} aria-label={repeat ? "Tắt lặp lại" : "Bật lặp lại"}><RepeatIcon /></button>
+          <button className="player-icon" onClick={() => onTrackChange(nextTrack(), true)} aria-label="Next"><NextIcon /></button>
+          <button className={`player-icon ${repeat ? "player-icon--active" : ""}`} onClick={() => setRepeat((value) => !value)} aria-label={repeat ? "Turn repeat off" : "Turn repeat on"}><RepeatIcon /></button>
         </div>
         <div className="timeline">
           <span>{formatTime(currentTime)}</span>
-          <input type="range" min="0" max={Math.max(duration, 1)} step="0.1" value={Math.min(currentTime, duration)} onChange={(event) => seek(Number(event.target.value))} aria-label="Tiến trình bài hát" style={{ "--range-progress": `${Math.min((currentTime / Math.max(duration, 1)) * 100, 100)}%` } as CSSProperties} />
+          <input type="range" min="0" max={Math.max(duration, 1)} step="0.1" value={Math.min(currentTime, duration)} onChange={(event) => seek(Number(event.target.value))} aria-label="Progress" style={{ "--range-progress": `${Math.min((currentTime / Math.max(duration, 1)) * 100, 100)}%` } as CSSProperties} />
           <span>{formatTime(duration)}</span>
         </div>
-        {audioError && <span className="audio-error">Không thể tải audio mẫu. Hãy kiểm tra kết nối mạng.</span>}
+        {audioError && <span className="audio-error">The audio could not be loaded. Check your network connection.</span>}
       </div>
 
       <div className="player-tools">
-        <button className={`player-icon ${isQueueActive ? "player-icon--active" : ""}`} onClick={handleQueueClick} aria-label="Danh sách chờ"><QueueIcon /></button>
+        <button className={`player-icon ${isQueueActive ? "player-icon--active" : ""}`} onClick={handleQueueClick} aria-label="Queue"><QueueIcon /></button>
         <VolumeIcon />
-        <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(event) => setVolume(Number(event.target.value))} aria-label="Âm lượng" style={{ "--range-progress": `${volume * 100}%` } as CSSProperties} />
+        <input type="range" min="0" max="1" step="0.01" value={volume} onChange={(event) => setVolume(Number(event.target.value))} aria-label="Volume" style={{ "--range-progress": `${volume * 100}%` } as CSSProperties} />
       </div>
 
       {!onToggleQueue && localQueueOpen && (
         <div className="queue-popover">
-          <div className="queue-heading"><div><span>TIẾP THEO</span><h3>Danh sách chờ</h3></div><button className="text-button" onClick={() => setLocalQueueOpen(false)}>Đóng</button></div>
+          <div className="queue-heading"><div><span>NEXT</span><h3>Queue</h3></div><button className="text-button" onClick={() => setLocalQueueOpen(false)}>Close</button></div>
           <div className="queue-list">
             {queue.map((item) => (
               <button key={item.id} className={item.id === track.id ? "queue-item queue-item--active" : "queue-item"} onClick={() => onTrackChange(item, true)}>

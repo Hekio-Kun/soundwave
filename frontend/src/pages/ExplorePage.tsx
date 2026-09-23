@@ -40,32 +40,32 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
     <div className="discover-page">
       <section className="discover-hero" aria-labelledby="discover-title">
         <div className="discover-hero-copy">
-          <span className="discover-kicker"><i /> KHÁM PHÁ MỖI NGÀY</span>
-          <h1 id="discover-title">Âm nhạc cho<br /><span>nhịp sống của bạn.</span></h1>
-          <p>Tìm bài hát mới, theo dõi creator Việt và lưu lại những giai điệu hợp với từng khoảnh khắc.</p>
+          <span className="discover-kicker"><i /> DISCOVER SOMETHING NEW EVERY DAY</span>
+          <h1 id="discover-title">Music for<br /><span>the rhythm of your life.</span></h1>
+          <p>Find new tracks, follow Vietnamese creators, and save music for every moment.</p>
           <div className="discover-hero-actions">
             <button className="button button-primary button-large" onClick={() => onPlayTrack(heroTrack)}>
-              {heroPlaying ? <PauseIcon /> : <PlayIcon />} {heroPlaying ? "Tạm dừng" : "Nghe ngay"}
+              {heroPlaying ? <PauseIcon /> : <PlayIcon />} {heroPlaying ? "Pause" : "Listen now"}
             </button>
             <button className="button button-secondary button-large" onClick={() => document.getElementById("trending")?.scrollIntoView({ behavior: "smooth" })}>
-              Xem thịnh hành <ArrowIcon width={17} height={17} />
+              View trending <ArrowIcon width={17} height={17} />
             </button>
           </div>
           <div className="discover-proof">
-            <span><b>1.2K+</b><small>creator Việt</small></span>
-            <span><b>24K+</b><small>giai điệu</small></span>
-            <span><b>Mỗi ngày</b><small>nhạc mới cập nhật</small></span>
+            <span><b>1.2K+</b><small>Vietnamese creators</small></span>
+            <span><b>24K+</b><small>tracks</small></span>
+            <span><b>Every day</b><small>new music added</small></span>
           </div>
         </div>
-        <button className="discover-feature" onClick={() => onPlayTrack(heroTrack)} aria-label={`${heroPlaying ? "Tạm dừng" : "Phát"} ${heroTrack.title}`}>
+        <button className="discover-feature" onClick={() => onPlayTrack(heroTrack)} aria-label={`${heroPlaying ? "Pause" : "Play"} ${heroTrack.title}`}>
           <span className="discover-feature-art"><img src={heroTrack.coverUrl ?? undefined} alt="" /></span>
-          <span className="discover-feature-info"><small>GỢI Ý HÔM NAY</small><strong>{heroTrack.title}</strong><em>{heroTrack.creator.displayName} · {heroTrack.album?.title}</em></span>
+          <span className="discover-feature-info"><small>RECOMMENDED SONGS</small><strong>{heroTrack.title}</strong><em>{heroTrack.creator.displayName} · {heroTrack.album?.title}</em></span>
           <span className="discover-feature-play">{heroPlaying ? <PauseIcon /> : <PlayIcon />}</span>
         </button>
       </section>
 
       <section className="sw-section" id="trending">
-        <SectionHeader title="Đang thịnh hành" description="Những giai điệu được cộng đồng nghe nhiều nhất tuần này" actionLabel="Xem tất cả" onAction={scrollToCatalog} />
+        <SectionHeader title="Trending tracks" description="The most-played tracks in the SoundWave community this week" actionLabel="View all" onAction={scrollToCatalog} />
         <div className="sw-track-grid">
           {approvedTracks.slice(0, 5).map((track, index) => <TrackCard key={track.id} track={track} rank={index + 1} active={currentTrack?.id === track.id} playing={currentTrack?.id === track.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />)}
         </div>
@@ -73,7 +73,7 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
 
       <section className="sw-section sw-section--split">
         <div className="sw-release-panel">
-          <SectionHeader title="Mới phát hành" description="Vừa lên sóng trên SoundWave" />
+          <SectionHeader title="New releases" description="Recently published on SoundWave" />
           <div className="sw-release-list">
             {approvedTracks.slice(1, 6).map((track, index) => (
               <button key={track.id} className={`sw-release-row ${currentTrack?.id === track.id ? "is-active" : ""}`} onClick={() => onPlayTrack(track)}>
@@ -87,7 +87,7 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
           </div>
         </div>
         <div className="sw-genre-panel">
-          <SectionHeader title="Theo tâm trạng" description="Chọn không gian âm nhạc của riêng bạn" actionLabel="Tất cả" onAction={() => onNavigate("/genres")} />
+          <SectionHeader title="Genres" description="Choose music that matches your mood" actionLabel="View all" onAction={() => onNavigate("/genres")} />
           <div className="sw-genre-grid">
             {genres.slice(0, 6).map((genre) => (
               <button key={genre.id} style={{ "--genre-color": genre.color, "--genre-accent": genre.accent } as CSSProperties} onClick={() => { setSelectedGenre(genre.slug); scrollToCatalog(); }}>
@@ -99,25 +99,25 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
       </section>
 
       <section className="sw-section">
-        <SectionHeader title="Album tuyển chọn" description="Những câu chuyện được kể trọn vẹn qua từng album" actionLabel="Mở thư viện" onAction={() => onNavigate("/library")} />
+        <SectionHeader title="Featured albums" description="Complete stories told through every album" actionLabel="Open library" onAction={() => onNavigate("/library")} />
         <div className="sw-album-grid">{albums.map((album) => <AlbumCard key={album.id} album={album} onNavigate={onNavigate} />)}</div>
       </section>
 
       <section className="sw-section">
-        <SectionHeader title="Creator nổi bật" description="Theo dõi những màu sắc âm nhạc đang được yêu thích" />
+        <SectionHeader title="Featured creators" description="Follow the creators shaping today's favorite sounds" />
         <div className="sw-creator-grid">{featuredCreators.map((creator) => <CreatorCard key={creator.userId} creator={creator} onNavigate={onNavigate} />)}</div>
       </section>
 
       <section className="sw-section sw-catalog" id="catalog">
-        <SectionHeader title="Kho nhạc SoundWave" description={`${filteredTracks.length} bài hát phù hợp với lựa chọn của bạn`} />
+        <SectionHeader title="SoundWave catalog" description={`${filteredTracks.length} tracks match your selection`} />
         <div className="sw-catalog-toolbar">
           <div className="sw-filter-scroll">
-            <button className={selectedGenre === "all" ? "is-active" : ""} onClick={() => setSelectedGenre("all")}>Tất cả</button>
+            <button className={selectedGenre === "all" ? "is-active" : ""} onClick={() => setSelectedGenre("all")}>All</button>
             {genres.map((genre) => <button key={genre.id} className={selectedGenre === genre.slug ? "is-active" : ""} onClick={() => setSelectedGenre(genre.slug)}>{genre.name}</button>)}
           </div>
-          <label className="sw-sort"><FilterIcon width={15} height={15} /><span className="sr-only">Sắp xếp</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as "trending" | "newest")}><option value="trending">Thịnh hành</option><option value="newest">Mới nhất</option></select></label>
+          <label className="sw-sort"><FilterIcon width={15} height={15} /><span className="sr-only">Sort by</span><select value={sortBy} onChange={(event) => setSortBy(event.target.value as "trending" | "newest")}><option value="trending">Most played</option><option value="newest">Newest</option></select></label>
         </div>
-        {filteredTracks.length ? <div className="sw-track-grid sw-track-grid--catalog">{filteredTracks.map((track) => <TrackCard key={track.id} track={track} active={currentTrack?.id === track.id} playing={currentTrack?.id === track.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />)}</div> : <div className="sw-empty"><HeadphonesIcon /><strong>Chưa có bài hát ở thể loại này</strong><span>Hãy thử chọn một thể loại khác.</span><button onClick={() => setSelectedGenre("all")}>Xem tất cả bài hát</button></div>}
+        {filteredTracks.length ? <div className="sw-track-grid sw-track-grid--catalog">{filteredTracks.map((track) => <TrackCard key={track.id} track={track} active={currentTrack?.id === track.id} playing={currentTrack?.id === track.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />)}</div> : <div className="sw-empty"><HeadphonesIcon /><strong>No tracks in this genre yet</strong><span>Try selecting another genre.</span><button onClick={() => setSelectedGenre("all")}>View all tracks</button></div>}
       </section>
     </div>
   );

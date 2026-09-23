@@ -33,15 +33,15 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
 
   const hasDashboardAccess = user?.role === "ADMIN" || user?.role === "STAFF";
   const workspaceRoute = user?.role === "ADMIN" ? "/admin/dashboard" : user?.role === "STAFF" ? "/staff/dashboard" : "/studio";
-  const workspaceLabel = hasDashboardAccess ? "Mở Dashboard" : "Tải nhạc lên";
+  const workspaceLabel = hasDashboardAccess ? "Open dashboard" : "Upload music";
 
   return (
     <header className="app-topbar">
       <div className="topbar-nav-controls">
-        <button className="topbar-nav-btn" onClick={handleBack} aria-label="Quay lại">
+        <button className="topbar-nav-btn" onClick={handleBack} aria-label="Back">
           <ChevronLeftIcon width={18} height={18} />
         </button>
-        <button className="topbar-nav-btn" onClick={handleForward} aria-label="Tiến tới">
+        <button className="topbar-nav-btn" onClick={handleForward} aria-label="Forward">
           <ChevronRightIcon width={18} height={18} />
         </button>
       </div>
@@ -52,15 +52,15 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Tìm kiếm bài hát, album, nghệ sĩ..."
-          aria-label="Tìm kiếm âm nhạc"
+          placeholder="Search tracks, albums, creators..."
+          aria-label="Search music"
         />
         {query && (
           <button
             type="button"
             className="search-clear-btn"
             onClick={() => setQuery("")}
-            aria-label="Xóa từ khóa tìm kiếm"
+            aria-label="Clear search keyword"
           >
             <CloseIcon width={14} height={14} />
           </button>
@@ -82,7 +82,7 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
             <button
               className="topbar-icon-btn"
               onClick={() => setNotifOpen(!notifOpen)}
-              aria-label="Thông báo hệ thống"
+              aria-label="System notifications"
             >
               <BellIcon width={20} height={20} />
               {unreadNotifications > 0 && <span className="notif-badge">{unreadNotifications}</span>}
@@ -91,19 +91,19 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
             {notifOpen && (
               <div className="notif-popover">
                 <div className="notif-header">
-                  <h4>Thông báo</h4>
-                  <button className="text-button" onClick={() => setNotifOpen(false)}>Đóng</button>
+                  <h4>Notifications</h4>
+                  <button className="text-button" onClick={() => setNotifOpen(false)}>Close</button>
                 </div>
                 <div className="notif-list">
                   <div className="notif-item">
-                    <p className="notif-title">Bài hát đã được phê duyệt</p>
-                    <p className="notif-msg">Bài hát "Sớm Mai Dịu Dàng" của bạn đã được Staff duyệt và phát hành công khai.</p>
-                    <span className="notif-time">2 giờ trước</span>
+                    <p className="notif-title">Track approved</p>
+                    <p className="notif-msg">Your track "Sớm Mai Dịu Dàng" was approved by Staff and published.</p>
+                    <span className="notif-time">2 hours ago</span>
                   </div>
                   <div className="notif-item notif-item--warning">
-                    <p className="notif-title">Yêu cầu chỉnh sửa bài hát</p>
-                    <p className="notif-msg">Bài "Vũ Điệu Đêm Hè" bị từ chối do chất lượng âm thanh. Xem chi tiết trong Studio.</p>
-                    <span className="notif-time">Hôm qua</span>
+                    <p className="notif-title">Track revision requested</p>
+                    <p className="notif-msg">"Vũ Điệu Đêm Hè" was rejected because of its audio quality. View details in Content Studio.</p>
+                    <span className="notif-time">Yesterday</span>
                   </div>
                 </div>
               </div>
@@ -116,7 +116,7 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
             <button
               className="topbar-user-btn"
               onClick={() => setUserMenuOpen(!userMenuOpen)}
-              aria-label="Menu tài khoản"
+              aria-label="Account menu"
               aria-expanded={userMenuOpen}
             >
               <img src={user.avatarUrl} alt="" className="topbar-avatar" />
@@ -128,7 +128,7 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
                 <div className="dropdown-user-info">
                   <p className="dropdown-name">{user.displayName}</p>
                   <p className="dropdown-email">{user.email}</p>
-                  <span className="user-role-tag">Vai trò: {user.role}</span>
+                  <span className="user-role-tag">Role: {user.role}</span>
                 </div>
                 <hr className="dropdown-divider" />
                 {user.role === "ADMIN" || user.role === "STAFF" ? (
@@ -140,7 +140,7 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
                     }}
                   >
                     <DashboardIcon width={16} height={16} />
-                    <span>{user.role === "ADMIN" ? "Dashboard quản trị" : "Dashboard kiểm duyệt"}</span>
+                    <span>{user.role === "ADMIN" ? "Administration dashboard" : "Moderation dashboard"}</span>
                   </button>
                 ) : null}
                 <button
@@ -151,7 +151,7 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
                   }}
                 >
                   <UserIcon width={16} height={16} />
-                  <span>Hồ sơ của tôi</span>
+                  <span>My profile</span>
                 </button>
                 <button
                   className="dropdown-item"
@@ -171,7 +171,7 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
                     onLogout();
                   }}
                 >
-                  <span>Đăng xuất</span>
+                  <span>Logout</span>
                 </button>
               </div>
             )}
@@ -179,10 +179,10 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
         ) : (
           <div className="topbar-auth-buttons">
             <button className="button button-ghost button-small" onClick={() => onNavigate("/login")}>
-              Đăng nhập
+              Login
             </button>
             <button className="button button-primary button-small" onClick={() => onNavigate("/register")}>
-              Đăng ký
+              Register
             </button>
           </div>
         )}

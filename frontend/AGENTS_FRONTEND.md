@@ -14,7 +14,7 @@ Nguyên tắc chung:
 - Không dùng quá nhiều gradient, hiệu ứng phát sáng, glassmorphism hoặc animation gây mất tập trung.
 - Mọi màn hình phải dùng chung header, footer, player, button, card và trạng thái hệ thống.
 - Giao diện phải hoạt động tốt ở 375px, 768px, 1024px và 1440px.
-- Nội dung giao diện dùng tiếng Việt. Tên biến, type, component và code dùng tiếng Anh.
+- Nội dung giao diện dùng tiếng Anh. Tên biến, type, component và code dùng tiếng Anh.
 
 ## 2. Nguồn tham chiếu bắt buộc
 
@@ -98,6 +98,22 @@ Kích thước tham khảo:
 - Không dùng shadow đen dày hoặc nhiều lớp trên card thông thường.
 - Hover card được nâng tối đa khoảng `4px`.
 
+### 3.5 Motion và animation
+
+- Giao diện cần có nhiều chuyển động nhỏ, có chủ đích để tạo cảm giác sống động: chuyển trang, xuất hiện khi cuộn, hover card, phản hồi button, mở queue/modal và trạng thái phát nhạc.
+- Tất cả chuyển động phải mượt, nhẹ và không làm người dùng mất tập trung khỏi nội dung âm nhạc.
+- Ưu tiên animation bằng `transform` và `opacity`; tránh animate các thuộc tính gây tính toán lại layout như `width`, `height`, `top`, `left` hoặc `margin`.
+- Tái sử dụng motion token và hiệu ứng trong `src/motion.css`; không tự tạo duration hoặc easing khác nhau tùy tiện trong từng component.
+- Thời lượng tham khảo: phản hồi thao tác `150–260ms`, chuyển trang/hiện nội dung `400–620ms`, chuyển động trang trí lặp lại tối thiểu `2.5s`.
+- Nội dung trong cùng một nhóm nên xuất hiện theo stagger ngắn; khoảng cách giữa các phần tử khoảng `30–60ms` và không kéo dài tổng thời gian chờ quá mức.
+- Animation khi cuộn chỉ chạy lần đầu khi phần tử đi vào vùng nhìn thấy; không được phát lại liên tục mỗi lần người dùng cuộn qua.
+- Hover không được làm thay đổi kích thước layout. Card chỉ nâng tối đa `4px`, ảnh chỉ phóng nhẹ và button phải phản hồi ngay khi nhấn.
+- Animation lặp lại chỉ dùng cho trạng thái có ý nghĩa như bài hát đang phát, loading hoặc đồ họa nền rất nhẹ; dừng animation khi trạng thái kết thúc.
+- Sidebar và Music Player phải luôn cố định đúng vị trí; animation không được làm hai thành phần này biến mất, rung hoặc che nội dung.
+- Bắt buộc hỗ trợ `prefers-reduced-motion: reduce`: tắt animation lặp, bỏ stagger và hiển thị nội dung ngay lập tức.
+- Không thêm thư viện animation mới nếu CSS và Web Animations API hiện có đã đáp ứng được yêu cầu.
+- Sau khi thêm animation, phải kiểm tra không có giật layout, horizontal overflow hoặc lỗi hiển thị ở 375px, 768px, 1024px và 1440px.
+
 ## 4. Component rules
 
 ### 4.1 Button
@@ -163,7 +179,7 @@ Bấm tên bài mở Track Details. Bấm creator mở User/Creator Profile. Kh�
 - Không dùng `window.alert()` để thông báo lỗi nhập liệu.
 - Khi người dùng submit form không hợp lệ, phải hiển thị một hộp cảnh báo chung ở đầu form và thông báo cụ thể ngay dưới từng field bị lỗi.
 - Field lỗi phải có trạng thái trực quan thống nhất: label và nội dung lỗi màu `#B42318`, viền đỏ, nền đỏ rất nhạt và icon cảnh báo khi phù hợp.
-- Nội dung lỗi phải cụ thể bằng tiếng Việt, ví dụ `Bạn chưa nhập địa chỉ email.`; không dùng thông báo chung chung như `Invalid value` hoặc hiển thị raw API error.
+- Nội dung lỗi phải cụ thể bằng tiếng Anh, ví dụ `Please enter your email address.`; không dùng thông báo chung chung như `Invalid value` hoặc hiển thị raw API error.
 - Sau khi validation thất bại, focus phải tự chuyển đến field lỗi đầu tiên để hỗ trợ bàn phím và trình đọc màn hình.
 - Field lỗi phải có `aria-invalid="true"`; thông báo lỗi phải được liên kết bằng `aria-describedby`.
 - Hộp cảnh báo chung dùng `role="alert"` hoặc `aria-live="polite"` để công nghệ hỗ trợ nhận biết thay đổi.
@@ -304,7 +320,7 @@ Trong khi code:
 2. Không đổi token hoặc component dùng chung một cách âm thầm.
 3. Không tạo mock API bên trong JSX.
 4. Dùng semantic HTML và accessibility attribute.
-5. Giữ toàn bộ text giao diện bằng tiếng Việt và nhất quán thuật ngữ.
+5. Giữ toàn bộ text giao diện bằng tiếng Anh và nhất quán với Field Name trong RDS.
 
 Sau khi code:
 
@@ -352,6 +368,7 @@ Một màn hình chỉ được xem là hoàn thành khi:
 [ ] Responsive 375 / 768 / 1024 / 1440
 [ ] Keyboard và aria-label hoạt động
 [ ] Form không dùng thông báo validation mặc định của trình duyệt
+[ ] Animation mượt, có mục đích và hỗ trợ prefers-reduced-motion
 [ ] Không có horizontal overflow ngoài vùng cho phép
 [ ] Player không che nội dung
 [ ] npm run typecheck thành công

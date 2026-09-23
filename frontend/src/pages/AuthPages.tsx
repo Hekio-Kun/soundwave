@@ -16,7 +16,7 @@ type AuthProps = {
   onNavigate: (route: string) => void;
 };
 
-type AuthMode = "login" | "register" | "recovery";
+type AuthMode = "login" | "register" | "recovery" | "verification";
 type FieldErrors = Record<string, string>;
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -32,12 +32,12 @@ function AuthErrorNotice({ message }: { message: string }) {
   return (
     <div className="auth-v2-error" role="alert" aria-live="polite">
       <span><AlertIcon width={17} height={17} /></span>
-      <div><b>Thông tin chưa đầy đủ</b><small>{message}</small></div>
+      <div><b>Incomplete information</b><small>{message}</small></div>
     </div>
   );
 }
 
-function AuthExperience({
+export function AuthExperience({
   children,
   mode,
   eyebrow,
@@ -54,27 +54,27 @@ function AuthExperience({
 }) {
   return (
     <main className="auth-v2-experience">
-      <section className="auth-v2-story" aria-label="Giới thiệu SoundWave">
+      <section className="auth-v2-story" aria-label="About SoundWave">
         <div className="auth-v2-orbit auth-v2-orbit--one" />
         <div className="auth-v2-orbit auth-v2-orbit--two" />
-        <button className="auth-v2-brand" onClick={() => onNavigate("/")} aria-label="Về trang khám phá SoundWave">
+        <button className="auth-v2-brand" onClick={() => onNavigate("/")} aria-label="Return to SoundWave Explore">
           <img src="/soundwave-logo.png" alt="" />
           <span>SoundWave</span>
         </button>
         <div className="auth-v2-story-content">
-          <span className="auth-v2-story-tag"><HeadphonesIcon width={15} height={15} /> ÂM NHẠC KẾT NỐI CỘNG ĐỒNG</span>
-          <h2>Mỗi khoảnh khắc<br />đều có một <span>giai điệu.</span></h2>
-          <p>Nghe nhạc từ cộng đồng nghệ sĩ độc lập, lưu lại những điều bạn yêu thích và chia sẻ tác phẩm của riêng mình.</p>
+          <span className="auth-v2-story-tag"><HeadphonesIcon width={15} height={15} /> MUSIC CONNECTS THE COMMUNITY</span>
+          <h2>Every moment<br />has its own <span>soundtrack.</span></h2>
+          <p>Listen to independent creators, save what you love, and share your own music.</p>
 
           <div className="auth-v2-now-playing">
             <span className="auth-v2-cover"><i /><i /><i /><i /></span>
-            <span><small>ĐANG PHÁT TRÊN SOUNDWAVE</small><strong>Sớm Mai Dịu Dàng</strong><em>Minh An · Acoustic</em></span>
+            <span><small>NOW PLAYING ON SOUNDWAVE</small><strong>Sớm Mai Dịu Dàng</strong><em>Minh An · Acoustic</em></span>
             <b><PlayIcon width={17} height={17} /></b>
           </div>
 
           <div className="auth-v2-trust-row">
-            <span><ShieldIcon width={16} height={16} /><b>Không quảng cáo chen ngang</b><small>Tập trung vào âm nhạc</small></span>
-            <span><HeadphonesIcon width={16} height={16} /><b>Âm thanh chất lượng</b><small>Trải nghiệm liền mạch</small></span>
+            <span><ShieldIcon width={16} height={16} /><b>No interrupting ads</b><small>Stay focused on the music</small></span>
+            <span><HeadphonesIcon width={16} height={16} /><b>Quality audio</b><small>A seamless listening experience</small></span>
           </div>
         </div>
       </section>
@@ -82,13 +82,13 @@ function AuthExperience({
       <section className="auth-v2-workspace">
         <button className="auth-v2-back-home" onClick={() => onNavigate("/")}>
           <ChevronLeftIcon width={16} height={16} />
-          Về trang khám phá
+          Back to Explore
         </button>
         <div className="auth-v2-card">
-          {mode !== "recovery" ? (
-            <nav className="auth-v2-tabs" aria-label="Chuyển đổi đăng nhập và đăng ký">
-              <button className={mode === "login" ? "is-active" : ""} onClick={() => onNavigate("/login")} aria-current={mode === "login" ? "page" : undefined}>Đăng nhập</button>
-              <button className={mode === "register" ? "is-active" : ""} onClick={() => onNavigate("/register")} aria-current={mode === "register" ? "page" : undefined}>Đăng ký</button>
+          {mode === "login" || mode === "register" ? (
+            <nav className="auth-v2-tabs" aria-label="Switch between Login and Register">
+              <button className={mode === "login" ? "is-active" : ""} onClick={() => onNavigate("/login")} aria-current={mode === "login" ? "page" : undefined}>Login</button>
+              <button className={mode === "register" ? "is-active" : ""} onClick={() => onNavigate("/register")} aria-current={mode === "register" ? "page" : undefined}>Register</button>
             </nav>
           ) : null}
 
@@ -162,8 +162,8 @@ function PasswordField({
       <div className="auth-v2-label-row"><label htmlFor={id}>{label}</label>{action}</div>
       <div className={`auth-v2-input auth-v2-input--password ${error ? "is-invalid" : ""}`}>
         <span><LockIcon width={17} height={17} /></span>
-        <input id={id} type={visible ? "text" : "password"} required minLength={8} autoComplete={autoComplete} value={value} onChange={(event) => onChange(event.target.value)} placeholder="Nhập tối thiểu 8 ký tự" aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} />
-        <button type="button" onClick={() => setVisible((current) => !current)} aria-label={visible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}>{visible ? "Ẩn" : "Hiện"}</button>
+        <input id={id} type={visible ? "text" : "password"} required minLength={8} autoComplete={autoComplete} value={value} onChange={(event) => onChange(event.target.value)} placeholder="Enter at least 8 characters" aria-invalid={Boolean(error)} aria-describedby={error ? `${id}-error` : undefined} />
+        <button type="button" onClick={() => setVisible((current) => !current)} aria-label={visible ? "Hide Password" : "Show Password"}>{visible ? "Hide" : "Show"}</button>
       </div>
       {error ? <small className="auth-v2-field-error" id={`${id}-error`}><AlertIcon width={12} height={12} />{error}</small> : null}
     </div>
@@ -178,9 +178,9 @@ export function LoginPage({ onLoginSuccess, onNavigate }: AuthProps) {
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: FieldErrors = {};
-    if (!email.trim()) nextErrors["login-email"] = "Bạn chưa nhập địa chỉ email.";
-    else if (!emailPattern.test(email.trim())) nextErrors["login-email"] = "Địa chỉ email chưa đúng định dạng.";
-    if (!password) nextErrors["login-password"] = "Bạn chưa nhập mật khẩu.";
+    if (!email.trim()) nextErrors["login-email"] = "Please enter your email address.";
+    else if (!emailPattern.test(email.trim())) nextErrors["login-email"] = "Please enter a valid email address.";
+    if (!password) nextErrors["login-password"] = "Please enter your password.";
 
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -198,26 +198,26 @@ export function LoginPage({ onLoginSuccess, onNavigate }: AuthProps) {
   };
 
   return (
-    <AuthExperience mode="login" eyebrow="CHÀO MỪNG TRỞ LẠI" title="Tiếp tục cùng SoundWave" description="Đăng nhập để mở thư viện cá nhân và tiếp tục nghe từ nơi bạn đã dừng." onNavigate={onNavigate}>
+    <AuthExperience mode="login" eyebrow="WELCOME BACK" title="Continue with SoundWave" description="Log in to open your personal library and continue listening where you left off." onNavigate={onNavigate}>
       <form onSubmit={handleSubmit} className="auth-v2-form" noValidate>
-        {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Vui lòng kiểm tra các trường được đánh dấu bên dưới." /> : null}
-        <TextField id="login-email" type="email" label="Địa chỉ email" value={email} onChange={updateField("login-email", setEmail)} placeholder="ban@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["login-email"]} />
-        <PasswordField id="login-password" label="Mật khẩu" value={password} onChange={updateField("login-password", setPassword)} autoComplete="current-password" action={<button type="button" className="auth-v2-text-button" onClick={() => onNavigate("/forgot-password")}>Quên mật khẩu?</button>} error={errors["login-password"]} />
+        {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Please review the fields marked below." /> : null}
+        <TextField id="login-email" type="email" label="Email" value={email} onChange={updateField("login-email", setEmail)} placeholder="you@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["login-email"]} />
+        <PasswordField id="login-password" label="Password" value={password} onChange={updateField("login-password", setPassword)} autoComplete="current-password" action={<button type="button" className="auth-v2-text-button" onClick={() => onNavigate("/forgot-password")}>Forgot Password?</button>} error={errors["login-password"]} />
 
         <div className="auth-v2-form-options">
-          <label><input type="checkbox" defaultChecked /><span>Ghi nhớ đăng nhập</span></label>
-          <span><ShieldIcon width={13} height={13} /> Kết nối được bảo vệ</span>
+          <label><input type="checkbox" defaultChecked /><span>Remember Me</span></label>
+          <span><ShieldIcon width={13} height={13} /> Secure connection</span>
         </div>
 
-        <button type="submit" className="button button-primary button-large auth-v2-submit">Đăng nhập SoundWave</button>
+        <button type="submit" className="button button-primary button-large auth-v2-submit">Login</button>
       </form>
 
       <div className="auth-v2-access-note">
         <ShieldIcon width={17} height={17} />
-        <span><b>Quyền truy cập được xác định tự động</b><small>Hệ thống sẽ kiểm tra vai trò của tài khoản sau khi đăng nhập.</small></span>
+        <span><b>Access is assigned automatically</b><small>The system checks the account role after login.</small></span>
       </div>
 
-      <p className="auth-v2-switch">Chưa có tài khoản? <button onClick={() => onNavigate("/register")}>Tạo tài khoản miễn phí</button></p>
+      <p className="auth-v2-switch">Do not have an account? <button onClick={() => onNavigate("/register")}>Register</button></p>
     </AuthExperience>
   );
 }
@@ -232,23 +232,23 @@ export function RegisterPage({ onNavigate }: { onNavigate: (route: string) => vo
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const passwordRules = [
-    { label: "8+ ký tự", valid: password.length >= 8 },
-    { label: "Có chữ hoa", valid: /[A-Z]/.test(password) },
-    { label: "Có chữ số", valid: /\d/.test(password) },
+    { label: "8+ characters", valid: password.length >= 8 },
+    { label: "Uppercase letter", valid: /[A-Z]/.test(password) },
+    { label: "Number", valid: /\d/.test(password) },
   ];
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: FieldErrors = {};
-    if (!displayName.trim()) nextErrors["reg-name"] = "Bạn chưa nhập tên hiển thị.";
-    else if (displayName.trim().length < 2) nextErrors["reg-name"] = "Tên hiển thị cần có ít nhất 2 ký tự.";
-    if (!email.trim()) nextErrors["reg-email"] = "Bạn chưa nhập địa chỉ email.";
-    else if (!emailPattern.test(email.trim())) nextErrors["reg-email"] = "Địa chỉ email chưa đúng định dạng.";
-    if (!password) nextErrors["reg-password"] = "Bạn chưa tạo mật khẩu.";
-    else if (!passwordRules.every((rule) => rule.valid)) nextErrors["reg-password"] = "Mật khẩu chưa đáp ứng đủ yêu cầu bảo mật.";
-    if (!confirmPassword) nextErrors["reg-confirm"] = "Bạn chưa xác nhận mật khẩu.";
-    else if (password !== confirmPassword) nextErrors["reg-confirm"] = "Mật khẩu xác nhận chưa trùng khớp.";
-    if (!termsAccepted) nextErrors["reg-terms"] = "Bạn cần đồng ý với điều khoản để tiếp tục.";
+    if (!displayName.trim()) nextErrors["reg-name"] = "Please enter your display name.";
+    else if (displayName.trim().length < 2) nextErrors["reg-name"] = "Display Name must contain at least 2 characters.";
+    if (!email.trim()) nextErrors["reg-email"] = "Please enter your email address.";
+    else if (!emailPattern.test(email.trim())) nextErrors["reg-email"] = "Please enter a valid email address.";
+    if (!password) nextErrors["reg-password"] = "Please create a password.";
+    else if (!passwordRules.every((rule) => rule.valid)) nextErrors["reg-password"] = "Password does not meet all security requirements.";
+    if (!confirmPassword) nextErrors["reg-confirm"] = "Please confirm your password.";
+    else if (password !== confirmPassword) nextErrors["reg-confirm"] = "Confirm Password does not match.";
+    if (!termsAccepted) nextErrors["reg-terms"] = "Please accept the terms to continue.";
 
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -266,35 +266,35 @@ export function RegisterPage({ onNavigate }: { onNavigate: (route: string) => vo
   };
 
   return (
-    <AuthExperience mode="register" eyebrow="BẮT ĐẦU MIỄN PHÍ" title="Tạo không gian âm nhạc của bạn" description="Một tài khoản cho nghe nhạc, lưu playlist và chia sẻ những sáng tác mới." onNavigate={onNavigate}>
+    <AuthExperience mode="register" eyebrow="START FOR FREE" title="Create your music space" description="One account to listen, save playlists, and share new music." onNavigate={onNavigate}>
       {submitted ? (
         <div className="auth-v2-success">
           <span><CheckIcon width={28} height={28} /></span>
-          <small>ĐĂNG KÝ THÀNH CÔNG</small>
-          <h2>Kiểm tra hộp thư của bạn</h2>
-          <p>Liên kết xác thực đã được gửi đến <b>{email}</b>. Hãy xác thực email trước khi đăng nhập.</p>
-          <button className="button button-primary button-large" onClick={() => onNavigate("/login")}>Đến trang đăng nhập</button>
+          <small>REGISTRATION SUCCESSFUL</small>
+          <h2>Check your inbox</h2>
+          <p>A verification link was sent to <b>{email}</b>. Verify your email before logging in.</p>
+          <button className="button button-primary button-large" onClick={() => onNavigate("/login")}>Go to Login</button>
         </div>
       ) : (
         <>
           <form onSubmit={handleSubmit} className="auth-v2-form" noValidate>
-            {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Hãy bổ sung các thông tin bắt buộc trước khi tạo tài khoản." /> : null}
+            {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Complete all required information before registering." /> : null}
             <div className="auth-v2-two-columns">
-              <TextField id="reg-name" label="Tên hiển thị" value={displayName} onChange={updateField("reg-name", setDisplayName)} placeholder="Ví dụ: Lê An" autoComplete="name" minLength={2} icon={<UserIcon width={17} height={17} />} error={errors["reg-name"]} />
-              <TextField id="reg-email" type="email" label="Địa chỉ email" value={email} onChange={updateField("reg-email", setEmail)} placeholder="ban@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["reg-email"]} />
+              <TextField id="reg-name" label="Display Name" value={displayName} onChange={updateField("reg-name", setDisplayName)} placeholder="For example: Le An" autoComplete="name" minLength={2} icon={<UserIcon width={17} height={17} />} error={errors["reg-name"]} />
+              <TextField id="reg-email" type="email" label="Email" value={email} onChange={updateField("reg-email", setEmail)} placeholder="you@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["reg-email"]} />
             </div>
-            <PasswordField id="reg-password" label="Mật khẩu" value={password} onChange={updateField("reg-password", setPassword)} autoComplete="new-password" error={errors["reg-password"]} />
+            <PasswordField id="reg-password" label="Password" value={password} onChange={updateField("reg-password", setPassword)} autoComplete="new-password" error={errors["reg-password"]} />
             <div className="auth-v2-password-rules">
               {passwordRules.map((rule) => <span key={rule.label} className={rule.valid ? "is-valid" : ""}><i>{rule.valid ? <CheckIcon width={10} height={10} /> : null}</i>{rule.label}</span>)}
             </div>
-            <PasswordField id="reg-confirm" label="Xác nhận mật khẩu" value={confirmPassword} onChange={updateField("reg-confirm", setConfirmPassword)} autoComplete="new-password" error={errors["reg-confirm"]} />
+            <PasswordField id="reg-confirm" label="Confirm Password" value={confirmPassword} onChange={updateField("reg-confirm", setConfirmPassword)} autoComplete="new-password" error={errors["reg-confirm"]} />
             <div className={`auth-v2-terms-wrap ${errors["reg-terms"] ? "has-error" : ""}`}>
-              <label className="auth-v2-terms"><input id="reg-terms" type="checkbox" checked={termsAccepted} onChange={(event) => { setTermsAccepted(event.target.checked); setErrors((current) => ({ ...current, "reg-terms": "" })); }} aria-invalid={Boolean(errors["reg-terms"])} aria-describedby={errors["reg-terms"] ? "reg-terms-error" : undefined} /><span>Tôi đồng ý với <button type="button">Điều khoản sử dụng</button> và <button type="button">Chính sách cộng đồng</button> của SoundWave.</span></label>
+              <label className="auth-v2-terms"><input id="reg-terms" type="checkbox" checked={termsAccepted} onChange={(event) => { setTermsAccepted(event.target.checked); setErrors((current) => ({ ...current, "reg-terms": "" })); }} aria-invalid={Boolean(errors["reg-terms"])} aria-describedby={errors["reg-terms"] ? "reg-terms-error" : undefined} /><span>I accept SoundWave's <button type="button">Terms of Use</button> and <button type="button">Community Policy</button>.</span></label>
               {errors["reg-terms"] ? <small className="auth-v2-field-error" id="reg-terms-error"><AlertIcon width={12} height={12} />{errors["reg-terms"]}</small> : null}
             </div>
-            <button type="submit" className="button button-primary button-large auth-v2-submit">Tạo tài khoản miễn phí</button>
+            <button type="submit" className="button button-primary button-large auth-v2-submit">Register</button>
           </form>
-          <p className="auth-v2-switch">Đã có tài khoản? <button onClick={() => onNavigate("/login")}>Đăng nhập ngay</button></p>
+          <p className="auth-v2-switch">Already have an account? <button onClick={() => onNavigate("/login")}>Login</button></p>
         </>
       )}
     </AuthExperience>
@@ -309,8 +309,8 @@ export function ForgotPasswordPage({ onNavigate }: { onNavigate: (route: string)
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: FieldErrors = {};
-    if (!email.trim()) nextErrors["forgot-email"] = "Bạn chưa nhập địa chỉ email.";
-    else if (!emailPattern.test(email.trim())) nextErrors["forgot-email"] = "Địa chỉ email chưa đúng định dạng.";
+    if (!email.trim()) nextErrors["forgot-email"] = "Please enter your email address.";
+    else if (!emailPattern.test(email.trim())) nextErrors["forgot-email"] = "Please enter a valid email address.";
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
       focusFirstInvalid(nextErrors);
@@ -321,15 +321,15 @@ export function ForgotPasswordPage({ onNavigate }: { onNavigate: (route: string)
   };
 
   return (
-    <AuthExperience mode="recovery" eyebrow="KHÔI PHỤC TÀI KHOẢN" title="Quên mật khẩu?" description="Nhập email đã đăng ký, SoundWave sẽ gửi hướng dẫn đặt lại mật khẩu." onNavigate={onNavigate}>
+    <AuthExperience mode="recovery" eyebrow="ACCOUNT RECOVERY" title="Forgot Password?" description="Enter your registered email and SoundWave will send password-reset instructions." onNavigate={onNavigate}>
       {submitted ? (
-        <div className="auth-v2-success"><span><CheckIcon width={28} height={28} /></span><h2>Email đã được gửi</h2><p>Nếu <b>{email}</b> thuộc một tài khoản, bạn sẽ nhận được liên kết trong vài phút.</p><button className="button button-primary button-large" onClick={() => onNavigate("/login")}>Quay lại đăng nhập</button></div>
+        <div className="auth-v2-success"><span><CheckIcon width={28} height={28} /></span><h2>Email sent</h2><p>If <b>{email}</b> belongs to an account, you will receive a link within a few minutes.</p><button className="button button-primary button-large" onClick={() => onNavigate("/login")}>Back to Login</button></div>
       ) : (
         <form className="auth-v2-form" onSubmit={handleSubmit} noValidate>
-          {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Nhập email đã dùng để đăng ký tài khoản SoundWave." /> : null}
-          <TextField id="forgot-email" type="email" label="Email đã đăng ký" value={email} onChange={(value) => { setEmail(value); setErrors({}); }} placeholder="ban@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["forgot-email"]} />
-          <button className="button button-primary button-large auth-v2-submit">Gửi liên kết khôi phục</button>
-          <button type="button" className="auth-v2-back" onClick={() => onNavigate("/login")}>← Quay lại đăng nhập</button>
+          {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Enter the email used to register your SoundWave account." /> : null}
+          <TextField id="forgot-email" type="email" label="Email" value={email} onChange={(value) => { setEmail(value); setErrors({}); }} placeholder="you@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["forgot-email"]} />
+          <button className="button button-primary button-large auth-v2-submit">Send Reset Link</button>
+          <button type="button" className="auth-v2-back" onClick={() => onNavigate("/login")}>← Back to Login</button>
         </form>
       )}
     </AuthExperience>
@@ -345,10 +345,10 @@ export function ResetPasswordPage({ onNavigate }: { onNavigate: (route: string) 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: FieldErrors = {};
-    if (!newPassword) nextErrors["new-password"] = "Bạn chưa nhập mật khẩu mới.";
-    else if (newPassword.length < 8) nextErrors["new-password"] = "Mật khẩu mới cần có ít nhất 8 ký tự.";
-    if (!confirmPassword) nextErrors["confirm-password"] = "Bạn chưa xác nhận mật khẩu mới.";
-    else if (newPassword !== confirmPassword) nextErrors["confirm-password"] = "Mật khẩu xác nhận chưa trùng khớp.";
+    if (!newPassword) nextErrors["new-password"] = "Please enter a new password.";
+    else if (newPassword.length < 8) nextErrors["new-password"] = "New Password must contain at least 8 characters.";
+    if (!confirmPassword) nextErrors["confirm-password"] = "Please confirm your new password.";
+    else if (newPassword !== confirmPassword) nextErrors["confirm-password"] = "Confirm Password does not match.";
 
     if (Object.keys(nextErrors).length) {
       setErrors(nextErrors);
@@ -366,15 +366,15 @@ export function ResetPasswordPage({ onNavigate }: { onNavigate: (route: string) 
   };
 
   return (
-    <AuthExperience mode="recovery" eyebrow="BẢO MẬT TÀI KHOẢN" title="Tạo mật khẩu mới" description="Chọn mật khẩu khác với những mật khẩu bạn đã sử dụng trước đây." onNavigate={onNavigate}>
+    <AuthExperience mode="recovery" eyebrow="ACCOUNT SECURITY" title="Create a new password" description="Choose a password different from those you have used before." onNavigate={onNavigate}>
       {submitted ? (
-        <div className="auth-v2-success"><span><CheckIcon width={28} height={28} /></span><h2>Đã cập nhật mật khẩu</h2><p>Bạn có thể đăng nhập bằng mật khẩu mới ngay bây giờ.</p><button className="button button-primary button-large" onClick={() => onNavigate("/login")}>Đăng nhập ngay</button></div>
+        <div className="auth-v2-success"><span><CheckIcon width={28} height={28} /></span><h2>Password updated</h2><p>You can now log in with your new password.</p><button className="button button-primary button-large" onClick={() => onNavigate("/login")}>Login</button></div>
       ) : (
         <form className="auth-v2-form" onSubmit={handleSubmit} noValidate>
-          {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Vui lòng kiểm tra mật khẩu mới và phần xác nhận." /> : null}
-          <PasswordField id="new-password" label="Mật khẩu mới" value={newPassword} onChange={updateField("new-password", setNewPassword)} autoComplete="new-password" error={errors["new-password"]} />
-          <PasswordField id="confirm-password" label="Xác nhận mật khẩu" value={confirmPassword} onChange={updateField("confirm-password", setConfirmPassword)} autoComplete="new-password" error={errors["confirm-password"]} />
-          <button className="button button-primary button-large auth-v2-submit">Lưu mật khẩu mới</button>
+          {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Review the New Password and Confirm Password fields." /> : null}
+          <PasswordField id="new-password" label="New Password" value={newPassword} onChange={updateField("new-password", setNewPassword)} autoComplete="new-password" error={errors["new-password"]} />
+          <PasswordField id="confirm-password" label="Confirm Password" value={confirmPassword} onChange={updateField("confirm-password", setConfirmPassword)} autoComplete="new-password" error={errors["confirm-password"]} />
+          <button className="button button-primary button-large auth-v2-submit">Save Password</button>
         </form>
       )}
     </AuthExperience>

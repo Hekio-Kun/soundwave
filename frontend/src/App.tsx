@@ -4,6 +4,7 @@ import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
 import { MusicPlayer } from "./components/MusicPlayer";
 import { DashboardLayout } from "./layouts/DashboardLayout";
 import { MusicAppShell } from "./layouts/MusicAppShell";
+import { useMotionReveal } from "./hooks/useMotionReveal";
 import { AlbumDetailsPage } from "./pages/AlbumDetailsPage";
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from "./pages/AuthPages";
 import { CreatorProfilePage } from "./pages/CreatorProfilePage";
@@ -14,6 +15,7 @@ import { AdminDashboardPage, DashboardAccessDenied, StaffDashboardPage } from ".
 import { SearchPage } from "./pages/SearchPage";
 import { StudioPage } from "./pages/StudioPage";
 import { TrackDetailsPage } from "./pages/TrackDetailsPage";
+import { VerifyEmailPage, type EmailVerificationStatus } from "./pages/VerifyEmailPage";
 import type { CurrentUser, LandingTrack, Playlist, StudioTrack } from "./types";
 
 export default function App() {
@@ -144,14 +146,14 @@ export default function App() {
     const newPl: Playlist = {
       id: Date.now(),
       title,
-      description: description || "Danh sách phát tùy chỉnh",
+      description: description || "Custom playlist",
       coverUrl: "/pics/album.png",
       trackCount: 0,
       isPrivate: false,
       ownerId: user?.id ?? 1,
-      ownerName: user?.displayName || "Bạn",
-      creatorName: user?.displayName || "Bạn",
-      createdAt: "Vừa xong",
+      ownerName: user?.displayName || "You",
+      creatorName: user?.displayName || "You",
+      createdAt: "Just now",
       trackIds: [],
     };
     setPlaylists((prev) => [newPl, ...prev]);
@@ -179,7 +181,7 @@ export default function App() {
     const newTrack: StudioTrack = {
       ...newTrackData,
       id: Date.now(),
-      createdAt: "Hôm nay",
+      createdAt: "Today",
     };
     setStudioTracks((prev) => [newTrack, ...prev]);
   };
@@ -192,6 +194,8 @@ export default function App() {
 
   // 5. Routing State
   const [route, setRoute] = useState(() => window.location.hash || "#/");
+
+  useMotionReveal(route);
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -215,6 +219,7 @@ export default function App() {
   const isAuthRoute =
     pathname === "/login" ||
     pathname === "/register" ||
+    pathname === "/verify-email" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password";
   const isDashboardRoute = pathname.startsWith("/admin") || pathname.startsWith("/staff");
@@ -235,6 +240,20 @@ export default function App() {
     }
     if (pathname === "/register") {
       return <RegisterPage onNavigate={navigate} />;
+    }
+    if (pathname === "/verify-email") {
+      const statusParam = queryParams.get("status");
+      const status: EmailVerificationStatus =
+        statusParam === "verifying" || statusParam === "expired" || statusParam === "invalid"
+          ? statusParam
+          : "success";
+      return (
+        <VerifyEmailPage
+          email={queryParams.get("email") || "you@example.com"}
+          status={status}
+          onNavigate={navigate}
+        />
+      );
     }
     if (pathname === "/forgot-password") {
       return <ForgotPasswordPage onNavigate={navigate} />;
@@ -403,7 +422,9 @@ export default function App() {
   return (
     <div className={isMusicRoute ? "app-root app-root--has-player" : "app-root"}>
       {isAuthRoute ? (
-        renderContent()
+        <div key={route} className="app-route-stage app-route-stage--auth">
+          {renderContent()}
+        </div>
       ) : isDashboardRoute ? (
         <DashboardLayout
           activeRoute={pathname}
@@ -411,7 +432,9 @@ export default function App() {
           onNavigate={navigate}
           onLogout={handleLogout}
         >
-          {renderContent()}
+          <div key={route} className="app-route-stage app-route-stage--dashboard">
+            {renderContent()}
+          </div>
         </DashboardLayout>
       ) : (
         <MusicAppShell
@@ -431,7 +454,9 @@ export default function App() {
           onClearQueue={handleClearQueue}
           hasPlayer
         >
-          {renderContent()}
+          <div key={route} className="app-route-stage app-route-stage--music">
+            {renderContent()}
+          </div>
         </MusicAppShell>
       )}
 
@@ -466,11 +491,11 @@ export default function App() {
         <div className="modal-overlay" onClick={() => setIsNewPlaylistModalOpen(false)}>
           <div className="modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Tạo playlist mới</h2>
+              <h2>Create playlist</h2>
               <button
                 className="icon-button"
                 onClick={() => setIsNewPlaylistModalOpen(false)}
-                aria-label="Đóng"
+                aria-label="Close"
               >
                 ✕
               </button>
@@ -487,22 +512,22 @@ export default function App() {
               className="modal-form"
             >
               <div className="form-group">
-                <label htmlFor="playlist-title">Tên playlist</label>
+                <label htmlFor="playlist-title">Name</label>
                 <input
                   id="playlist-title"
                   type="text"
                   required
-                  placeholder="Ví dụ: Giai điệu thư giãn cuối tuần"
+                  placeholder="For example: Weekend relaxation"
                   value={newPlaylistTitle}
                   onChange={(e) => setNewPlaylistTitle(e.target.value)}
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="playlist-desc">Mô tả (tùy chọn)</label>
+                <label htmlFor="playlist-desc">Description (optional)</label>
                 <input
                   id="playlist-desc"
                   type="text"
-                  placeholder="Thêm mô tả cho danh sách phát của bạn"
+                  placeholder="Add a description for your playlist"
                   value={newPlaylistDesc}
                   onChange={(e) => setNewPlaylistDesc(e.target.value)}
                 />
@@ -513,10 +538,10 @@ export default function App() {
                   className="button button-ghost"
                   onClick={() => setIsNewPlaylistModalOpen(false)}
                 >
-                  Hủy
+                  Cancel
                 </button>
                 <button type="submit" className="button button-primary">
-                  Tạo danh sách
+                  Create playlist
                 </button>
               </div>
             </form>

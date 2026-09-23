@@ -2319,6 +2319,59 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
   background: #f8fafc;
 }
 
+.table-track-cell {
+  display: flex;
+  align-items: center;
+  min-width: 220px;
+  gap: 12px;
+}
+
+.table-track-cell > img {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.table-track-cell > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.table-track-cell b,
+.table-track-cell small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.table-track-cell b {
+  color: #101828;
+}
+
+.table-track-cell small {
+  color: #667085;
+}
+
+.genre-badge {
+  display: inline-flex;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #ecfeff;
+  color: #0e7490;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.table-action-btns {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* Status Badges */
 .status-badge {
   display: inline-flex;

@@ -175,28 +175,28 @@ Gọi nắng về thắp sáng ngày mai.`,
 ];
 
 export const genres: Genre[] = [
-  { id: 1, name: "Pop", slug: "pop", color: "#ecfeff", accent: "#0891b2", description: "Những giai điệu bắt tai, tươi sáng và thịnh hành." },
-  { id: 2, name: "Ballad", slug: "ballad", color: "#f5f3ff", accent: "#7c3aed", description: "Khúc tình ca êm dịu, sâu lắng và giàu cảm xúc." },
-  { id: 3, name: "Rap / Hip-hop", slug: "rap-hip-hop", color: "#fff7ed", accent: "#ea580c", description: "Nhịp beat sôi động, ca từ chân thực và phóng khoáng." },
-  { id: 4, name: "R&B", slug: "rnb", color: "#fdf2f8", accent: "#db2777", description: "Giai điệu uyển chuyển, trầm ấm và quyến rũ." },
-  { id: 5, name: "Acoustic", slug: "acoustic", color: "#f0fdf4", accent: "#16a34a", description: "Thanh âm mộc mạc từ guitar và piano mộc." },
-  { id: 6, name: "EDM", slug: "edm", color: "#eff6ff", accent: "#2563eb", description: "Năng lượng bùng nổ với âm nhạc điện tử hiện đại." },
-  { id: 7, name: "Indie", slug: "indie", color: "#fefce8", accent: "#ca8a04", description: "Những sáng tạo tự do, độc đáo của nghệ sĩ độc lập." },
-  { id: 8, name: "Lofi", slug: "lofi", color: "#f8fafc", accent: "#475569", description: "Âm hưởng thư giãn tuyệt đối cho học tập và làm việc." },
+  { id: 1, name: "Pop", slug: "pop", color: "#ecfeff", accent: "#0891b2", description: "Bright, catchy, and popular melodies." },
+  { id: 2, name: "Ballad", slug: "ballad", color: "#f5f3ff", accent: "#7c3aed", description: "Gentle, heartfelt songs rich in emotion." },
+  { id: 3, name: "Rap / Hip-hop", slug: "rap-hip-hop", color: "#fff7ed", accent: "#ea580c", description: "Energetic beats with honest, expressive lyrics." },
+  { id: 4, name: "R&B", slug: "rnb", color: "#fdf2f8", accent: "#db2777", description: "Smooth, warm, and soulful melodies." },
+  { id: 5, name: "Acoustic", slug: "acoustic", color: "#f0fdf4", accent: "#16a34a", description: "Natural sounds from acoustic guitar and piano." },
+  { id: 6, name: "EDM", slug: "edm", color: "#eff6ff", accent: "#2563eb", description: "High-energy modern electronic music." },
+  { id: 7, name: "Indie", slug: "indie", color: "#fefce8", accent: "#ca8a04", description: "Independent music with a free and distinctive spirit." },
+  { id: 8, name: "Lofi", slug: "lofi", color: "#f8fafc", accent: "#475569", description: "Relaxing sounds for studying and working." },
 ];
 
 export const albums: FeaturedAlbum[] = [
-  { id: 1, title: "Những Ngày Trong Veo", coverUrl: covers.dawn, creatorName: "Minh An", releaseYear: 2026, tracksCount: 2, description: "Tuyển tập acoustic nhẹ nhàng dành cho những sớm mai yên tĩnh." },
-  { id: 2, title: "Đi Qua Đêm", coverUrl: covers.night, creatorName: "Lâm Mộc", releaseYear: 2026, tracksCount: 2, description: "Hành trình âm thanh qua thành phố sau những cơn mưa đêm." },
-  { id: 3, title: "Chạm Vào Mây", coverUrl: covers.blue, creatorName: "Yên Chi", releaseYear: 2025, tracksCount: 1, description: "Giai điệu dream pop bay bổng giữa biển trời." },
-  { id: 4, title: "Gọi Nắng", coverUrl: covers.gold, creatorName: "Kai Vũ", releaseYear: 2026, tracksCount: 2, description: "Năng lượng mùa hè bùng cháy trong từng giai điệu." },
+  { id: 1, title: "Những Ngày Trong Veo", coverUrl: covers.dawn, creatorName: "Minh An", releaseYear: 2026, tracksCount: 2, description: "A gentle acoustic collection for quiet mornings." },
+  { id: 2, title: "Đi Qua Đêm", coverUrl: covers.night, creatorName: "Lâm Mộc", releaseYear: 2026, tracksCount: 2, description: "A sonic journey through the city after the night rain." },
+  { id: 3, title: "Chạm Vào Mây", coverUrl: covers.blue, creatorName: "Yên Chi", releaseYear: 2025, tracksCount: 1, description: "Dream-pop melodies drifting between sea and sky." },
+  { id: 4, title: "Gọi Nắng", coverUrl: covers.gold, creatorName: "Kai Vũ", releaseYear: 2026, tracksCount: 2, description: "Summer energy in every beat." },
 ];
 
 export const featuredCreators: FeaturedCreator[] = [
-  { ...creators.minh, avatarUrl: creators.minh.avatarUrl!, bio: "Những giai điệu acoustic dành cho ngày chậm rãi.", publishedTracks: 12, followersCount: 4320 },
-  { ...creators.lam, avatarUrl: creators.lam.avatarUrl!, bio: "Kể chuyện thành phố bằng alternative pop.", publishedTracks: 9, followersCount: 3180 },
-  { ...creators.yen, avatarUrl: creators.yen.avatarUrl!, bio: "Dream pop, biển xanh và những khoảng trời xa.", publishedTracks: 7, followersCount: 2950 },
-  { ...creators.kai, avatarUrl: creators.kai.avatarUrl!, bio: "Năng lượng mùa hè trong từng nhịp beat.", publishedTracks: 11, followersCount: 5120 },
+  { ...creators.minh, avatarUrl: creators.minh.avatarUrl!, bio: "Acoustic melodies for slow, peaceful days.", publishedTracks: 12, followersCount: 4320 },
+  { ...creators.lam, avatarUrl: creators.lam.avatarUrl!, bio: "Telling city stories through alternative pop.", publishedTracks: 9, followersCount: 3180 },
+  { ...creators.yen, avatarUrl: creators.yen.avatarUrl!, bio: "Dream pop, blue seas, and distant skies.", publishedTracks: 7, followersCount: 2950 },
+  { ...creators.kai, avatarUrl: creators.kai.avatarUrl!, bio: "Summer energy in every beat.", publishedTracks: 11, followersCount: 5120 },
 ];
 
 export const heroCovers = [covers.dawn, covers.city, covers.blue];
@@ -205,7 +205,7 @@ export const demoPlaylists: import("./types").Playlist[] = [
   {
     id: 1,
     title: "Giai điệu sớm mai",
-    description: "Khởi đầu ngày mới với nguồn năng lượng tích cực.",
+    description: "Start the day with positive energy.",
     coverUrl: covers.dawn,
     trackCount: 3,
     isPrivate: false,
@@ -216,7 +216,7 @@ export const demoPlaylists: import("./types").Playlist[] = [
   {
     id: 2,
     title: "Đêm muộn suy tư",
-    description: "Nhạc nhẹ ru giấc ngủ và những khoảng lặng tâm hồn.",
+    description: "Gentle music for sleep and quiet reflection.",
     coverUrl: covers.night,
     trackCount: 3,
     isPrivate: true,
@@ -260,7 +260,7 @@ export const initialStudioTracks: import("./types").StudioTrack[] = [
     genreSlug: "edm",
     genreName: "EDM",
     status: "REJECTED",
-    latestRejectionReason: "Âm thanh ở đoạn drop bị rè âm lượng vượt ngưỡng chuẩn. Vui lòng kiểm tra lại mastering trước khi gửi lại.",
+    latestRejectionReason: "The drop section is distorted and exceeds the accepted volume level. Check the mastering before resubmitting.",
     createdAt: "2026-09-15",
   },
 ];
@@ -271,6 +271,5 @@ export const demoUser: import("./types").CurrentUser = {
   displayName: "Lê An",
   avatarUrl: avatar("#cffafe", "#0891b2", "LA"),
   role: "USER",
-  bio: "Yêu thích sáng tác những giai điệu lofi và pop mộc.",
+  bio: "Creating mellow lofi and acoustic pop melodies.",
 };
-

@@ -51,7 +51,7 @@ const initialSubmissions: ReviewSubmission[] = [
     artist: "Yên Chi",
     coverUrl: tracks[6].coverUrl,
     genre: "R&B",
-    submittedAt: "08:42 hôm nay",
+    submittedAt: "08:42 today",
     ageMinutes: 138,
     priority: "HIGH",
     status: "PENDING",
@@ -62,7 +62,7 @@ const initialSubmissions: ReviewSubmission[] = [
     artist: "Kai Vũ",
     coverUrl: tracks[7].coverUrl,
     genre: "Rap / Hip-hop",
-    submittedAt: "09:15 hôm nay",
+    submittedAt: "09:15 today",
     ageMinutes: 105,
     priority: "NORMAL",
     status: "REVIEWING",
@@ -73,7 +73,7 @@ const initialSubmissions: ReviewSubmission[] = [
     artist: "Minh An",
     coverUrl: tracks[5].coverUrl,
     genre: "Acoustic",
-    submittedAt: "09:48 hôm nay",
+    submittedAt: "09:48 today",
     ageMinutes: 72,
     priority: "NORMAL",
     status: "PENDING",
@@ -84,7 +84,7 @@ const initialSubmissions: ReviewSubmission[] = [
     artist: "Lâm Mộc",
     coverUrl: tracks[4].coverUrl,
     genre: "Ballad",
-    submittedAt: "10:12 hôm nay",
+    submittedAt: "10:12 today",
     ageMinutes: 48,
     priority: "NORMAL",
     status: "PENDING",
@@ -157,65 +157,65 @@ export function AdminDashboardPage({ onNavigate }: DashboardProps) {
   return (
     <div className="ops-dashboard ops-dashboard--admin">
       <DashboardHeading
-        eyebrow="KHÔNG GIAN QUẢN TRỊ"
-        title="Tổng quan SoundWave"
-        description="Theo dõi sức khỏe nền tảng, người dùng và chất lượng nội dung trong một màn hình."
+        eyebrow="ADMINISTRATION"
+        title="System Statistics Dashboard"
+        description="Monitor platform health, users, and content quality in one place."
         icon={<ShieldIcon width={15} height={15} />}
       >
-        <span className="ops-live-status"><i /> Hệ thống ổn định</span>
+        <span className="ops-live-status"><i /> System stable</span>
         <label className="ops-range-select">
-          <span>Khoảng thời gian</span>
-          <select value={range} onChange={(event) => setRange(event.target.value)} aria-label="Khoảng thời gian thống kê">
-            <option value="7d">7 ngày qua</option>
-            <option value="30d">30 ngày qua</option>
-            <option value="90d">90 ngày qua</option>
+          <span>Date range</span>
+          <select value={range} onChange={(event) => setRange(event.target.value)} aria-label="Date range">
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 90 days</option>
           </select>
         </label>
       </DashboardHeading>
 
-      <section className="ops-metric-grid" aria-label="Chỉ số hệ thống">
-        <DashboardMetric icon={<UsersIcon />} label="Tổng người dùng" value="12.480" change="8,2%" note="+946 trong kỳ này" />
-        <DashboardMetric icon={<DiscIcon />} label="Bài hát công khai" value="8.942" change="5,6%" note="312 bài mới được duyệt" tone="violet" />
-        <DashboardMetric icon={<ActivityIcon />} label="Lượt nghe hôm nay" value="284K" change="12,4%" note="Đỉnh lúc 21:00" tone="green" />
-        <DashboardMetric icon={<FlagIcon />} label="Báo cáo đang mở" value="27" change="3 mới" note="5 báo cáo cần ưu tiên" tone="amber" />
+      <section className="ops-metric-grid" aria-label="System statistics">
+        <DashboardMetric icon={<UsersIcon />} label="Total users" value="12,480" change="8.2%" note="+946 in this period" />
+        <DashboardMetric icon={<DiscIcon />} label="Published tracks" value="8,942" change="5.6%" note="312 newly approved tracks" tone="violet" />
+        <DashboardMetric icon={<ActivityIcon />} label="Total plays" value="284K" change="12.4%" note="Today's peak was at 21:00" tone="green" />
+        <DashboardMetric icon={<FlagIcon />} label="Pending reports" value="27" change="3 new" note="5 reports need priority review" tone="amber" />
       </section>
 
       <section className="ops-dashboard-grid ops-dashboard-grid--hero">
         <article className="ops-panel ops-panel--chart">
           <PanelHeading
-            title="Tăng trưởng người dùng"
-            description={range === "7d" ? "Người dùng mới trong 7 ngày gần nhất" : `Xu hướng trong ${range === "30d" ? "30" : "90"} ngày gần nhất`}
-            action={<span className="ops-panel-total"><b>+1.248</b> tài khoản mới</span>}
+            title="User growth"
+            description={range === "7d" ? "New users in the last 7 days" : `Trend over the last ${range === "30d" ? "30" : "90"} days`}
+            action={<span className="ops-panel-total"><b>+1,248</b> new accounts</span>}
           />
-          <div className="ops-growth-chart" aria-label="Biểu đồ tăng trưởng người dùng">
+          <div className="ops-growth-chart" aria-label="User growth chart">
             <div className="ops-chart-scale"><span>300</span><span>200</span><span>100</span><span>0</span></div>
             <div className="ops-bars">
               {growthBars.map((height, index) => (
                 <div className="ops-bar-column" key={`${height}-${index}`}>
                   <div className="ops-bar-track"><i style={{ height: `${height}%` }} /></div>
-                  <span>{["T2", "T3", "T4", "T5", "T6", "T7", "CN"][index]}</span>
+                  <span>{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]}</span>
                 </div>
               ))}
             </div>
           </div>
           <div className="ops-chart-summary">
-            <span><i className="is-primary" />Người nghe <b>78%</b></span>
-            <span><i className="is-accent" />Nhà sáng tạo <b>22%</b></span>
-            <span className="ops-chart-insight"><TrendingUpIcon width={14} height={14} /> Cao hơn 14% so với tuần trước</span>
+            <span><i className="is-primary" />Listeners <b>78%</b></span>
+            <span><i className="is-accent" />Creators <b>22%</b></span>
+            <span className="ops-chart-insight"><TrendingUpIcon width={14} height={14} /> 14% higher than last week</span>
           </div>
         </article>
 
         <aside className="ops-panel ops-health-panel">
-          <PanelHeading title="Sức khỏe hệ thống" description="Cập nhật vài giây trước" />
+          <PanelHeading title="System health" description="Updated a few seconds ago" />
           <div className="ops-health-score">
-            <div className="ops-score-ring"><span><b>99,98%</b><small>uptime</small></span></div>
-            <p>Mọi dịch vụ đang vận hành bình thường.</p>
+            <div className="ops-score-ring"><span><b>99.98%</b><small>uptime</small></span></div>
+            <p>All services are operating normally.</p>
           </div>
           <div className="ops-health-list">
             <div><span><i className="is-ok" />REST API</span><b>84 ms</b></div>
             <div><span><i className="is-ok" />SQL Server</span><b>31 ms</b></div>
             <div><span><i className="is-ok" />Cloudinary</span><b>126 ms</b></div>
-            <div><span><i className="is-ok" />Email Service</span><b>Hoạt động</b></div>
+            <div><span><i className="is-ok" />Email Service</span><b>Operational</b></div>
           </div>
         </aside>
       </section>
@@ -223,24 +223,24 @@ export function AdminDashboardPage({ onNavigate }: DashboardProps) {
       <section className="ops-dashboard-grid ops-dashboard-grid--lower">
         <article className="ops-panel ops-recent-users">
           <PanelHeading
-            title="Tài khoản mới gần đây"
-            description="Các tài khoản vừa hoàn tất xác thực"
-            action={<button className="ops-text-button" onClick={() => onNavigate("/admin/dashboard")}>Xem tất cả <span>→</span></button>}
+            title="Recent accounts"
+            description="Accounts that recently completed verification"
+            action={<button className="ops-text-button" onClick={() => onNavigate("/admin/dashboard")}>View all <span>→</span></button>}
           />
           <div className="ops-table-wrap">
             <table className="ops-table">
-              <thead><tr><th>Người dùng</th><th>Vai trò</th><th>Trạng thái</th><th>Tham gia</th></tr></thead>
+              <thead><tr><th>User</th><th>Role</th><th>Status</th><th>Joined</th></tr></thead>
               <tbody>
                 {[
-                  ["Nguyễn Hải", "hai.nguyen@example.com", "Người nghe", "Đã xác thực", "5 phút trước", "NH"],
-                  ["Mộc Miên", "mocmien.music@example.com", "Nhà sáng tạo", "Đã xác thực", "24 phút trước", "MM"],
-                  ["Trần Khải", "khai.tran@example.com", "Người nghe", "Chờ xác thực", "1 giờ trước", "TK"],
-                  ["An Nhiên", "annhien@example.com", "Nhà sáng tạo", "Đã xác thực", "2 giờ trước", "AN"],
+                  ["Nguyễn Hải", "hai.nguyen@example.com", "Listener", "Verified", "5 minutes ago", "NH"],
+                  ["Mộc Miên", "mocmien.music@example.com", "Creator", "Verified", "24 minutes ago", "MM"],
+                  ["Trần Khải", "khai.tran@example.com", "Listener", "Pending verification", "1 hour ago", "TK"],
+                  ["An Nhiên", "annhien@example.com", "Creator", "Verified", "2 hours ago", "AN"],
                 ].map(([name, email, role, status, time, initials]) => (
                   <tr key={email}>
                     <td><div className="ops-user-cell"><span>{initials}</span><div><b>{name}</b><small>{email}</small></div></div></td>
                     <td><span className="ops-role-chip">{role}</span></td>
-                    <td><span className={`ops-status ${status === "Đã xác thực" ? "is-success" : "is-warning"}`}><i />{status}</span></td>
+                    <td><span className={`ops-status ${status === "Verified" ? "is-success" : "is-warning"}`}><i />{status}</span></td>
                     <td>{time}</td>
                   </tr>
                 ))}
@@ -250,12 +250,12 @@ export function AdminDashboardPage({ onNavigate }: DashboardProps) {
         </article>
 
         <aside className="ops-panel ops-activity-feed">
-          <PanelHeading title="Hoạt động quản trị" description="Các thay đổi quan trọng gần đây" />
+          <PanelHeading title="Administration activity" description="Recent important changes" />
           <div className="ops-timeline">
-            <div><span className="is-cyan"><UserIcon width={14} height={14} /></span><p><b>Admin Lê An</b> đã cấp vai trò Staff cho Thu Hà.<small>12 phút trước</small></p></div>
-            <div><span className="is-violet"><DiscIcon width={14} height={14} /></span><p><b>Thể loại “City Pop”</b> vừa được tạo mới.<small>46 phút trước</small></p></div>
-            <div><span className="is-amber"><FlagIcon width={14} height={14} /></span><p><b>5 báo cáo</b> đã được chuyển sang mức ưu tiên.<small>1 giờ trước</small></p></div>
-            <div><span className="is-green"><CheckIcon width={14} height={14} /></span><p>Hoàn tất tác vụ sao lưu dữ liệu hàng ngày.<small>3 giờ trước</small></p></div>
+            <div><span className="is-cyan"><UserIcon width={14} height={14} /></span><p><b>Admin Lê An</b> assigned the Staff role to Thu Hà.<small>12 minutes ago</small></p></div>
+            <div><span className="is-violet"><DiscIcon width={14} height={14} /></span><p><b>Genre “City Pop”</b> was created.<small>46 minutes ago</small></p></div>
+            <div><span className="is-amber"><FlagIcon width={14} height={14} /></span><p><b>5 reports</b> were marked as priority.<small>1 hour ago</small></p></div>
+            <div><span className="is-green"><CheckIcon width={14} height={14} /></span><p>Daily data backup completed.<small>3 hours ago</small></p></div>
           </div>
         </aside>
       </section>
@@ -289,47 +289,47 @@ export function StaffDashboardPage({ onNavigate }: DashboardProps) {
 
   const updateSubmission = (submission: ReviewSubmission, status: ReviewStatus) => {
     setSubmissions((current) => current.map((item) => item.id === submission.id ? { ...item, status } : item));
-    notify(status === "APPROVED" ? `Đã duyệt “${submission.title}”.` : `Đã từ chối “${submission.title}”.`);
+    notify(status === "APPROVED" ? `Approved “${submission.title}”.` : `Rejected “${submission.title}”.`);
   };
 
   const reports = [
-    { id: 701, category: "Bản quyền", title: "Thành Phố Sau Mưa", reporter: "Ngọc Anh", age: "18 phút", priority: "Cao" },
-    { id: 702, category: "Nội dung không phù hợp", title: "Đêm Trôi Rất Khẽ", reporter: "Minh Tú", age: "52 phút", priority: "Bình thường" },
-    { id: 703, category: "Sai thông tin", title: "Gọi Nắng Về", reporter: "Thu Trang", age: "1 giờ", priority: "Bình thường" },
+    { id: 701, category: "Copyright", title: "Thành Phố Sau Mưa", reporter: "Ngọc Anh", age: "18 minutes", priority: "High" },
+    { id: 702, category: "Inappropriate content", title: "Đêm Trôi Rất Khẽ", reporter: "Minh Tú", age: "52 minutes", priority: "Normal" },
+    { id: 703, category: "Incorrect information", title: "Gọi Nắng Về", reporter: "Thu Trang", age: "1 hour", priority: "Normal" },
   ].filter((report) => !resolvedReports.includes(report.id));
 
   return (
     <div className="ops-dashboard ops-dashboard--staff">
       <DashboardHeading
-        eyebrow="TRUNG TÂM KIỂM DUYỆT"
-        title="Chào buổi sáng, Staff"
-        description="Ưu tiên nội dung chờ lâu, xử lý báo cáo chính xác và giữ trải nghiệm SoundWave an toàn."
+        eyebrow="CONTENT MODERATION"
+        title="Good morning, Staff"
+        description="Prioritize older submissions, assess reports accurately, and keep SoundWave safe."
         icon={<DashboardIcon width={15} height={15} />}
       >
-        <span className="ops-shift-chip"><ClockIcon width={15} height={15} /> Ca sáng · 08:00–16:00</span>
+        <span className="ops-shift-chip"><ClockIcon width={15} height={15} /> Morning shift · 08:00–16:00</span>
         <button className="button button-primary button-small" onClick={() => document.getElementById("review-queue")?.scrollIntoView({ behavior: "smooth" })}>
-          Bắt đầu kiểm duyệt
+          Start review
         </button>
       </DashboardHeading>
 
-      <section className="ops-metric-grid" aria-label="Chỉ số kiểm duyệt">
-        <DashboardMetric icon={<ClockIcon />} label="Bài hát chờ duyệt" value={String(pendingSubmissions.length + 14)} change="4 mới" note="Cũ nhất đã chờ 2 giờ 18 phút" tone="amber" />
-        <DashboardMetric icon={<CheckIcon />} label="Đã duyệt hôm nay" value="24" change="16,7%" note="Trung bình 6 phút / hồ sơ" tone="green" />
-        <DashboardMetric icon={<FlagIcon />} label="Báo cáo đang mở" value={String(reports.length + 9)} change="3 ưu tiên" note="Mục tiêu xử lý dưới 4 giờ" tone="red" />
-        <DashboardMetric icon={<ChartIcon />} label="Đúng SLA tuần này" value="92%" change="3,4%" note="Mục tiêu của nhóm là 90%" tone="violet" />
+      <section className="ops-metric-grid" aria-label="Moderation statistics">
+        <DashboardMetric icon={<ClockIcon />} label="Pending reviews" value={String(pendingSubmissions.length + 14)} change="4 new" note="Oldest waiting time: 2 hours 18 minutes" tone="amber" />
+        <DashboardMetric icon={<CheckIcon />} label="Approved today" value="24" change="16.7%" note="Average: 6 minutes per submission" tone="green" />
+        <DashboardMetric icon={<FlagIcon />} label="Pending reports" value={String(reports.length + 9)} change="3 priority" note="Resolution target: under 4 hours" tone="red" />
+        <DashboardMetric icon={<ChartIcon />} label="Weekly SLA" value="92%" change="3.4%" note="Team target: 90%" tone="violet" />
       </section>
 
       <section className="ops-dashboard-grid ops-dashboard-grid--staff-main">
         <article className="ops-panel ops-review-panel" id="review-queue">
           <PanelHeading
-            title="Hàng chờ kiểm duyệt"
-            description="Được sắp xếp theo mức ưu tiên và thời gian chờ"
-            action={<span className="ops-queue-count">{pendingSubmissions.length} hồ sơ đang chờ</span>}
+            title="Pending Track List"
+            description="Sorted by priority and waiting time"
+            action={<span className="ops-queue-count">{pendingSubmissions.length} pending submissions</span>}
           />
-          <div className="ops-filter-row" role="group" aria-label="Lọc hàng chờ">
-            <button className={filter === "ALL" ? "is-active" : ""} onClick={() => setFilter("ALL")}>Tất cả</button>
-            <button className={filter === "HIGH" ? "is-active" : ""} onClick={() => setFilter("HIGH")}>Ưu tiên cao</button>
-            <button className={filter === "REVIEWING" ? "is-active" : ""} onClick={() => setFilter("REVIEWING")}>Đang xem</button>
+          <div className="ops-filter-row" role="group" aria-label="Filter submissions">
+            <button className={filter === "ALL" ? "is-active" : ""} onClick={() => setFilter("ALL")}>All</button>
+            <button className={filter === "HIGH" ? "is-active" : ""} onClick={() => setFilter("HIGH")}>High priority</button>
+            <button className={filter === "REVIEWING" ? "is-active" : ""} onClick={() => setFilter("REVIEWING")}>Reviewing</button>
           </div>
           <div className="ops-review-list">
             {visibleSubmissions.length ? visibleSubmissions.map((submission) => (
@@ -338,69 +338,69 @@ export function StaffDashboardPage({ onNavigate }: DashboardProps) {
                 <div className="ops-review-copy">
                   <div className="ops-review-title-line">
                     <strong>{submission.title}</strong>
-                    {submission.priority === "HIGH" ? <span className="ops-priority-tag"><AlertIcon width={12} height={12} />Ưu tiên</span> : null}
+                    {submission.priority === "HIGH" ? <span className="ops-priority-tag"><AlertIcon width={12} height={12} />Priority</span> : null}
                   </div>
                   <p>{submission.artist} <i /> {submission.genre}</p>
-                  <small><ClockIcon width={12} height={12} /> Nộp lúc {submission.submittedAt} · chờ {submission.ageMinutes} phút</small>
+                  <small><ClockIcon width={12} height={12} /> Submitted at {submission.submittedAt} · waiting {submission.ageMinutes} minutes</small>
                 </div>
                 <div className="ops-review-state">
-                  <span className={`ops-status ${submission.status === "REVIEWING" ? "is-info" : "is-warning"}`}><i />{submission.status === "REVIEWING" ? "Đang xem" : "Chờ duyệt"}</span>
+                  <span className={`ops-status ${submission.status === "REVIEWING" ? "is-info" : "is-warning"}`}><i />{submission.status === "REVIEWING" ? "Reviewing" : "Pending"}</span>
                 </div>
                 <div className="ops-review-actions">
-                  <button className="ops-icon-action" aria-label={`Xem chi tiết ${submission.title}`} onClick={() => onNavigate(`/track/${Math.min(submission.id - 400, 8)}`)}><EyeIcon width={17} height={17} /></button>
-                  <button className="ops-decision ops-decision--approve" onClick={() => updateSubmission(submission, "APPROVED")}><CheckIcon width={15} height={15} />Duyệt</button>
-                  <button className="ops-decision ops-decision--reject" onClick={() => { setRejectionTarget(submission); setRejectionReason(""); }}><CloseIcon width={15} height={15} />Từ chối</button>
+                  <button className="ops-icon-action" aria-label={`Open review for ${submission.title}`} onClick={() => onNavigate(`/track/${Math.min(submission.id - 400, 8)}`)}><EyeIcon width={17} height={17} /></button>
+                  <button className="ops-decision ops-decision--approve" onClick={() => updateSubmission(submission, "APPROVED")}><CheckIcon width={15} height={15} />Approve</button>
+                  <button className="ops-decision ops-decision--reject" onClick={() => { setRejectionTarget(submission); setRejectionReason(""); }}><CloseIcon width={15} height={15} />Reject</button>
                 </div>
               </article>
-            )) : <div className="ops-empty-state"><CheckIcon width={28} height={28} /><b>Không có hồ sơ phù hợp</b><span>Hãy thử chọn bộ lọc khác.</span></div>}
+            )) : <div className="ops-empty-state"><CheckIcon width={28} height={28} /><b>No matching submissions</b><span>Try another filter.</span></div>}
           </div>
         </article>
 
         <aside className="ops-panel ops-shift-panel">
-          <PanelHeading title="Tiến độ ca làm" description="Cập nhật theo hoạt động của bạn" />
-          <div className="ops-shift-ring"><span><b>24</b><small>/ 30 mục tiêu</small></span></div>
+          <PanelHeading title="Shift progress" description="Updated from your activity" />
+          <div className="ops-shift-ring"><span><b>24</b><small>/ 30 target</small></span></div>
           <div className="ops-shift-progress"><i style={{ width: "80%" }} /></div>
           <div className="ops-shift-stats">
-            <div><span>Đã duyệt</span><b>19</b></div>
-            <div><span>Đã từ chối</span><b>5</b></div>
-            <div><span>Thời gian TB</span><b>6 phút</b></div>
+            <div><span>Approved</span><b>19</b></div>
+            <div><span>Rejected</span><b>5</b></div>
+            <div><span>Average time</span><b>6 minutes</b></div>
           </div>
-          <div className="ops-guideline-note"><ShieldIcon width={18} height={18} /><p><b>Nhắc nhanh</b><span>Kiểm tra chất lượng âm thanh, metadata và quyền sử dụng trước khi đưa ra quyết định.</span></p></div>
+          <div className="ops-guideline-note"><ShieldIcon width={18} height={18} /><p><b>Quick reminder</b><span>Check audio quality, metadata, and usage rights before making a decision.</span></p></div>
         </aside>
       </section>
 
       <section className="ops-dashboard-grid ops-dashboard-grid--lower">
         <article className="ops-panel ops-report-panel">
-          <PanelHeading title="Báo cáo nội dung cần xử lý" description="Ưu tiên theo mức độ ảnh hưởng đến cộng đồng" action={<button className="ops-text-button">Mở trung tâm báo cáo <span>→</span></button>} />
+          <PanelHeading title="Content Report List" description="Prioritized by community impact" action={<button className="ops-text-button">Open report center <span>→</span></button>} />
           <div className="ops-report-list">
             {reports.map((report) => (
               <div className="ops-report-row" key={report.id}>
-                <span className={report.priority === "Cao" ? "is-high" : ""}><FlagIcon width={17} height={17} /></span>
-                <div><strong>{report.category}</strong><p>{report.title} · Báo cáo bởi {report.reporter}</p></div>
+                <span className={report.priority === "High" ? "is-high" : ""}><FlagIcon width={17} height={17} /></span>
+                <div><strong>{report.category}</strong><p>{report.title} · Reported by {report.reporter}</p></div>
                 <small>{report.age}</small>
-                <button onClick={() => { setResolvedReports((current) => [...current, report.id]); notify(`Đã đánh dấu báo cáo #${report.id} hoàn tất.`); }}>Xử lý</button>
+                <button onClick={() => { setResolvedReports((current) => [...current, report.id]); notify(`Report #${report.id} was marked complete.`); }}>Resolve</button>
               </div>
             ))}
-            {!reports.length ? <div className="ops-empty-inline"><CheckIcon width={17} height={17} /> Đã xử lý hết báo cáo trong danh sách.</div> : null}
+            {!reports.length ? <div className="ops-empty-inline"><CheckIcon width={17} height={17} /> All reports in this list are resolved.</div> : null}
           </div>
         </article>
 
         <aside className="ops-panel ops-weekly-panel">
-          <PanelHeading title="Hiệu suất 7 ngày" description="Số nội dung đã xử lý" />
+          <PanelHeading title="7-day performance" description="Resolved content" />
           <div className="ops-mini-chart">
-            {[48, 66, 54, 83, 72, 91, 80].map((height, index) => <div key={index}><i style={{ height: `${height}%` }} /><span>{["T2", "T3", "T4", "T5", "T6", "T7", "CN"][index]}</span></div>)}
+            {[48, 66, 54, 83, 72, 91, 80].map((height, index) => <div key={index}><i style={{ height: `${height}%` }} /><span>{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]}</span></div>)}
           </div>
-          <div className="ops-weekly-total"><span>Tổng tuần này</span><b>164 nội dung</b><small><TrendingUpIcon width={13} height={13} /> 11% so với tuần trước</small></div>
+          <div className="ops-weekly-total"><span>This week</span><b>164 items</b><small><TrendingUpIcon width={13} height={13} /> 11% higher than last week</small></div>
         </aside>
       </section>
 
       {rejectionTarget ? (
         <div className="modal-overlay" role="presentation" onClick={() => setRejectionTarget(null)}>
           <div className="modal-card ops-reject-dialog" role="dialog" aria-modal="true" aria-labelledby="reject-title" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header"><div><span className="ops-dialog-icon"><AlertIcon /></span><h2 id="reject-title">Từ chối bài hát</h2></div><button className="icon-button" onClick={() => setRejectionTarget(null)} aria-label="Đóng"><CloseIcon width={18} height={18} /></button></div>
-            <p>Bạn đang từ chối <b>“{rejectionTarget.title}”</b> của {rejectionTarget.artist}. Lý do sẽ được gửi đến người đăng tải.</p>
-            <label className="ops-reason-field"><span>Lý do từ chối</span><textarea autoFocus value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} placeholder="Mô tả ngắn gọn vấn đề cần chỉnh sửa..." /></label>
-            <div className="modal-actions"><button className="button button-ghost" onClick={() => setRejectionTarget(null)}>Hủy</button><button className="button ops-danger-button" disabled={rejectionReason.trim().length < 10} onClick={() => { updateSubmission(rejectionTarget, "REJECTED"); setRejectionTarget(null); }}>Xác nhận từ chối</button></div>
+            <div className="modal-header"><div><span className="ops-dialog-icon"><AlertIcon /></span><h2 id="reject-title">Reject Track</h2></div><button className="icon-button" onClick={() => setRejectionTarget(null)} aria-label="Close"><CloseIcon width={18} height={18} /></button></div>
+            <p>You are rejecting <b>“{rejectionTarget.title}”</b> by {rejectionTarget.artist}. The Rejection reason will be sent to the uploader.</p>
+            <label className="ops-reason-field"><span>Rejection reason</span><textarea autoFocus value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} placeholder="Briefly describe what needs to be corrected..." /></label>
+            <div className="modal-actions"><button className="button button-ghost" onClick={() => setRejectionTarget(null)}>Cancel</button><button className="button ops-danger-button" disabled={rejectionReason.trim().length < 10} onClick={() => { updateSubmission(rejectionTarget, "REJECTED"); setRejectionTarget(null); }}>Confirm</button></div>
           </div>
         </div>
       ) : null}
@@ -414,10 +414,10 @@ export function DashboardAccessDenied({ onNavigate }: DashboardProps) {
   return (
     <div className="ops-access-denied">
       <span><ShieldIcon width={32} height={32} /></span>
-      <small>403 · KHU VỰC GIỚI HẠN</small>
-      <h1>Bạn không có quyền truy cập</h1>
-      <p>Dashboard này chỉ dành cho tài khoản được phân quyền phù hợp. Hãy đăng nhập bằng tài khoản Staff hoặc Admin.</p>
-      <div><button className="button button-primary" onClick={() => onNavigate("/login")}>Đăng nhập tài khoản khác</button><button className="button button-secondary" onClick={() => onNavigate("/")}>Về trang khám phá</button></div>
+      <small>403 · RESTRICTED AREA</small>
+      <h1>Access denied</h1>
+      <p>This dashboard is available only to accounts with the required role. Log in with a Staff or Admin account.</p>
+      <div><button className="button button-primary" onClick={() => onNavigate("/login")}>Login with another account</button><button className="button button-secondary" onClick={() => onNavigate("/")}>Back to Explore</button></div>
     </div>
   );
 }

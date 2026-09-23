@@ -12,7 +12,7 @@ type Props = {
 };
 
 const formatPlays = (value: number) =>
-  new Intl.NumberFormat("vi-VN", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+  new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 
 const formatDuration = (ms: number) => {
   const min = Math.floor(ms / 60000);
@@ -33,13 +33,13 @@ export function CreatorProfilePage({ creatorId, currentTrack, playing, onPlayTra
       <section className="creator-banner-header">
         <img src={creator.avatarUrl} alt="" className="creator-large-avatar" />
         <div className="creator-header-meta">
-          <span className="eyebrow">HỒ SƠ TÁC GIẢ / CREATOR</span>
+          <span className="eyebrow">CREATOR PROFILE</span>
           <h1 className="creator-profile-name">{creator.displayName}</h1>
           <p className="creator-profile-bio">{creator.bio}</p>
           <div className="creator-stats-row">
-            <span><b>{creatorTracks.length}</b> bài hát đã phát hành</span>
+            <span><b>{creatorTracks.length}</b> published tracks</span>
             <span className="meta-dot">·</span>
-            <span><b>{creator.followersCount?.toLocaleString() ?? "1,200"}</b> người theo dõi</span>
+            <span><b>{creator.followersCount?.toLocaleString() ?? "1,200"}</b> followers</span>
           </div>
         </div>
       </section>
@@ -50,7 +50,7 @@ export function CreatorProfilePage({ creatorId, currentTrack, playing, onPlayTra
           className={`creator-tab ${activeTab === "tracks" ? "creator-tab--active" : ""}`}
           onClick={() => setActiveTab("tracks")}
         >
-          Bài hát ({creatorTracks.length})
+          Tracks ({creatorTracks.length})
         </button>
         <button
           className={`creator-tab ${activeTab === "albums" ? "creator-tab--active" : ""}`}
@@ -76,7 +76,7 @@ export function CreatorProfilePage({ creatorId, currentTrack, playing, onPlayTra
 
                 <div className="row-thumbnail" onClick={() => onPlayTrack(track)}>
                   <img src={track.coverUrl ?? undefined} alt="" />
-                  <button className="row-hover-play" aria-label={`Phát ${track.title}`}>
+                  <button className="row-hover-play" aria-label={`Play ${track.title}`}>
                     {isPlayingThis ? <PauseIcon width={14} height={14} /> : <PlayIcon width={14} height={14} />}
                   </button>
                 </div>
@@ -92,7 +92,7 @@ export function CreatorProfilePage({ creatorId, currentTrack, playing, onPlayTra
                   >
                     {track.title}
                   </a>
-                  <span className="row-album-name">{track.album?.title ?? "Đĩa đơn"}</span>
+                  <span className="row-album-name">{track.album?.title ?? "Single"}</span>
                 </div>
 
                 <span className="row-plays">

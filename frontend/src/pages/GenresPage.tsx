@@ -10,9 +10,9 @@ export function GenresPage({ onNavigate }: Props) {
     <div className="genres-page">
       <div className="page-title-banner">
         <div>
-          <span className="eyebrow">DANH MỤC THỂ LOẠI</span>
-          <h1 className="page-heading">Khám phá theo phong cách âm nhạc</h1>
-          <p className="page-subtext">Chọn thể loại để thưởng thức những giai điệu phù hợp với tâm trạng của bạn.</p>
+          <span className="eyebrow">GENRES</span>
+          <h1 className="page-heading">Explore by genre</h1>
+          <p className="page-subtext">Choose a genre to discover music that matches your mood.</p>
         </div>
       </div>
 

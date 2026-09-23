@@ -42,9 +42,9 @@ export function LibraryPage({
     <div className="library-page">
       <div className="page-title-banner">
         <div>
-          <span className="eyebrow">BỘ SƯU TẬP CÁ NHÂN</span>
-          <h1 className="page-heading">Thư viện của bạn</h1>
-          <p className="page-subtext">Quản lý những bài hát yêu thích và danh sách phát cá nhân.</p>
+          <span className="eyebrow">PERSONAL COLLECTION</span>
+          <h1 className="page-heading">Your Library</h1>
+          <p className="page-subtext">Manage your Favorite tracks and Playlists.</p>
         </div>
       </div>
 
@@ -54,20 +54,20 @@ export function LibraryPage({
             className={`library-tab ${tab === "favorites" ? "library-tab--active" : ""}`}
             onClick={() => setTab("favorites")}
           >
-            Bài hát yêu thích ({favoriteTracks.length})
+            Favorite tracks ({favoriteTracks.length})
           </button>
           <button
             className={`library-tab ${tab === "playlists" ? "library-tab--active" : ""}`}
             onClick={() => setTab("playlists")}
           >
-            Danh sách phát ({playlists.length})
+            Playlists ({playlists.length})
           </button>
         </div>
 
         {tab === "playlists" && (
           <button className="button button-primary button-small" onClick={onCreatePlaylist}>
             <PlusIcon width={16} height={16} />
-            <span>Tạo playlist mới</span>
+            <span>Create playlist</span>
           </button>
         )}
       </div>
@@ -76,10 +76,10 @@ export function LibraryPage({
         favoriteTracks.length === 0 ? (
           <div className="state-empty-box">
             <HeartIcon width={48} height={48} />
-            <p className="empty-title">Chưa có bài hát yêu thích nào</p>
-            <p className="empty-desc">Hãy bấm biểu tượng trái tim trên các bài hát để lưu vào đây nhé.</p>
+            <p className="empty-title">No favorite tracks yet</p>
+            <p className="empty-desc">Select the heart icon on a track to save it here.</p>
             <button className="button button-primary button-small" onClick={() => onNavigate("/explore")}>
-              Khám phá bài hát ngay
+              Explore tracks
             </button>
           </div>
         ) : (
@@ -97,7 +97,7 @@ export function LibraryPage({
 
                   <div className="row-thumbnail" onClick={() => onPlayTrack(track)}>
                     <img src={track.coverUrl ?? undefined} alt="" />
-                    <button className="row-hover-play" aria-label={`Phát ${track.title}`}>
+                    <button className="row-hover-play" aria-label={`Play ${track.title}`}>
                       {isPlayingThis ? <PauseIcon width={14} height={14} /> : <PlayIcon width={14} height={14} />}
                     </button>
                   </div>
@@ -132,7 +132,7 @@ export function LibraryPage({
                     <button
                       className="row-icon-btn row-icon-btn--favorited"
                       onClick={() => onToggleFavorite(track.id)}
-                      title="Bỏ thích"
+                      title="Remove favorite"
                     >
                       <HeartIcon width={16} height={16} />
                     </button>
@@ -155,14 +155,14 @@ export function LibraryPage({
               <div className="playlist-info">
                 <h3 className="playlist-title">{pl.title}</h3>
                 <p className="playlist-meta">
-                  {pl.trackCount} bài hát · {pl.isPrivate ? "Riêng tư" : "Công khai"}
+                  {pl.trackCount} tracks · {pl.isPrivate ? "Private" : "Public"}
                 </p>
                 {pl.description && <p className="playlist-desc">{pl.description}</p>}
               </div>
               <button
                 className="playlist-delete-btn"
                 onClick={() => onDeletePlaylist(pl.id)}
-                title="Xóa playlist"
+                title="Delete"
               >
                 <TrashIcon width={14} height={14} />
               </button>

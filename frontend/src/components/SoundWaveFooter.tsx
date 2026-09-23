@@ -4,12 +4,12 @@ export function SoundWaveFooter({ hasPlayer }: { hasPlayer: boolean }) {
   return (
     <footer className={`site-footer ${hasPlayer ? "site-footer--player" : ""}`}>
       <div className="container footer-grid">
-        <div className="footer-brand"><SoundWaveLogo/><p>Không gian để mọi người khám phá, lắng nghe và chia sẻ âm nhạc.</p><span>SWP391 · SoundWave Team</span></div>
-        <div><h3>Khám phá</h3><a href="#/">Bài hát</a><a href="#/?tab=albums">Album</a><a href="#/genres">Thể loại</a></div>
-        <div><h3>Tài khoản</h3><a href="#/login">Đăng nhập</a><a href="#/register">Đăng ký</a><a href="#/studio">Đăng tải nhạc</a></div>
-        <div><h3>Hỗ trợ</h3><a href="#/terms">Điều khoản</a><a href="#/privacy">Chính sách riêng tư</a><a href="#/contact">Liên hệ</a></div>
+        <div className="footer-brand"><SoundWaveLogo/><p>A place for everyone to discover, listen to, and share music.</p><span>SWP391 · SoundWave Team</span></div>
+        <div><h3>Explore</h3><a href="#/">Tracks</a><a href="#/?tab=albums">Albums</a><a href="#/genres">Genres</a></div>
+        <div><h3>Account</h3><a href="#/login">Login</a><a href="#/register">Register</a><a href="#/studio">Upload music</a></div>
+        <div><h3>Support</h3><a href="#/terms">Terms</a><a href="#/privacy">Privacy policy</a><a href="#/contact">Contact</a></div>
       </div>
-      <div className="container footer-bottom"><span>© 2026 SoundWave. Dự án môn học SWP391.</span><span>Made for music lovers.</span></div>
+      <div className="container footer-bottom"><span>© 2026 SoundWave. SWP391 course project.</span><span>Made for music lovers.</span></div>
     </footer>
   );
 }

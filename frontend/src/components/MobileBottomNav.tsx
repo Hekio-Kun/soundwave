@@ -11,13 +11,13 @@ export function MobileBottomNav({ activeRoute, onNavigate, userRole }: Props) {
   const isCurrent = (route: string) => activeRoute === route || (route !== "/" && activeRoute.startsWith(route));
 
   return (
-    <nav className="mobile-bottom-nav" aria-label="Điều hướng di động">
+    <nav className="mobile-bottom-nav" aria-label="Mobile navigation">
       <button
         className={`mobile-nav-item ${activeRoute === "/" || activeRoute === "/home" || isCurrent("/explore") ? "mobile-nav-item--active" : ""}`}
         onClick={() => onNavigate("/")}
       >
         <CompassIcon width={20} height={20} />
-        <span>Khám phá</span>
+        <span>Explore</span>
       </button>
 
       <button
@@ -25,7 +25,7 @@ export function MobileBottomNav({ activeRoute, onNavigate, userRole }: Props) {
         onClick={() => onNavigate("/genres")}
       >
         <DiscIcon width={20} height={20} />
-        <span>Thể loại</span>
+        <span>Genres</span>
       </button>
 
       <button
@@ -33,7 +33,7 @@ export function MobileBottomNav({ activeRoute, onNavigate, userRole }: Props) {
         onClick={() => onNavigate("/search")}
       >
         <SearchIcon width={20} height={20} />
-        <span>Tìm kiếm</span>
+        <span>Search</span>
       </button>
 
       <button
@@ -41,7 +41,7 @@ export function MobileBottomNav({ activeRoute, onNavigate, userRole }: Props) {
         onClick={() => onNavigate("/library")}
       >
         <LibraryIcon width={20} height={20} />
-        <span>Thư viện</span>
+        <span>Library</span>
       </button>
 
       {userRole === "ADMIN" || userRole === "STAFF" ? (

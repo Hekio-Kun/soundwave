@@ -13,24 +13,24 @@ type Props = {
 export function DashboardLayout({ children, activeRoute, user, onNavigate, onLogout }: Props) {
   const isAdminArea = activeRoute.startsWith("/admin");
   const dashboardRoute = user?.role === "ADMIN" ? "/admin/dashboard" : "/staff/dashboard";
-  const roleLabel = user?.role === "ADMIN" ? "Quản trị viên" : user?.role === "STAFF" ? "Nhân viên kiểm duyệt" : "Khách";
+  const roleLabel = user?.role === "ADMIN" ? "Administrator" : user?.role === "STAFF" ? "Moderation Staff" : "Guest";
 
   return (
     <div className="ops-shell">
-      <aside className="ops-shell-sidebar" aria-label="Điều hướng dashboard">
-        <button className="ops-shell-brand" onClick={() => onNavigate("/")} aria-label="Về SoundWave">
+      <aside className="ops-shell-sidebar" aria-label="Dashboard navigation">
+        <button className="ops-shell-brand" onClick={() => onNavigate("/")} aria-label="Return to SoundWave">
           <img src="/soundwave-logo.png" alt="" />
           <span>SoundWave</span>
         </button>
 
         <div className="ops-shell-workspace">
-          <small>KHÔNG GIAN LÀM VIỆC</small>
+          <small>WORKSPACE</small>
           <strong>{isAdminArea ? "Administration" : "Content Moderation"}</strong>
           <span><i /> {roleLabel}</span>
         </div>
 
         <nav className="ops-shell-nav">
-          <span>TỔNG QUAN</span>
+          <span>OVERVIEW</span>
           <button className="is-active" onClick={() => onNavigate(dashboardRoute)}>
             {isAdminArea ? <ShieldIcon width={18} height={18} /> : <DashboardIcon width={18} height={18} />}
             <span>Dashboard</span>
@@ -38,7 +38,7 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
           {user?.role === "ADMIN" ? (
             <button className={!isAdminArea ? "is-active" : ""} onClick={() => onNavigate("/staff/dashboard")}>
               <DashboardIcon width={18} height={18} />
-              <span>Trung tâm kiểm duyệt</span>
+              <span>Content Moderation</span>
             </button>
           ) : null}
         </nav>
@@ -46,7 +46,7 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
         <div className="ops-shell-sidebar-footer">
           <button onClick={() => onNavigate("/")}>
             <HomeIcon width={18} height={18} />
-            <span>Về trang nghe nhạc</span>
+            <span>Back to Explore</span>
           </button>
           <small>SoundWave Operations · 2026</small>
         </div>
@@ -57,13 +57,13 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
           <div className="ops-shell-breadcrumb">
             <span>SoundWave</span>
             <i>/</i>
-            <strong>{isAdminArea ? "Dashboard quản trị" : "Dashboard kiểm duyệt"}</strong>
+            <strong>{isAdminArea ? "Administration Dashboard" : "Moderation Dashboard"}</strong>
           </div>
 
           <div className="ops-shell-actions">
             <button className="ops-shell-home-button" onClick={() => onNavigate("/")}>
               <HomeIcon width={16} height={16} />
-              Trang nghe nhạc
+              Explore Music
             </button>
             {user ? (
               <div className="ops-shell-user">
@@ -71,7 +71,7 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
                 <span><b>{user.displayName}</b><small>{roleLabel}</small></span>
               </div>
             ) : null}
-            {user ? <button className="ops-shell-logout" onClick={onLogout}>Đăng xuất</button> : null}
+            {user ? <button className="ops-shell-logout" onClick={onLogout}>Logout</button> : null}
           </div>
         </header>
 

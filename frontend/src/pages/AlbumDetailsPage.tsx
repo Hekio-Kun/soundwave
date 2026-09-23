@@ -28,10 +28,10 @@ export function AlbumDetailsPage({ albumId, currentTrack, playing, onPlayTrack, 
       <section className="album-header-banner">
         <img src={album.coverUrl} alt={album.title} className="album-large-cover" />
         <div className="album-header-meta">
-          <span className="eyebrow">ALBUM TUYỂN TẬP</span>
+          <span className="eyebrow">FEATURED ALBUM</span>
           <h1 className="album-title">{album.title}</h1>
           <p className="album-subtitle">
-            Người tạo: <b>{album.creatorName}</b> · Phát hành: {album.releaseYear} · {albumTracks.length} bài hát ({totalMin} phút)
+            Creator: <b>{album.creatorName}</b> · Released: {album.releaseYear} · {albumTracks.length} tracks ({totalMin} minutes)
           </p>
           {album.description && <p className="album-desc">{album.description}</p>}
 
@@ -41,14 +41,14 @@ export function AlbumDetailsPage({ albumId, currentTrack, playing, onPlayTrack, 
               onClick={() => albumTracks.length > 0 && onPlayTrack(albumTracks[0])}
             >
               <PlayIcon />
-              <span>Phát toàn bộ album</span>
+              <span>Play all</span>
             </button>
           </div>
         </div>
       </section>
 
       <section className="album-tracklist-section">
-        <h2 className="section-title">Danh sách bài hát</h2>
+        <h2 className="section-title">Track list</h2>
         <div className="album-tracks-table">
           {albumTracks.map((track, idx) => {
             const isCurrent = currentTrack?.id === track.id;
@@ -63,7 +63,7 @@ export function AlbumDetailsPage({ albumId, currentTrack, playing, onPlayTrack, 
 
                 <div className="row-thumbnail" onClick={() => onPlayTrack(track)}>
                   <img src={track.coverUrl ?? undefined} alt="" />
-                  <button className="row-hover-play" aria-label={`Phát ${track.title}`}>
+                  <button className="row-hover-play" aria-label={`Play ${track.title}`}>
                     {isPlayingThis ? <PauseIcon width={14} height={14} /> : <PlayIcon width={14} height={14} />}
                   </button>
                 </div>

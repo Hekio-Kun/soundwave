@@ -55,35 +55,35 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
       <div className="studio-header">
         <div>
           <span className="eyebrow">CONTENT STUDIO</span>
-          <h1 className="page-heading">Quản lý bài hát của bạn</h1>
-          <p className="page-subtext">Mọi thành viên đều có thể tự do tải lên và phát hành các tác phẩm âm nhạc.</p>
+          <h1 className="page-heading">Content Studio</h1>
+          <p className="page-subtext">Upload tracks, save drafts, and manage review submissions.</p>
         </div>
         <button className="button button-primary" onClick={() => setUploadModalOpen(true)}>
           <UploadIcon width={18} height={18} />
-          <span>Tải lên bài hát mới</span>
+          <span>Create track</span>
         </button>
       </div>
 
       {/* Metrics Row */}
       <div className="studio-metrics-grid">
         <div className="metric-card" onClick={() => setFilterStatus("ALL")}>
-          <span className="metric-label">Tổng bài hát</span>
+          <span className="metric-label">Total tracks</span>
           <b className="metric-value">{stats.total}</b>
         </div>
         <div className="metric-card" onClick={() => setFilterStatus("APPROVED")}>
-          <span className="metric-label metric-label--approved">Đã phê duyệt</span>
+          <span className="metric-label metric-label--approved">Published</span>
           <b className="metric-value text-success">{stats.approved}</b>
         </div>
         <div className="metric-card" onClick={() => setFilterStatus("PENDING")}>
-          <span className="metric-label metric-label--pending">Đang chờ duyệt</span>
+          <span className="metric-label metric-label--pending">Pending</span>
           <b className="metric-value text-warning">{stats.pending}</b>
         </div>
         <div className="metric-card" onClick={() => setFilterStatus("REJECTED")}>
-          <span className="metric-label metric-label--rejected">Bị từ chối</span>
+          <span className="metric-label metric-label--rejected">Rejected</span>
           <b className="metric-value text-danger">{stats.rejected}</b>
         </div>
         <div className="metric-card" onClick={() => setFilterStatus("DRAFT")}>
-          <span className="metric-label">Bản nháp</span>
+          <span className="metric-label">Draft</span>
           <b className="metric-value">{stats.draft}</b>
         </div>
       </div>
@@ -94,31 +94,31 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
           className={`filter-pill ${filterStatus === "ALL" ? "filter-pill--active" : ""}`}
           onClick={() => setFilterStatus("ALL")}
         >
-          Tất cả ({stats.total})
+          All ({stats.total})
         </button>
         <button
           className={`filter-pill ${filterStatus === "APPROVED" ? "filter-pill--active" : ""}`}
           onClick={() => setFilterStatus("APPROVED")}
         >
-          Đã duyệt ({stats.approved})
+          Published ({stats.approved})
         </button>
         <button
           className={`filter-pill ${filterStatus === "PENDING" ? "filter-pill--active" : ""}`}
           onClick={() => setFilterStatus("PENDING")}
         >
-          Chờ duyệt ({stats.pending})
+          Pending ({stats.pending})
         </button>
         <button
           className={`filter-pill ${filterStatus === "REJECTED" ? "filter-pill--active" : ""}`}
           onClick={() => setFilterStatus("REJECTED")}
         >
-          Bị từ chối ({stats.rejected})
+          Rejected ({stats.rejected})
         </button>
         <button
           className={`filter-pill ${filterStatus === "DRAFT" ? "filter-pill--active" : ""}`}
           onClick={() => setFilterStatus("DRAFT")}
         >
-          Bản nháp ({stats.draft})
+          Draft ({stats.draft})
         </button>
       </div>
 
@@ -127,18 +127,18 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
         <table className="studio-table">
           <thead>
             <tr>
-              <th>Tên bài hát</th>
-              <th>Thể loại</th>
-              <th>Trạng thái</th>
-              <th>Ngày nộp</th>
-              <th>Thao tác</th>
+              <th>Title</th>
+              <th>Genre</th>
+              <th>Status</th>
+              <th>Submitted date</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={5} className="table-empty-cell">
-                  Không có bài hát nào trong mục này.
+                  No tracks in this category.
                 </td>
               </tr>
             ) : (
@@ -149,17 +149,17 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
                       <img src={t.coverUrl ?? "/pics/album.png"} alt="" />
                       <div>
                         <b>{t.title}</b>
-                        <small>{t.albumTitle ?? "Đĩa đơn"}</small>
+                        <small>{t.albumTitle ?? "Single"}</small>
                       </div>
                     </div>
                   </td>
                   <td><span className="genre-badge">{t.genreName}</span></td>
                   <td>
                     <span className={`status-badge status-badge--${t.status.toLowerCase()}`}>
-                      {t.status === "APPROVED" && "Đã phát hành"}
-                      {t.status === "PENDING" && "Đang chờ Staff duyệt"}
-                      {t.status === "REJECTED" && "Bị từ chối"}
-                      {t.status === "DRAFT" && "Bản nháp"}
+                      {t.status === "APPROVED" && "Published"}
+                      {t.status === "PENDING" && "Pending Staff review"}
+                      {t.status === "REJECTED" && "Rejected"}
+                      {t.status === "DRAFT" && "Draft"}
                     </span>
                   </td>
                   <td>{t.createdAt}</td>
@@ -170,7 +170,7 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
                           className="button button-primary button-small"
                           onClick={() => onSubmitForReview(t.id)}
                         >
-                          Gửi duyệt
+                          Submit for review
                         </button>
                       )}
 
@@ -180,13 +180,13 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
                             className="button button-secondary button-small"
                             onClick={() => setSelectedRejectedTrack(t)}
                           >
-                            Xem lý do
+                            View rejection reason
                           </button>
                           <button
                             className="button button-primary button-small"
                             onClick={() => onSubmitForReview(t.id)}
                           >
-                            Gửi lại
+                            Resubmit
                           </button>
                         </>
                       )}
@@ -196,12 +196,12 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
                           className="button button-ghost button-small"
                           onClick={() => onNavigate(`/track/1`)}
                         >
-                          Xem bài hát
+                          View track
                         </button>
                       )}
 
                       {t.status === "PENDING" && (
-                        <span className="text-muted small">Đang thẩm định...</span>
+                        <span className="text-muted small">Under review...</span>
                       )}
                     </div>
                   </td>
@@ -217,7 +217,7 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
         <div className="modal-backdrop" role="presentation" onClick={() => setUploadModalOpen(false)}>
           <div className="dialog-box dialog-box--wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="dialog-header">
-              <h3>Đăng tải bài hát mới</h3>
+              <h3>Create track</h3>
               <button className="icon-button" onClick={() => setUploadModalOpen(false)}>
                 <CloseIcon width={18} height={18} />
               </button>
@@ -225,19 +225,19 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
 
             <form onSubmit={handleUploadSubmit} className="upload-form">
               <div className="form-group">
-                <label htmlFor="track-title">Tiêu đề bài hát *</label>
+                <label htmlFor="track-title">Title *</label>
                 <input
                   id="track-title"
                   type="text"
                   required
-                  placeholder="Ví dụ: Hoàng Hôn Trên Phố"
+                  placeholder="For example: Hoàng Hôn Trên Phố"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
               </div>
 
               <div className="form-group">
-                <label htmlFor="track-genre">Thể loại âm nhạc *</label>
+                <label htmlFor="track-genre">Genre *</label>
                 <select
                   id="track-genre"
                   value={genreSlug}
@@ -255,7 +255,7 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
               </div>
 
               <div className="form-group">
-                <label>Tệp âm thanh (MP3, tối đa 15MB) *</label>
+                <label>Audio file (MP3, maximum 15 MB) *</label>
                 <div className="file-drop-zone">
                   <input
                     type="file"
@@ -266,13 +266,13 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
                   />
                   <label htmlFor="audio-file-input" className="file-drop-label">
                     <UploadIcon width={24} height={24} />
-                    <span>{audioName ? `Đã chọn: ${audioName}` : "Nhấp để chọn file âm thanh MP3"}</span>
+                    <span>{audioName ? `Selected: ${audioName}` : "Select an MP3 audio file"}</span>
                   </label>
                 </div>
               </div>
 
               <div className="form-group">
-                <label>Ảnh bìa bài hát (JPG, PNG, tối đa 5MB)</label>
+                <label>Cover image (JPG or PNG, maximum 5 MB)</label>
                 <div className="file-drop-zone">
                   <input
                     type="file"
@@ -282,17 +282,17 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
                     style={{ display: "none" }}
                   />
                   <label htmlFor="cover-file-input" className="file-drop-label">
-                    <span>{coverName ? `Đã chọn: ${coverName}` : "Nhấp để chọn ảnh bìa"}</span>
+                    <span>{coverName ? `Selected: ${coverName}` : "Select a cover image"}</span>
                   </label>
                 </div>
               </div>
 
               <div className="dialog-actions">
                 <button type="submit" className="button button-primary" disabled={!title.trim() || !audioName}>
-                  Lưu bản nháp (Save Draft)
+                  Save draft
                 </button>
                 <button type="button" className="button button-secondary" onClick={() => setUploadModalOpen(false)}>
-                  Hủy
+                  Cancel
                 </button>
               </div>
             </form>
@@ -305,17 +305,17 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
         <div className="modal-backdrop" role="presentation" onClick={() => setSelectedRejectedTrack(null)}>
           <div className="dialog-box" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <div className="dialog-header">
-              <h3>Lý do từ chối kiểm duyệt</h3>
+              <h3>Track Rejection Details</h3>
               <button className="icon-button" onClick={() => setSelectedRejectedTrack(null)}>
                 <CloseIcon width={18} height={18} />
               </button>
             </div>
-            <p className="rejection-track-name">Bài hát: <b>{selectedRejectedTrack.title}</b></p>
+            <p className="rejection-track-name">Track: <b>{selectedRejectedTrack.title}</b></p>
             <div className="rejection-box">
               <p className="rejection-text">{selectedRejectedTrack.latestRejectionReason}</p>
             </div>
             <p className="rejection-help">
-              Bạn có thể điều chỉnh lại file âm thanh hoặc metadata của bài hát và gửi duyệt lại để Staff thẩm định lại.
+              Update the audio file or metadata, then resubmit the track for Staff review.
             </p>
             <div className="dialog-actions">
               <button
@@ -325,10 +325,10 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
                   setSelectedRejectedTrack(null);
                 }}
               >
-                Gửi lại duyệt (Resubmit)
+                Resubmit
               </button>
               <button className="button button-secondary" onClick={() => setSelectedRejectedTrack(null)}>
-                Đóng
+                Close
               </button>
             </div>
           </div>

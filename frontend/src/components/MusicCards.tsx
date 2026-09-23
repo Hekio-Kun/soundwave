@@ -2,7 +2,7 @@ import type { FeaturedAlbum, FeaturedCreator, LandingTrack } from "../types";
 import { ArrowIcon, HeadphonesIcon, PauseIcon, PlayIcon } from "../icons";
 
 const compactNumber = (value: number) =>
-  new Intl.NumberFormat("vi-VN", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+  new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 
 type TrackCardProps = {
   track: LandingTrack;
@@ -16,7 +16,7 @@ type TrackCardProps = {
 export function TrackCard({ track, active, playing, onPlay, onNavigate, rank }: TrackCardProps) {
   return (
     <article className={`sw-track-card ${active ? "sw-track-card--active" : ""}`}>
-      <button className="sw-track-cover" onClick={() => onPlay(track)} aria-label={playing ? `Tạm dừng ${track.title}` : `Phát ${track.title}`}>
+      <button className="sw-track-cover" onClick={() => onPlay(track)} aria-label={playing ? `Pause ${track.title}` : `Play ${track.title}`}>
         <img src={track.coverUrl ?? undefined} alt="" loading="lazy" />
         {rank ? <span className="sw-track-rank">#{rank}</span> : null}
         <span className="sw-track-play">{playing ? <PauseIcon width={19} height={19} /> : <PlayIcon width={19} height={19} />}</span>
@@ -25,7 +25,7 @@ export function TrackCard({ track, active, playing, onPlay, onNavigate, rank }: 
       <div className="sw-card-copy">
         <a href={`#/track/${track.id}`} className="sw-card-title" onClick={(event) => { event.preventDefault(); onNavigate(`/track/${track.id}`); }}>{track.title}</a>
         <a href={`#/creator/${track.creator.userId}`} className="sw-card-subtitle" onClick={(event) => { event.preventDefault(); onNavigate(`/creator/${track.creator.userId}`); }}>{track.creator.displayName}</a>
-        <span className="sw-card-meta"><HeadphonesIcon width={13} height={13} /> {compactNumber(track.playCount)} lượt nghe</span>
+        <span className="sw-card-meta"><HeadphonesIcon width={13} height={13} /> {compactNumber(track.playCount)} plays</span>
       </div>
     </article>
   );
@@ -34,7 +34,7 @@ export function TrackCard({ track, active, playing, onPlay, onNavigate, rank }: 
 export function AlbumCard({ album, onNavigate }: { album: FeaturedAlbum; onNavigate: (route: string) => void }) {
   return (
     <article className="sw-album-card">
-      <button className="sw-album-art" onClick={() => onNavigate(`/album/${album.id}`)} aria-label={`Mở album ${album.title}`}>
+      <button className="sw-album-art" onClick={() => onNavigate(`/album/${album.id}`)} aria-label={`Open album ${album.title}`}>
         <img src={album.coverUrl} alt="" loading="lazy" />
         <span className="sw-track-play"><PlayIcon width={19} height={19} /></span>
       </button>
@@ -47,13 +47,13 @@ export function AlbumCard({ album, onNavigate }: { album: FeaturedAlbum; onNavig
 export function CreatorCard({ creator, onNavigate }: { creator: FeaturedCreator; onNavigate: (route: string) => void }) {
   return (
     <article className="sw-creator-card">
-      <button className="sw-creator-avatar" onClick={() => onNavigate(`/creator/${creator.userId}`)} aria-label={`Mở hồ sơ ${creator.displayName}`}><img src={creator.avatarUrl} alt="" loading="lazy" /></button>
+      <button className="sw-creator-avatar" onClick={() => onNavigate(`/creator/${creator.userId}`)} aria-label={`Open ${creator.displayName}'s profile`}><img src={creator.avatarUrl} alt="" loading="lazy" /></button>
       <div>
         <a href={`#/creator/${creator.userId}`} className="sw-card-title" onClick={(event) => { event.preventDefault(); onNavigate(`/creator/${creator.userId}`); }}>{creator.displayName}</a>
         <p>{creator.bio}</p>
-        <span>{creator.publishedTracks} bài hát · {compactNumber(creator.followersCount ?? 0)} người theo dõi</span>
+        <span>{creator.publishedTracks} tracks · {compactNumber(creator.followersCount ?? 0)} followers</span>
       </div>
-      <button className="sw-follow-button" onClick={() => onNavigate(`/creator/${creator.userId}`)}>Khám phá</button>
+      <button className="sw-follow-button" onClick={() => onNavigate(`/creator/${creator.userId}`)}>View profile</button>
     </article>
   );
 }

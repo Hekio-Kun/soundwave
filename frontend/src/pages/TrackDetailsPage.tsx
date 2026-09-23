@@ -17,7 +17,7 @@ type Props = {
 };
 
 const formatPlays = (value: number) =>
-  new Intl.NumberFormat("vi-VN", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+  new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 
 const formatDuration = (ms: number) => {
   const minutes = Math.floor(ms / 60000);
@@ -62,41 +62,41 @@ export function TrackDetailsPage({
 
   return (
     <div className="track-page-v2">
-      <nav className="track-breadcrumb" aria-label="Đường dẫn">
-        <button onClick={() => onNavigate("/")}>Khám phá</button><span>/</span><button onClick={() => onNavigate(`/creator/${track.creator.userId}`)}>{track.creator.displayName}</button><span>/</span><b>{track.title}</b>
+      <nav className="track-breadcrumb" aria-label="Breadcrumb">
+        <button onClick={() => onNavigate("/")}>Explore</button><span>/</span><button onClick={() => onNavigate(`/creator/${track.creator.userId}`)}>{track.creator.displayName}</button><span>/</span><b>{track.title}</b>
       </nav>
 
       <section className="track-showcase">
         <div className="track-showcase-glow" style={{ backgroundImage: `url(${track.coverUrl ?? ""})` }} aria-hidden="true" />
         <div className="track-showcase-visual">
-          <button className="track-cover-button" onClick={() => onPlayTrack(track)} aria-label={isPlayingThis ? `Tạm dừng ${track.title}` : `Phát ${track.title}`}>
-            <img src={track.coverUrl ?? undefined} alt={`Ảnh bìa ${track.title}`} />
+          <button className={`track-cover-button ${isPlayingThis ? "is-playing" : ""}`} onClick={() => onPlayTrack(track)} aria-label={isPlayingThis ? `Pause ${track.title}` : `Play ${track.title}`}>
+            <img src={track.coverUrl ?? undefined} alt={`${track.title} cover`} />
             <span>{isPlayingThis ? <PauseIcon width={28} height={28} /> : <PlayIcon width={28} height={28} />}</span>
           </button>
         </div>
 
         <div className="track-showcase-content">
-          <div className="track-labels"><span>BÀI HÁT</span><span>{track.genreSlug ?? "SoundWave"}</span><span className="is-approved"><CheckIcon width={12} height={12} /> Đã kiểm duyệt</span></div>
+          <div className="track-labels"><span>TRACK</span><span>{track.genreSlug ?? "SoundWave"}</span><span className="is-approved"><CheckIcon width={12} height={12} /> APPROVED</span></div>
           <h1>{track.title}</h1>
-          <p className="track-intro">Một sáng tác giàu cảm xúc từ cộng đồng SoundWave, phù hợp cho những khoảnh khắc bạn muốn chậm lại và lắng nghe.</p>
+          <p className="track-intro">An expressive release from the SoundWave community for moments when you want to slow down and listen.</p>
 
           <button className="track-creator-chip" onClick={() => onNavigate(`/creator/${track.creator.userId}`)}>
             <img src={track.creator.avatarUrl ?? undefined} alt="" />
-            <span><small>Được đăng bởi</small><strong>{track.creator.displayName}</strong></span>
+            <span><small>Creator</small><strong>{track.creator.displayName}</strong></span>
           </button>
 
           <div className="track-stat-row">
-            <span><HeadphonesIcon width={16} height={16} /><b>{formatPlays(track.playCount)}</b><small>lượt nghe</small></span>
+            <span><HeadphonesIcon width={16} height={16} /><b>{formatPlays(track.playCount)}</b><small>plays</small></span>
             <i />
-            <span><b>{formatDuration(track.durationMs)}</b><small>thời lượng</small></span>
+            <span><b>{formatDuration(track.durationMs)}</b><small>duration</small></span>
             <i />
-            <span><b>{track.album?.title ?? "Đĩa đơn"}</b><small>phát hành</small></span>
+            <span><b>{track.album?.title ?? "Single"}</b><small>release</small></span>
           </div>
 
           <div className="track-primary-actions">
-            <button className="button button-primary button-large" onClick={() => onPlayTrack(track)}>{isPlayingThis ? <PauseIcon /> : <PlayIcon />}<span>{isPlayingThis ? "Tạm dừng" : "Phát bài hát"}</span></button>
-            <button className={`track-round-action ${isFavorited ? "is-favorite" : ""}`} onClick={() => onToggleFavorite(track.id)} aria-label={isFavorited ? "Bỏ yêu thích" : "Yêu thích"}>{isFavorited ? <HeartFillIcon /> : <HeartIcon />}</button>
-            <button className="track-round-action" onClick={() => setPlaylistModalOpen(true)} aria-label="Thêm vào playlist"><PlusIcon /></button>
+            <button className="button button-primary button-large" onClick={() => onPlayTrack(track)}>{isPlayingThis ? <PauseIcon /> : <PlayIcon />}<span>{isPlayingThis ? "Pause" : "Play"}</span></button>
+            <button className={`track-round-action ${isFavorited ? "is-favorite" : ""}`} onClick={() => onToggleFavorite(track.id)} aria-label={isFavorited ? "Remove favorite" : "Favorite"}>{isFavorited ? <HeartFillIcon /> : <HeartIcon />}</button>
+            <button className="track-round-action" onClick={() => setPlaylistModalOpen(true)} aria-label="Add to playlist"><PlusIcon /></button>
           </div>
         </div>
       </section>
@@ -104,20 +104,20 @@ export function TrackDetailsPage({
       <div className="track-content-grid">
         <section className="track-lyrics-panel">
           <header>
-            <div><span className="track-section-icon"><FileTextIcon width={19} height={19} /></span><span><small>LỜI BÀI HÁT</small><h2>{track.title}</h2></span></div>
-            <span className="official-lyrics-badge"><CheckIcon width={13} height={13} /> Bản chính thức</span>
+            <div><span className="track-section-icon"><FileTextIcon width={19} height={19} /></span><span><small>LYRIC CONTENT</small><h2>{track.title}</h2></span></div>
+            <span className="official-lyrics-badge"><CheckIcon width={13} height={13} /> Official lyrics</span>
           </header>
-          {track.lyrics ? <pre>{track.lyrics}</pre> : <div className="track-lyrics-empty"><FileTextIcon /><strong>Chưa có lời bài hát</strong><span>Nội dung sẽ được cập nhật sau khi Staff kiểm duyệt.</span></div>}
-          <footer>Lời bài hát được hiển thị ở định dạng văn bản thuần và đã qua kiểm duyệt nội dung.</footer>
+          {track.lyrics ? <pre>{track.lyrics}</pre> : <div className="track-lyrics-empty"><FileTextIcon /><strong>No lyrics available</strong><span>Lyrics will be updated after Staff review.</span></div>}
+          <footer>Lyrics are displayed as plain text and have passed content review.</footer>
         </section>
 
         <aside className="track-context-column">
           <section className="track-context-card">
-            <span className="context-eyebrow">THÔNG TIN PHÁT HÀNH</span>
+            <span className="context-eyebrow">RELEASE INFORMATION</span>
             <dl>
-              <div><dt>Album</dt><dd>{track.album ? <button onClick={() => onNavigate(`/album/${track.album!.id}`)}>{track.album.title}</button> : "Đĩa đơn"}</dd></div>
-              <div><dt>Thể loại</dt><dd className="is-capitalized">{track.genreSlug ?? "Chưa phân loại"}</dd></div>
-              <div><dt>Trạng thái</dt><dd><span className="context-status"><CheckIcon width={12} height={12} /> Công khai</span></dd></div>
+              <div><dt>Album</dt><dd>{track.album ? <button onClick={() => onNavigate(`/album/${track.album!.id}`)}>{track.album.title}</button> : "Single"}</dd></div>
+              <div><dt>Genre</dt><dd className="is-capitalized">{track.genreSlug ?? "Uncategorized"}</dd></div>
+              <div><dt>Status</dt><dd><span className="context-status"><CheckIcon width={12} height={12} /> Published</span></dd></div>
             </dl>
           </section>
 
@@ -126,16 +126,16 @@ export function TrackDetailsPage({
             <span className="track-section-icon"><UserIcon width={18} height={18} /></span>
             <small>CREATOR</small>
             <h3>{track.creator.displayName}</h3>
-            <p>Khám phá thêm những giai điệu và album mới nhất từ creator này.</p>
-            <button onClick={() => onNavigate(`/creator/${track.creator.userId}`)}>Xem trang cá nhân</button>
+            <p>Discover more tracks and albums from this creator.</p>
+            <button onClick={() => onNavigate(`/creator/${track.creator.userId}`)}>View profile</button>
           </section>
 
-          <button className="track-report-button" onClick={() => setReportModalOpen(true)}>Báo cáo nội dung không phù hợp</button>
+          <button className="track-report-button" onClick={() => setReportModalOpen(true)}>Report</button>
         </aside>
       </div>
 
       <section className="track-recommendations">
-        <SectionHeader title="Có thể bạn cũng thích" description="Những bài hát tiếp theo dành cho bạn" actionLabel="Khám phá thêm" onAction={() => onNavigate("/")} />
+        <SectionHeader title="Related tracks" description="More public tracks you may enjoy" actionLabel="Explore more" onAction={() => onNavigate("/")} />
         <div className="sw-track-grid">
           {recommendations.map((item) => <TrackCard key={item.id} track={item} active={currentTrack?.id === item.id} playing={currentTrack?.id === item.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />)}
         </div>
@@ -144,12 +144,12 @@ export function TrackDetailsPage({
       {playlistModalOpen ? (
         <div className="modal-backdrop" role="presentation" onClick={() => setPlaylistModalOpen(false)}>
           <section className="track-dialog" role="dialog" aria-modal="true" aria-labelledby="playlist-dialog-title" onClick={(event) => event.stopPropagation()}>
-            <div className="track-dialog-heading"><span><PlusIcon /></span><div><small>THƯ VIỆN CỦA BẠN</small><h2 id="playlist-dialog-title">Thêm vào playlist</h2></div></div>
-            <p>Chọn danh sách bạn muốn thêm “{track.title}”.</p>
+            <div className="track-dialog-heading"><span><PlusIcon /></span><div><small>YOUR LIBRARY</small><h2 id="playlist-dialog-title">Add to playlist</h2></div></div>
+            <p>Select a playlist for “{track.title}”.</p>
             <div className="track-dialog-list">
-              {playlists.map((playlist) => <button key={playlist.id} onClick={() => { onAddToPlaylist(playlist.id, track.id); setPlaylistModalOpen(false); }}><img src={playlist.coverUrl} alt="" /><span><b>{playlist.title}</b><small>{playlist.trackCount} bài hát · {playlist.isPrivate ? "Riêng tư" : "Công khai"}</small></span><PlusIcon width={17} height={17} /></button>)}
+              {playlists.map((playlist) => <button key={playlist.id} onClick={() => { onAddToPlaylist(playlist.id, track.id); setPlaylistModalOpen(false); }}><img src={playlist.coverUrl} alt="" /><span><b>{playlist.title}</b><small>{playlist.trackCount} tracks · {playlist.isPrivate ? "Private" : "Public"}</small></span><PlusIcon width={17} height={17} /></button>)}
             </div>
-            <button className="button button-secondary" onClick={() => setPlaylistModalOpen(false)}>Đóng</button>
+            <button className="button button-secondary" onClick={() => setPlaylistModalOpen(false)}>Close</button>
           </section>
         </div>
       ) : null}
@@ -157,12 +157,12 @@ export function TrackDetailsPage({
       {reportModalOpen ? (
         <div className="modal-backdrop" role="presentation" onClick={() => setReportModalOpen(false)}>
           <section className="track-dialog" role="dialog" aria-modal="true" aria-labelledby="report-dialog-title" onClick={(event) => event.stopPropagation()}>
-            {reportSubmitted ? <div className="track-dialog-success"><span><CheckIcon width={27} height={27} /></span><h2>Đã gửi báo cáo</h2><p>Đội ngũ kiểm duyệt sẽ xem xét nội dung này.</p></div> : <>
-              <div className="track-dialog-heading"><span>!</span><div><small>HỖ TRỢ CỘNG ĐỒNG</small><h2 id="report-dialog-title">Báo cáo bài hát</h2></div></div>
-              <p>Bài hát: <b>{track.title}</b> · {track.creator.displayName}</p>
-              <div className="form-group"><label htmlFor="report-category">Lý do</label><select id="report-category" value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}><option value="copyright">Vi phạm bản quyền</option><option value="inappropriate">Nội dung không phù hợp</option><option value="quality">Chất lượng âm thanh kém</option></select></div>
-              <div className="form-group"><label htmlFor="report-description">Mô tả chi tiết</label><textarea id="report-description" rows={4} value={reportDesc} onChange={(event) => setReportDesc(event.target.value)} placeholder="Cung cấp ít nhất 10 ký tự để Staff có đủ thông tin xử lý..." /></div>
-              <div className="track-dialog-actions"><button className="button button-secondary" onClick={() => setReportModalOpen(false)}>Hủy</button><button className="button button-primary" disabled={reportDesc.trim().length < 10} onClick={handleReportSubmit}>Gửi báo cáo</button></div>
+            {reportSubmitted ? <div className="track-dialog-success"><span><CheckIcon width={27} height={27} /></span><h2>Report submitted</h2><p>The moderation team will review this content.</p></div> : <>
+              <div className="track-dialog-heading"><span>!</span><div><small>COMMUNITY SUPPORT</small><h2 id="report-dialog-title">Create Content Report</h2></div></div>
+              <p>Track: <b>{track.title}</b> · {track.creator.displayName}</p>
+              <div className="form-group"><label htmlFor="report-category">Category</label><select id="report-category" value={reportCategory} onChange={(event) => setReportCategory(event.target.value)}><option value="copyright">Copyright violation</option><option value="inappropriate">Inappropriate content</option><option value="quality">Poor audio quality</option></select></div>
+              <div className="form-group"><label htmlFor="report-description">Description</label><textarea id="report-description" rows={4} value={reportDesc} onChange={(event) => setReportDesc(event.target.value)} placeholder="Enter at least 10 characters so Staff can assess the report..." /></div>
+              <div className="track-dialog-actions"><button className="button button-secondary" onClick={() => setReportModalOpen(false)}>Cancel</button><button className="button button-primary" disabled={reportDesc.trim().length < 10} onClick={handleReportSubmit}>Submit report</button></div>
             </>}
           </section>
         </div>

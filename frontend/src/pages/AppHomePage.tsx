@@ -13,7 +13,7 @@ type Props = {
 };
 
 const formatPlays = (value: number) =>
-  new Intl.NumberFormat("vi-VN", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+  new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 
 const formatDuration = (ms: number) => {
   const min = Math.floor(ms / 60000);
@@ -37,10 +37,10 @@ export function AppHomePage({
       {/* 1. Hero Featured Music Banner */}
       <section className="app-hero-banner">
         <div className="hero-banner-content">
-          <span className="hero-banner-tag">GỢI Ý HÔM NAY</span>
+          <span className="hero-banner-tag">RECOMMENDED SONGS</span>
           <h1 className="hero-banner-title">{heroTrack.title}</h1>
           <p className="hero-banner-subtitle">
-            Sáng tác bởi <b>{heroTrack.creator.displayName}</b> · {heroTrack.album?.title ?? "Đĩa đơn"}
+            By <b>{heroTrack.creator.displayName}</b> · {heroTrack.album?.title ?? "Single"}
           </p>
           <div className="hero-banner-actions">
             <button
@@ -48,13 +48,13 @@ export function AppHomePage({
               onClick={() => onPlayTrack(heroTrack)}
             >
               {currentTrack?.id === heroTrack.id && playing ? <PauseIcon /> : <PlayIcon />}
-              <span>{currentTrack?.id === heroTrack.id && playing ? "Tạm dừng" : "Nghe ngay"}</span>
+              <span>{currentTrack?.id === heroTrack.id && playing ? "Pause" : "Listen now"}</span>
             </button>
             <button
               className="button button-secondary button-large"
               onClick={() => onNavigate(`/track/${heroTrack.id}`)}
             >
-              Xem chi tiết
+              View details
             </button>
           </div>
         </div>
@@ -70,11 +70,11 @@ export function AppHomePage({
       <section className="app-section">
         <div className="section-header">
           <div>
-            <h2 className="section-title">Đang thịnh hành</h2>
-            <p className="section-subtitle">Những giai điệu được nghe nhiều nhất trên SoundWave tuần này</p>
+            <h2 className="section-title">Trending tracks</h2>
+            <p className="section-subtitle">The most-played tracks on SoundWave this week</p>
           </div>
           <button className="section-see-all" onClick={() => onNavigate("/explore?sort=trending")}>
-            <span>Xem tất cả</span>
+            <span>View all</span>
             <ArrowIcon width={16} height={16} />
           </button>
         </div>
@@ -89,7 +89,7 @@ export function AppHomePage({
                   <img src={track.coverUrl ?? undefined} alt={track.title} loading="lazy" />
                   <button
                     className="music-card-play-btn"
-                    aria-label={isPlayingThis ? `Tạm dừng ${track.title}` : `Phát ${track.title}`}
+                    aria-label={isPlayingThis ? `Pause ${track.title}` : `Play ${track.title}`}
                   >
                     {isPlayingThis ? <PauseIcon width={18} height={18} /> : <PlayIcon width={18} height={18} />}
                   </button>
@@ -132,11 +132,11 @@ export function AppHomePage({
       <section className="app-section">
         <div className="section-header">
           <div>
-            <h2 className="section-title">Mới phát hành</h2>
-            <p className="section-subtitle">Các sáng tác vừa được kiểm duyệt và đưa lên kệ âm nhạc</p>
+            <h2 className="section-title">New releases</h2>
+            <p className="section-subtitle">Tracks recently approved and published</p>
           </div>
           <button className="section-see-all" onClick={() => onNavigate("/explore?sort=newest")}>
-            <span>Xem tất cả</span>
+            <span>View all</span>
             <ArrowIcon width={16} height={16} />
           </button>
         </div>
@@ -156,7 +156,7 @@ export function AppHomePage({
 
                 <div className="row-thumbnail" onClick={() => onPlayTrack(track)}>
                   <img src={track.coverUrl ?? undefined} alt="" />
-                  <button className="row-hover-play" aria-label={`Phát ${track.title}`}>
+                  <button className="row-hover-play" aria-label={`Play ${track.title}`}>
                     {isPlayingThis ? <PauseIcon width={14} height={14} /> : <PlayIcon width={14} height={14} />}
                   </button>
                 </div>
@@ -206,14 +206,14 @@ export function AppHomePage({
                   <button
                     className={`row-icon-btn ${isFavorited ? "row-icon-btn--favorited" : ""}`}
                     onClick={() => onToggleFavorite(track.id)}
-                    aria-label={isFavorited ? "Bỏ thích" : "Yêu thích"}
+                    aria-label={isFavorited ? "Remove favorite" : "Favorite"}
                   >
                     <HeartIcon width={16} height={16} />
                   </button>
                   <button
                     className="row-icon-btn"
                     onClick={() => onNavigate(`/track/${track.id}`)}
-                    aria-label="Xem chi tiết"
+                    aria-label="View details"
                   >
                     <MoreIcon width={16} height={16} />
                   </button>
@@ -228,11 +228,11 @@ export function AppHomePage({
       <section className="app-section">
         <div className="section-header">
           <div>
-            <h2 className="section-title">Album & EP nổi bật</h2>
-            <p className="section-subtitle">Tuyển tập âm nhạc hoàn chỉnh từ các creator</p>
+            <h2 className="section-title">Featured albums</h2>
+            <p className="section-subtitle">Complete collections from SoundWave creators</p>
           </div>
           <button className="section-see-all" onClick={() => onNavigate("/explore?tab=albums")}>
-            <span>Tất cả Album</span>
+            <span>All albums</span>
             <ArrowIcon width={16} height={16} />
           </button>
         </div>
@@ -263,11 +263,11 @@ export function AppHomePage({
       <section className="app-section">
         <div className="section-header">
           <div>
-            <h2 className="section-title">Khám phá theo thể loại</h2>
-            <p className="section-subtitle">Giai điệu phù hợp cho từng cảm xúc và gu âm nhạc</p>
+            <h2 className="section-title">Genres</h2>
+            <p className="section-subtitle">Music for every mood and taste</p>
           </div>
           <button className="section-see-all" onClick={() => onNavigate("/genres")}>
-            <span>Xem tất cả</span>
+            <span>View all</span>
             <ArrowIcon width={16} height={16} />
           </button>
         </div>
@@ -291,8 +291,8 @@ export function AppHomePage({
       <section className="app-section">
         <div className="section-header">
           <div>
-            <h2 className="section-title">Creator tiêu biểu</h2>
-            <p className="section-subtitle">Những người mang đến những giai điệu mới mỗi ngày</p>
+            <h2 className="section-title">Featured creators</h2>
+            <p className="section-subtitle">People bringing new music every day</p>
           </div>
         </div>
 
@@ -302,12 +302,12 @@ export function AppHomePage({
               <img src={creator.avatarUrl} alt="" className="creator-card-avatar" />
               <h3 className="creator-card-name">{creator.displayName}</h3>
               <p className="creator-card-bio">{creator.bio}</p>
-              <span className="creator-card-tracks-count">{creator.publishedTracks} bài hát đã xuất bản</span>
+              <span className="creator-card-tracks-count">{creator.publishedTracks} published tracks</span>
               <button
                 className="button button-secondary button-small creator-card-btn"
                 onClick={() => onNavigate(`/creator/${creator.userId}`)}
               >
-                Xem trang cá nhân
+                View profile
               </button>
             </div>
           ))}

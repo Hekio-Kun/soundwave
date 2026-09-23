@@ -6,6 +6,7 @@ import "./app-shell.css";
 import "./redesign.css";
 import "./dashboard.css";
 import "./auth-redesign.css";
+import "./motion.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
