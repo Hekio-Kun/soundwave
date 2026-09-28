@@ -1,4 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
+import { authApi, getAuthErrorMessage, type AuthSession } from "../api/auth";
 import {
   AlertIcon,
   CheckIcon,
@@ -12,7 +13,7 @@ import {
 } from "../icons";
 
 type AuthProps = {
-  onLoginSuccess: (credentials: { email: string; password: string }) => void;
+  onLoginSuccess: (session: AuthSession, rememberMe: boolean) => void;
   onNavigate: (route: string) => void;
 };
 
@@ -28,11 +29,11 @@ function focusFirstInvalid(errors: FieldErrors) {
   }
 }
 
-function AuthErrorNotice({ message }: { message: string }) {
+function AuthErrorNotice({ message, title = "Incomplete information" }: { message: string; title?: string }) {
   return (
     <div className="auth-v2-error" role="alert" aria-live="polite">
       <span><AlertIcon width={17} height={17} /></span>
-      <div><b>Incomplete information</b><small>{message}</small></div>
+      <div><b>{title}</b><small>{message}</small></div>
     </div>
   );
 }
@@ -173,9 +174,12 @@ function PasswordField({
 export function LoginPage({ onLoginSuccess, onNavigate }: AuthProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [apiError, setApiError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: FieldErrors = {};
     if (!email.trim()) nextErrors["login-email"] = "Please enter your email address.";
@@ -189,11 +193,21 @@ export function LoginPage({ onLoginSuccess, onNavigate }: AuthProps) {
     }
 
     setErrors({});
-    onLoginSuccess({ email: email.trim(), password });
+    setApiError("");
+    setSubmitting(true);
+    try {
+      const session = await authApi.login(email.trim(), password, rememberMe);
+      onLoginSuccess(session, rememberMe);
+    } catch (error) {
+      setApiError(getAuthErrorMessage(error, "Login failed. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const updateField = (id: string, setter: (value: string) => void) => (value: string) => {
     setter(value);
+    setApiError("");
     setErrors((current) => ({ ...current, [id]: "" }));
   };
 
@@ -201,15 +215,16 @@ export function LoginPage({ onLoginSuccess, onNavigate }: AuthProps) {
     <AuthExperience mode="login" eyebrow="WELCOME BACK" title="Continue with SoundWave" description="Log in to open your personal library and continue listening where you left off." onNavigate={onNavigate}>
       <form onSubmit={handleSubmit} className="auth-v2-form" noValidate>
         {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Please review the fields marked below." /> : null}
+        {apiError ? <AuthErrorNotice title="Unable to log in" message={apiError} /> : null}
         <TextField id="login-email" type="email" label="Email" value={email} onChange={updateField("login-email", setEmail)} placeholder="you@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["login-email"]} />
         <PasswordField id="login-password" label="Password" value={password} onChange={updateField("login-password", setPassword)} autoComplete="current-password" action={<button type="button" className="auth-v2-text-button" onClick={() => onNavigate("/forgot-password")}>Forgot Password?</button>} error={errors["login-password"]} />
 
         <div className="auth-v2-form-options">
-          <label><input type="checkbox" defaultChecked /><span>Remember Me</span></label>
+          <label><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /><span>Remember Me</span></label>
           <span><ShieldIcon width={13} height={13} /> Secure connection</span>
         </div>
 
-        <button type="submit" className="button button-primary button-large auth-v2-submit">Login</button>
+        <button type="submit" className="button button-primary button-large auth-v2-submit" disabled={submitting}>{submitting ? "Logging in…" : "Login"}</button>
       </form>
 
       <div className="auth-v2-access-note">
@@ -223,13 +238,14 @@ export function LoginPage({ onLoginSuccess, onNavigate }: AuthProps) {
 }
 
 export function RegisterPage({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const [submitted, setSubmitted] = useState(false);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [apiError, setApiError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const passwordRules = [
     { label: "8+ characters", valid: password.length >= 8 },
@@ -237,7 +253,7 @@ export function RegisterPage({ onNavigate }: { onNavigate: (route: string) => vo
     { label: "Number", valid: /\d/.test(password) },
   ];
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: FieldErrors = {};
     if (!displayName.trim()) nextErrors["reg-name"] = "Please enter your display name.";
@@ -257,28 +273,30 @@ export function RegisterPage({ onNavigate }: { onNavigate: (route: string) => vo
     }
 
     setErrors({});
-    setSubmitted(true);
+    setApiError("");
+    setSubmitting(true);
+    try {
+      await authApi.register({ displayName: displayName.trim(), email: email.trim(), password, confirmPassword });
+      onNavigate(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+    } catch (error) {
+      setApiError(getAuthErrorMessage(error, "Registration failed. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const updateField = (id: string, setter: (value: string) => void) => (value: string) => {
     setter(value);
+    setApiError("");
     setErrors((current) => ({ ...current, [id]: "" }));
   };
 
   return (
     <AuthExperience mode="register" eyebrow="START FOR FREE" title="Create your music space" description="One account to listen, save playlists, and share new music." onNavigate={onNavigate}>
-      {submitted ? (
-        <div className="auth-v2-success">
-          <span><CheckIcon width={28} height={28} /></span>
-          <small>REGISTRATION SUCCESSFUL</small>
-          <h2>Check your inbox</h2>
-          <p>A verification link was sent to <b>{email}</b>. Verify your email before logging in.</p>
-          <button className="button button-primary button-large" onClick={() => onNavigate("/login")}>Go to Login</button>
-        </div>
-      ) : (
-        <>
+      <>
           <form onSubmit={handleSubmit} className="auth-v2-form" noValidate>
             {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Complete all required information before registering." /> : null}
+            {apiError ? <AuthErrorNotice title="Unable to register" message={apiError} /> : null}
             <div className="auth-v2-two-columns">
               <TextField id="reg-name" label="Display Name" value={displayName} onChange={updateField("reg-name", setDisplayName)} placeholder="For example: Le An" autoComplete="name" minLength={2} icon={<UserIcon width={17} height={17} />} error={errors["reg-name"]} />
               <TextField id="reg-email" type="email" label="Email" value={email} onChange={updateField("reg-email", setEmail)} placeholder="you@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["reg-email"]} />
@@ -292,21 +310,21 @@ export function RegisterPage({ onNavigate }: { onNavigate: (route: string) => vo
               <label className="auth-v2-terms"><input id="reg-terms" type="checkbox" checked={termsAccepted} onChange={(event) => { setTermsAccepted(event.target.checked); setErrors((current) => ({ ...current, "reg-terms": "" })); }} aria-invalid={Boolean(errors["reg-terms"])} aria-describedby={errors["reg-terms"] ? "reg-terms-error" : undefined} /><span>I accept SoundWave's <button type="button">Terms of Use</button> and <button type="button">Community Policy</button>.</span></label>
               {errors["reg-terms"] ? <small className="auth-v2-field-error" id="reg-terms-error"><AlertIcon width={12} height={12} />{errors["reg-terms"]}</small> : null}
             </div>
-            <button type="submit" className="button button-primary button-large auth-v2-submit">Register</button>
+            <button type="submit" className="button button-primary button-large auth-v2-submit" disabled={submitting}>{submitting ? "Creating account…" : "Register"}</button>
           </form>
           <p className="auth-v2-switch">Already have an account? <button onClick={() => onNavigate("/login")}>Login</button></p>
-        </>
-      )}
+      </>
     </AuthExperience>
   );
 }
 
 export function ForgotPasswordPage({ onNavigate }: { onNavigate: (route: string) => void }) {
-  const [submitted, setSubmitted] = useState(false);
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [apiError, setApiError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: FieldErrors = {};
     if (!email.trim()) nextErrors["forgot-email"] = "Please enter your email address.";
@@ -317,34 +335,44 @@ export function ForgotPasswordPage({ onNavigate }: { onNavigate: (route: string)
       return;
     }
     setErrors({});
-    setSubmitted(true);
+    setApiError("");
+    setSubmitting(true);
+    try {
+      await authApi.forgotPassword(email.trim());
+      onNavigate(`/reset-password?email=${encodeURIComponent(email.trim())}`);
+    } catch (error) {
+      setApiError(getAuthErrorMessage(error, "Unable to send the reset OTP. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <AuthExperience mode="recovery" eyebrow="ACCOUNT RECOVERY" title="Forgot Password?" description="Enter your registered email and SoundWave will send password-reset instructions." onNavigate={onNavigate}>
-      {submitted ? (
-        <div className="auth-v2-success"><span><CheckIcon width={28} height={28} /></span><h2>Email sent</h2><p>If <b>{email}</b> belongs to an account, you will receive a link within a few minutes.</p><button className="button button-primary button-large" onClick={() => onNavigate("/login")}>Back to Login</button></div>
-      ) : (
-        <form className="auth-v2-form" onSubmit={handleSubmit} noValidate>
+      <form className="auth-v2-form" onSubmit={handleSubmit} noValidate>
           {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Enter the email used to register your SoundWave account." /> : null}
-          <TextField id="forgot-email" type="email" label="Email" value={email} onChange={(value) => { setEmail(value); setErrors({}); }} placeholder="you@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["forgot-email"]} />
-          <button className="button button-primary button-large auth-v2-submit">Send Reset Link</button>
+          {apiError ? <AuthErrorNotice title="Unable to send OTP" message={apiError} /> : null}
+          <TextField id="forgot-email" type="email" label="Email" value={email} onChange={(value) => { setEmail(value); setErrors({}); setApiError(""); }} placeholder="you@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["forgot-email"]} />
+          <button className="button button-primary button-large auth-v2-submit" disabled={submitting}>{submitting ? "Sending OTP…" : "Send Reset OTP"}</button>
           <button type="button" className="auth-v2-back" onClick={() => onNavigate("/login")}>← Back to Login</button>
-        </form>
-      )}
+      </form>
     </AuthExperience>
   );
 }
 
-export function ResetPasswordPage({ onNavigate }: { onNavigate: (route: string) => void }) {
+export function ResetPasswordPage({ email, onNavigate }: { email: string; onNavigate: (route: string) => void }) {
   const [submitted, setSubmitted] = useState(false);
+  const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [apiError, setApiError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const nextErrors: FieldErrors = {};
+    if (!/^\d{6}$/.test(otp)) nextErrors["reset-otp"] = "Enter the 6-digit code from your email.";
     if (!newPassword) nextErrors["new-password"] = "Please enter a new password.";
     else if (newPassword.length < 8) nextErrors["new-password"] = "New Password must contain at least 8 characters.";
     if (!confirmPassword) nextErrors["confirm-password"] = "Please confirm your new password.";
@@ -357,24 +385,36 @@ export function ResetPasswordPage({ onNavigate }: { onNavigate: (route: string) 
     }
 
     setErrors({});
-    setSubmitted(true);
+    setApiError("");
+    setSubmitting(true);
+    try {
+      await authApi.resetPassword(email, otp, newPassword, confirmPassword);
+      setSubmitted(true);
+    } catch (error) {
+      setApiError(getAuthErrorMessage(error, "Unable to reset your password. Please try again."));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const updateField = (id: string, setter: (value: string) => void) => (value: string) => {
     setter(value);
+    setApiError("");
     setErrors((current) => ({ ...current, [id]: "" }));
   };
 
   return (
-    <AuthExperience mode="recovery" eyebrow="ACCOUNT SECURITY" title="Create a new password" description="Choose a password different from those you have used before." onNavigate={onNavigate}>
+    <AuthExperience mode="recovery" eyebrow="ACCOUNT SECURITY" title="Create a new password" description={`Enter the OTP sent to ${email || "your email"} and choose a secure password.`} onNavigate={onNavigate}>
       {submitted ? (
         <div className="auth-v2-success"><span><CheckIcon width={28} height={28} /></span><h2>Password updated</h2><p>You can now log in with your new password.</p><button className="button button-primary button-large" onClick={() => onNavigate("/login")}>Login</button></div>
       ) : (
         <form className="auth-v2-form" onSubmit={handleSubmit} noValidate>
           {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Review the New Password and Confirm Password fields." /> : null}
+          {apiError ? <AuthErrorNotice title="Unable to reset password" message={apiError} /> : null}
+          <TextField id="reset-otp" label="6-digit OTP" value={otp} onChange={updateField("reset-otp", setOtp)} placeholder="000000" autoComplete="one-time-code" icon={<ShieldIcon width={17} height={17} />} error={errors["reset-otp"]} />
           <PasswordField id="new-password" label="New Password" value={newPassword} onChange={updateField("new-password", setNewPassword)} autoComplete="new-password" error={errors["new-password"]} />
           <PasswordField id="confirm-password" label="Confirm Password" value={confirmPassword} onChange={updateField("confirm-password", setConfirmPassword)} autoComplete="new-password" error={errors["confirm-password"]} />
-          <button className="button button-primary button-large auth-v2-submit">Save Password</button>
+          <button className="button button-primary button-large auth-v2-submit" disabled={submitting}>{submitting ? "Saving…" : "Save Password"}</button>
         </form>
       )}
     </AuthExperience>

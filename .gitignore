@@ -5,3 +5,13 @@ tmp/
 # OS metadata
 Thumbs.db
 .DS_Store
+
+# Local credentials
+.env
+.env.*
+!.env.example
+*-local.properties
+application-local.properties
+
+# Build artifacts
+*.tsbuildinfo

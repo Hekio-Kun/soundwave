@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { authApi, type AuthSession } from "./api/auth";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
 import { MusicPlayer } from "./components/MusicPlayer";
@@ -15,13 +16,13 @@ import { AdminDashboardPage, DashboardAccessDenied, StaffDashboardPage } from ".
 import { SearchPage } from "./pages/SearchPage";
 import { StudioPage } from "./pages/StudioPage";
 import { TrackDetailsPage } from "./pages/TrackDetailsPage";
-import { VerifyEmailPage, type EmailVerificationStatus } from "./pages/VerifyEmailPage";
+import { VerifyEmailPage } from "./pages/VerifyEmailPage";
 import type { CurrentUser, LandingTrack, Playlist, StudioTrack } from "./types";
 
 export default function App() {
   // 1. Authentication State
   const [user, setUser] = useState<CurrentUser | null>(() => {
-    const saved = localStorage.getItem("soundwave_user");
+    const saved = localStorage.getItem("soundwave_user") ?? sessionStorage.getItem("soundwave_user");
     if (saved) {
       try {
         return JSON.parse(saved) as CurrentUser;
@@ -29,38 +30,34 @@ export default function App() {
         // ignore parse error
       }
     }
-    if (localStorage.getItem("soundwave_demo_user") === "authenticated") {
-      return demoUser;
-    }
     return null;
   });
 
   const isAuthenticated = Boolean(user);
 
-  const handleLoginSuccess = ({ email }: { email: string; password: string }) => {
-    // Tạm mô phỏng vai trò do backend trả về sau khi xác thực tài khoản.
-    const normalizedEmail = email.toLowerCase();
-    const role: CurrentUser["role"] = normalizedEmail.startsWith("admin")
-      ? "ADMIN"
-      : normalizedEmail.startsWith("staff")
-        ? "STAFF"
-        : "USER";
+  const handleLoginSuccess = (session: AuthSession, rememberMe: boolean) => {
     const loggedInUser: CurrentUser = {
-      ...demoUser,
-      email: normalizedEmail,
-      displayName: role === "ADMIN" ? "Admin SoundWave" : role === "STAFF" ? "Staff SoundWave" : demoUser.displayName,
-      role,
+      ...session.user,
+      avatarUrl: demoUser.avatarUrl,
     };
     setUser(loggedInUser);
-    localStorage.setItem("soundwave_user", JSON.stringify(loggedInUser));
-    localStorage.setItem("soundwave_demo_user", "authenticated");
-    window.location.hash = role === "ADMIN" ? "#/admin/dashboard" : role === "STAFF" ? "#/staff/dashboard" : "#/";
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem("soundwave_user", JSON.stringify(loggedInUser));
+    storage.setItem("soundwave_access_token", session.accessToken);
+    window.location.hash = session.user.role === "ADMIN" ? "#/admin/dashboard" : session.user.role === "STAFF" ? "#/staff/dashboard" : "#/";
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Local logout must still complete if the server session already expired.
+    }
     setUser(null);
     localStorage.removeItem("soundwave_user");
-    localStorage.removeItem("soundwave_demo_user");
+    localStorage.removeItem("soundwave_access_token");
+    sessionStorage.removeItem("soundwave_user");
+    sessionStorage.removeItem("soundwave_access_token");
     window.location.hash = "#/";
   };
 
@@ -242,15 +239,9 @@ export default function App() {
       return <RegisterPage onNavigate={navigate} />;
     }
     if (pathname === "/verify-email") {
-      const statusParam = queryParams.get("status");
-      const status: EmailVerificationStatus =
-        statusParam === "verifying" || statusParam === "expired" || statusParam === "invalid"
-          ? statusParam
-          : "success";
       return (
         <VerifyEmailPage
           email={queryParams.get("email") || "you@example.com"}
-          status={status}
           onNavigate={navigate}
         />
       );
@@ -259,7 +250,7 @@ export default function App() {
       return <ForgotPasswordPage onNavigate={navigate} />;
     }
     if (pathname === "/reset-password") {
-      return <ResetPasswordPage onNavigate={navigate} />;
+      return <ResetPasswordPage email={queryParams.get("email") || ""} onNavigate={navigate} />;
     }
 
     // App Routes
