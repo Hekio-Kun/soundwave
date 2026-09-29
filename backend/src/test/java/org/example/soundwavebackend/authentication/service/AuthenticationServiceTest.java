@@ -55,7 +55,7 @@ class AuthenticationServiceTest {
         RegisterRequest request = new RegisterRequest("Le Hai", "User@Example.com", "Password1", "Password1");
         Role role = mock(Role.class);
         when(userRepository.existsByEmailIgnoreCase("user@example.com")).thenReturn(false);
-        when(roleRepository.findByCode("USER")).thenReturn(Optional.of(role));
+        when(roleRepository.findByCode("LISTENER")).thenReturn(Optional.of(role));
         when(passwordEncoder.encode("Password1")).thenReturn("password-hash");
         when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(profileRepository.existsByUsername("user")).thenReturn(false);

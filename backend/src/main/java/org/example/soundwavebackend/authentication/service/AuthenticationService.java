@@ -23,7 +23,7 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
-    private static final String DEFAULT_ROLE = "USER";
+    private static final String DEFAULT_ROLE = "LISTENER";
     private static final String RECOVERY_MESSAGE = "If the account exists, an OTP has been sent to the registered email.";
 
     private final AppUserRepository userRepository;
@@ -62,7 +62,7 @@ public class AuthenticationService {
         }
 
         Role role = roleRepository.findByCode(DEFAULT_ROLE)
-                .orElseThrow(() -> new IllegalStateException("Default USER role is missing"));
+                .orElseThrow(() -> new IllegalStateException("Default LISTENER role is missing"));
         AppUser user = userRepository.save(new AppUser(role, email, passwordEncoder.encode(request.password())));
         String username = createUniqueUsername(email, user.getId());
         profileRepository.save(new UserProfile(user, username, request.displayName().trim()));

@@ -10,8 +10,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-*-local.properties
-application-local.properties
 
 # Build artifacts
 *.tsbuildinfo

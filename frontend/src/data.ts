@@ -270,6 +270,6 @@ export const demoUser: import("./types").CurrentUser = {
   email: "lean@soundwave.vn",
   displayName: "Lê An",
   avatarUrl: avatar("#cffafe", "#0891b2", "LA"),
-  role: "USER",
+  role: "LISTENER",
   bio: "Creating mellow lofi and acoustic pop melodies.",
 };

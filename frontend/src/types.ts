@@ -81,7 +81,7 @@ export type CurrentUser = {
   email: string;
   displayName: string;
   avatarUrl: string;
-  role: "USER" | "STAFF" | "ADMIN";
+  role: "LISTENER" | "STAFF" | "ADMIN";
   bio?: string;
 };
 

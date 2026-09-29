@@ -17,12 +17,12 @@ For local frontend development, the default allowed origins are `http://127.0.0.
 
 ## Required role data
 
-The `roles` table must contain the three stable role codes below. Registration always assigns `USER`; clients never choose a role.
+The `roles` table must contain the three stable role codes below. Registration always assigns `LISTENER`; clients never choose a role.
 
 ```sql
-IF NOT EXISTS (SELECT 1 FROM roles WHERE code = 'USER')
+IF NOT EXISTS (SELECT 1 FROM roles WHERE code = 'LISTENER')
     INSERT INTO roles (code, name, description, created_at)
-    VALUES ('USER', N'Listener', N'Standard SoundWave account', SYSUTCDATETIME());
+    VALUES ('LISTENER', N'Listener', N'Standard SoundWave listener account', SYSUTCDATETIME());
 
 IF NOT EXISTS (SELECT 1 FROM roles WHERE code = 'STAFF')
     INSERT INTO roles (code, name, description, created_at)
