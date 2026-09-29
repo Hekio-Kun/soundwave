@@ -1,0 +1,399 @@
+/* Motion system — chỉ dùng transform/opacity để giữ chuyển động mượt. */
+:root {
+  --sw-motion-fast: 150ms;
+  --sw-motion-base: 260ms;
+  --sw-motion-slow: 520ms;
+  --sw-ease-standard: cubic-bezier(.2, .8, .2, 1);
+  --sw-ease-emphasized: cubic-bezier(.16, 1, .3, 1);
+}
+
+html { scroll-behavior: smooth; }
+
+.app-route-stage {
+  min-width: 0;
+  animation: sw-route-enter 420ms var(--sw-ease-emphasized) both;
+}
+
+.app-route-stage--auth { min-height: 100dvh; }
+
+@keyframes sw-route-enter {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.motion-reveal {
+  opacity: 0;
+  transform: translate3d(0, var(--motion-shift, 12px), 0) scale(.992);
+  transition:
+    opacity var(--sw-motion-slow) var(--sw-ease-emphasized) var(--motion-delay, 0ms),
+    transform var(--sw-motion-slow) var(--sw-ease-emphasized) var(--motion-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+.motion-reveal.is-motion-visible {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+/* Tránh chạy hai page-entry animation cùng lúc. */
+.library-page,
+.genres-page,
+.search-page,
+.studio-page,
+.track-details-page,
+.album-details-page,
+.creator-profile-page,
+.track-page-v2,
+.ops-page { animation: none; }
+
+/* Button, link và điều hướng phản hồi tức thì nhưng không giật layout. */
+.button,
+.icon-button,
+.player-icon,
+.player-play,
+.track-round-action,
+.nav-item,
+.mobile-nav-item,
+.sw-section-heading button,
+.sw-follow-button,
+.queue-tab,
+.queue-clear-btn,
+.topbar-upload-btn,
+.topbar-user-button,
+.auth-v2-tabs button,
+.auth-v2-back-home,
+.auth-v2-text-button {
+  transition:
+    transform var(--sw-motion-fast) var(--sw-ease-standard),
+    color var(--sw-motion-fast) ease,
+    background-color var(--sw-motion-fast) ease,
+    border-color var(--sw-motion-fast) ease,
+    box-shadow var(--sw-motion-base) var(--sw-ease-standard),
+    opacity var(--sw-motion-fast) ease;
+}
+
+.button:hover,
+.topbar-upload-btn:hover,
+.sw-follow-button:hover { transform: translate3d(0, -2px, 0); }
+
+.button:active,
+.icon-button:active,
+.player-icon:active,
+.player-play:active,
+.track-round-action:active,
+.nav-item:active,
+.mobile-nav-item:active,
+.sw-section-heading button:active,
+.sw-follow-button:active,
+.queue-tab:active,
+.auth-v2-tabs button:active { transform: scale(.96); }
+
+.button svg,
+.icon-button svg,
+.nav-item svg,
+.mobile-nav-item svg,
+.sw-section-heading button svg {
+  transition: transform var(--sw-motion-base) var(--sw-ease-emphasized);
+}
+
+.button:hover svg,
+.sw-section-heading button:hover svg { transform: translate3d(2px, 0, 0) scale(1.04); }
+.nav-item:hover svg { transform: translate3d(2px, 0, 0) scale(1.08); }
+.nav-item--active svg { animation: sw-icon-pop 360ms var(--sw-ease-emphasized) both; }
+
+@keyframes sw-icon-pop {
+  0% { transform: scale(.82); }
+  65% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* Sidebar luôn cố định nhưng có micro-interaction rõ ràng. */
+.nav-item { position: relative; overflow: hidden; }
+.nav-item::after {
+  content: "";
+  position: absolute;
+  inset: 7px auto 7px 0;
+  width: 3px;
+  border-radius: 0 999px 999px 0;
+  background: var(--sw-primary, #0891b2);
+  opacity: 0;
+  transform: translateX(-5px) scaleY(.45);
+  transition: opacity var(--sw-motion-fast) ease, transform var(--sw-motion-base) var(--sw-ease-emphasized);
+}
+.nav-item--active::after { opacity: 1; transform: translateX(0) scaleY(1); }
+.sidebar-brand .brand:hover .brand-mark { transform: rotate(-5deg) scale(1.06); }
+.sidebar-brand .brand-mark { transition: transform 320ms var(--sw-ease-emphasized), box-shadow 320ms ease; }
+.sidebar-brand .brand:hover .brand-mark { box-shadow: 0 9px 22px rgba(8, 145, 178, .22); }
+
+/* Hero: stagger nội dung, giữ biên độ nhỏ để không gây mất tập trung. */
+.discover-hero-copy > * { animation: sw-hero-item 560ms var(--sw-ease-emphasized) both; }
+.discover-hero-copy > :nth-child(1) { animation-delay: 50ms; }
+.discover-hero-copy > :nth-child(2) { animation-delay: 110ms; }
+.discover-hero-copy > :nth-child(3) { animation-delay: 170ms; }
+.discover-hero-copy > :nth-child(4) { animation-delay: 230ms; }
+.discover-hero-copy > :nth-child(5) { animation-delay: 290ms; }
+
+@keyframes sw-hero-item {
+  from { opacity: 0; transform: translate3d(0, 16px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.discover-kicker i { animation: sw-kicker-pulse 2.2s ease-in-out infinite; }
+@keyframes sw-kicker-pulse {
+  0%, 100% { transform: scale(.82); opacity: .62; }
+  50% { transform: scale(1.18); opacity: 1; }
+}
+
+.discover-feature-art { animation: sw-feature-float 4.8s ease-in-out infinite; }
+@keyframes sw-feature-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0); }
+  50% { transform: translate3d(0, -5px, 0) rotate(-1deg); }
+}
+
+.discover-feature-play,
+.sw-track-play,
+.track-cover-button > span {
+  transition: transform var(--sw-motion-base) var(--sw-ease-emphasized), opacity var(--sw-motion-base) ease, box-shadow var(--sw-motion-base) ease;
+}
+
+.discover-feature:hover .discover-feature-play,
+.sw-track-card:hover .sw-track-play,
+.sw-album-card:hover .sw-track-play { transform: translateY(0) scale(1.08); }
+
+/* Cards: nâng nhẹ, zoom ảnh và quét sáng khi hover. */
+.sw-track-card,
+.sw-album-card,
+.sw-creator-card,
+.sw-release-row,
+.sw-genre-grid > button,
+.track-context-card,
+.track-author-card,
+.ops-card,
+.ops-stat-card {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.sw-track-card:hover,
+.sw-album-card:hover,
+.sw-creator-card:hover,
+.track-context-card:hover,
+.track-author-card:hover,
+.ops-card:hover,
+.ops-stat-card:hover {
+  transform: translate3d(0, -4px, 0) scale(1.008);
+}
+
+.sw-track-cover,
+.sw-album-art,
+.track-cover-button { isolation: isolate; }
+
+.sw-track-cover::before,
+.sw-album-art::before,
+.track-cover-button::before {
+  content: "";
+  position: absolute;
+  inset: -45% auto -45% -55%;
+  z-index: 2;
+  width: 32%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.42), transparent);
+  transform: translateX(-160%) rotate(16deg);
+  transition: transform 620ms var(--sw-ease-standard);
+  pointer-events: none;
+}
+
+.sw-track-card:hover .sw-track-cover::before,
+.sw-album-card:hover .sw-album-art::before,
+.track-cover-button:hover::before { transform: translateX(610%) rotate(16deg); }
+
+.sw-track-card:hover img,
+.sw-album-card:hover img { transform: scale(1.055); }
+.sw-creator-avatar img { transition: transform 420ms var(--sw-ease-emphasized); }
+.sw-creator-card:hover .sw-creator-avatar img { transform: scale(1.07) rotate(-2deg); }
+
+.sw-release-row:hover { transform: translate3d(5px, 0, 0); }
+.sw-release-row:active { transform: translate3d(3px, 0, 0) scale(.995); }
+.sw-release-row img,
+.queue-track-card img { transition: transform 360ms var(--sw-ease-emphasized); }
+.sw-release-row:hover img,
+.queue-track-card:hover img { transform: scale(1.07); }
+
+.sw-genre-grid > button { overflow: hidden; transition: transform var(--sw-motion-base) var(--sw-ease-emphasized), box-shadow var(--sw-motion-base) ease, border-color var(--sw-motion-fast) ease; }
+.sw-genre-grid > button:hover { transform: translate3d(0, -3px, 0) scale(1.015); }
+.sw-genre-grid > button svg { transition: transform var(--sw-motion-base) var(--sw-ease-emphasized); }
+.sw-genre-grid > button:hover svg { transform: translate3d(4px, -2px, 0); }
+
+/* Track details tạo cảm giác sống động theo trạng thái phát. */
+.track-showcase-glow { animation: sw-glow-breathe 7s ease-in-out infinite alternate; }
+@keyframes sw-glow-breathe {
+  from { transform: scale(1.02); opacity: .2; }
+  to { transform: scale(1.09) translate3d(1%, -1%, 0); opacity: .32; }
+}
+
+.track-cover-button.is-playing { animation: sw-cover-playing 3.2s ease-in-out infinite; }
+@keyframes sw-cover-playing {
+  0%, 100% { transform: translate3d(0, 0, 0); box-shadow: 0 18px 42px rgba(16, 24, 40, .18); }
+  50% { transform: translate3d(0, -4px, 0); box-shadow: 0 24px 54px rgba(8, 145, 178, .22); }
+}
+
+.track-round-action.is-favorite { animation: sw-heart-pop 420ms var(--sw-ease-emphasized); }
+@keyframes sw-heart-pop {
+  0% { transform: scale(.82); }
+  55% { transform: scale(1.18) rotate(-5deg); }
+  100% { transform: scale(1); }
+}
+
+.track-creator-chip,
+.track-author-card > img { transition: transform var(--sw-motion-base) var(--sw-ease-emphasized), box-shadow var(--sw-motion-base) ease; }
+.track-creator-chip:hover { transform: translate3d(3px, 0, 0); }
+.track-author-card:hover > img { transform: translate3d(0, -3px, 0) scale(1.035); }
+
+/* Player luôn hiện nhưng chỉ pulse khi thực sự đang phát. */
+.music-player { animation: sw-player-enter 480ms var(--sw-ease-emphasized) both; }
+@keyframes sw-player-enter {
+  from { opacity: 0; transform: translate3d(0, 24px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.player-track img { transition: transform 420ms var(--sw-ease-emphasized), box-shadow 420ms ease; }
+.music-player--playing .player-track img { animation: sw-player-cover 2.8s ease-in-out infinite; }
+@keyframes sw-player-cover {
+  0%, 100% { transform: scale(1); box-shadow: 0 4px 12px rgba(16,24,40,.1); }
+  50% { transform: scale(1.035); box-shadow: 0 7px 18px rgba(8,145,178,.2); }
+}
+
+.player-play { position: relative; isolation: isolate; }
+.music-player--playing .player-play::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  z-index: -1;
+  border: 2px solid rgba(8, 145, 178, .32);
+  border-radius: 50%;
+  animation: sw-player-ring 1.8s ease-out infinite;
+}
+@keyframes sw-player-ring {
+  from { opacity: .8; transform: scale(.82); }
+  to { opacity: 0; transform: scale(1.28); }
+}
+
+.player-icon--active svg { animation: sw-icon-pop 360ms var(--sw-ease-emphasized); }
+.timeline input::-webkit-slider-thumb,
+.player-tools input::-webkit-slider-thumb { transition: transform var(--sw-motion-fast) var(--sw-ease-standard), box-shadow var(--sw-motion-fast) ease; }
+.timeline input:hover::-webkit-slider-thumb,
+.player-tools input:hover::-webkit-slider-thumb { transform: scale(1.22); box-shadow: 0 0 0 5px rgba(8,145,178,.12); }
+
+/* Queue drawer và từng item chuyển động theo lớp. */
+.queue-drawer { transition: transform 360ms var(--sw-ease-emphasized), visibility 360ms ease, box-shadow 360ms ease; }
+.queue-drawer--open { box-shadow: -16px 0 44px rgba(16, 24, 40, .1); }
+.queue-drawer--open .queue-drawer-header { animation: sw-queue-item 380ms var(--sw-ease-emphasized) 70ms both; }
+.queue-drawer--open .queue-now-playing { animation: sw-queue-item 420ms var(--sw-ease-emphasized) 120ms both; }
+.queue-drawer--open .queue-next-section { animation: sw-queue-item 460ms var(--sw-ease-emphasized) 170ms both; }
+@keyframes sw-queue-item {
+  from { opacity: 0; transform: translate3d(14px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.queue-track-card { transition: transform var(--sw-motion-fast) var(--sw-ease-standard), background-color var(--sw-motion-fast) ease, border-color var(--sw-motion-fast) ease; }
+.queue-track-card:hover { transform: translate3d(3px, 0, 0); }
+.queue-remove-btn { transition: opacity var(--sw-motion-fast) ease, transform var(--sw-motion-fast) var(--sw-ease-standard), color var(--sw-motion-fast) ease; }
+.queue-track-card:hover .queue-remove-btn { transform: scale(1.05); }
+
+/* Modal, toast và trạng thái thành công. */
+.modal-overlay,
+.modal-backdrop { animation: sw-backdrop-in 220ms ease-out both; }
+@keyframes sw-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-card,
+.track-dialog,
+.guest-dialog { animation: sw-dialog-in 340ms var(--sw-ease-emphasized) both; }
+@keyframes sw-dialog-in {
+  from { opacity: 0; transform: translate3d(0, 16px, 0) scale(.965); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.track-dialog-success > span,
+.auth-v2-success > span { animation: sw-success-pop 520ms var(--sw-ease-emphasized) both; }
+@keyframes sw-success-pop {
+  0% { opacity: 0; transform: scale(.55) rotate(-12deg); }
+  66% { opacity: 1; transform: scale(1.12) rotate(3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* Authentication: chuyển động nền rất chậm và stagger form. */
+.auth-v2-orbit--one { animation: sw-orbit-drift-one 14s ease-in-out infinite alternate; }
+.auth-v2-orbit--two { animation: sw-orbit-drift-two 11s ease-in-out infinite alternate; }
+@keyframes sw-orbit-drift-one { to { transform: translate3d(22px, 15px, 0) scale(1.04); } }
+@keyframes sw-orbit-drift-two { to { transform: translate3d(-18px, 22px, 0) scale(.96); } }
+
+.auth-v2-story-content > * { animation: sw-auth-story-in 580ms var(--sw-ease-emphasized) both; }
+.auth-v2-story-content > :nth-child(1) { animation-delay: 80ms; }
+.auth-v2-story-content > :nth-child(2) { animation-delay: 140ms; }
+.auth-v2-story-content > :nth-child(3) { animation-delay: 200ms; }
+.auth-v2-story-content > :nth-child(4) { animation-delay: 260ms; }
+.auth-v2-story-content > :nth-child(5) { animation-delay: 320ms; }
+@keyframes sw-auth-story-in {
+  from { opacity: 0; transform: translate3d(-16px, 0, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.auth-v2-input > span,
+.auth-v2-input--password > button { transition: transform var(--sw-motion-base) var(--sw-ease-emphasized), color var(--sw-motion-fast) ease, background-color var(--sw-motion-fast) ease; }
+.auth-v2-input:focus-within > span { transform: scale(1.1); color: #0891b2; }
+.auth-v2-input--password > button:hover { transform: scale(1.04); }
+.auth-v2-submit:hover { box-shadow: 0 13px 28px rgba(8, 145, 178, .24); }
+
+/* Dashboard: số liệu và biểu đồ xuất hiện có nhịp. */
+.ops-shell-sidebar { animation: sw-dashboard-sidebar 460ms var(--sw-ease-emphasized) both; }
+.ops-shell-topbar { animation: sw-dashboard-topbar 420ms var(--sw-ease-emphasized) both; }
+@keyframes sw-dashboard-sidebar { from { opacity: 0; transform: translate3d(-14px, 0, 0); } }
+@keyframes sw-dashboard-topbar { from { opacity: 0; transform: translate3d(0, -10px, 0); } }
+.ops-bar-track i { transform-origin: bottom; animation: sw-bar-grow 620ms var(--sw-ease-emphasized) both; }
+@keyframes sw-bar-grow { from { transform: scaleY(.08); opacity: .35; } to { transform: scaleY(1); opacity: 1; } }
+
+/* Chuyển động nhỏ trên trạng thái tương tác. */
+.sw-filter-scroll button,
+.tab-button,
+.filter-chip,
+.status-badge {
+  transition: transform var(--sw-motion-fast) var(--sw-ease-standard), background-color var(--sw-motion-fast) ease, color var(--sw-motion-fast) ease, border-color var(--sw-motion-fast) ease;
+}
+.sw-filter-scroll button:hover,
+.tab-button:hover,
+.filter-chip:hover { transform: translate3d(0, -1px, 0); }
+.sw-filter-scroll button:active,
+.tab-button:active,
+.filter-chip:active { transform: scale(.96); }
+
+@media (max-width: 680px) {
+  .motion-reveal { --motion-shift: 8px !important; }
+  .sw-track-card:hover,
+  .sw-album-card:hover,
+  .sw-creator-card:hover { transform: translate3d(0, -2px, 0); }
+  .discover-feature-art { animation-duration: 5.8s; }
+}
+
+@media (hover: none) {
+  .sw-track-card:hover,
+  .sw-album-card:hover,
+  .sw-creator-card:hover,
+  .track-context-card:hover,
+  .track-author-card:hover,
+  .ops-card:hover,
+  .ops-stat-card:hover { transform: none; }
+  .sw-track-card:hover img,
+  .sw-album-card:hover img,
+  .sw-creator-card:hover .sw-creator-avatar img { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+  .motion-reveal { opacity: 1; transform: none; filter: none; }
+}
