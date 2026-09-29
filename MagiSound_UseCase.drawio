@@ -1,0 +1,171 @@
+<mxfile host="app.diagrams.net" modified="2026-09-22T00:00:00.000Z" agent="Codex" version="28.2.9" type="device">
+  <diagram id="magisound-usecase" name="MagiSound Use Case">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1654" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="system" value="MagiSound Music Streaming Website" style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;fontStyle=1;fontSize=18;spacingTop=10;strokeWidth=2;strokeColor=#344054;fillColor=#FFFFFF;" vertex="1" parent="1">
+          <mxGeometry x="190" y="30" width="1280" height="1460" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="guest" value="Guest" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="45" y="120" width="60" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="user" value="User" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="45" y="440" width="60" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="staff" value="Staff" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="45" y="880" width="60" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="admin" value="Admin" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="45" y="1250" width="60" height="100" as="geometry"/>
+        </mxCell>
+        <mxCell id="email" value="Email Service" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1520" y="115" width="70" height="100" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="uc01" value="UC-01: Register Account" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="70" y="70" width="180" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc02" value="UC-02: Verify Email" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="970" y="70" width="180" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc03" value="UC-03: Login" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="70" y="165" width="180" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc04" value="UC-04: Reset Forgotten Password" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="290" y="165" width="200" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc05" value="UC-05: Browse Music Catalog" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="300" y="70" width="200" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc06" value="UC-06: Search and Filter Music" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="540" y="70" width="210" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc07" value="UC-07: Play Public Music" style="ellipse;whiteSpace=wrap;html=1;fillColor=#E0F2FE;strokeColor=#0284C7;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="780" y="70" width="170" height="64" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="userHeader" value="USER FUNCTIONS" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=14;fontColor=#0E7490;" vertex="1" parent="system">
+          <mxGeometry x="50" y="285" width="180" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc08" value="UC-08: Manage Personal Profile" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ECFDF3;strokeColor=#039855;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="70" y="325" width="200" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc09" value="UC-09: Manage Favorites" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ECFDF3;strokeColor=#039855;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="300" y="325" width="180" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc10" value="UC-10: Manage Playlists" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ECFDF3;strokeColor=#039855;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="510" y="325" width="180" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc11" value="UC-11: View Lyrics" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ECFDF3;strokeColor=#039855;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="720" y="325" width="170" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc12" value="UC-12: Submit Content Report" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ECFDF3;strokeColor=#039855;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="920" y="325" width="200" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc13" value="UC-13: Logout" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ECFDF3;strokeColor=#039855;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="70" y="435" width="170" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc14" value="UC-14: Upload Track for Review" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ECFDF3;strokeColor=#039855;fontSize=13;fontStyle=1;" vertex="1" parent="system">
+          <mxGeometry x="280" y="435" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc15" value="UC-15: View Track Review Result" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ECFDF3;strokeColor=#039855;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="540" y="435" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc17" value="UC-17: Manage My Albums" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ECFDF3;strokeColor=#039855;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="800" y="435" width="200" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="trackFlow" value="Track status: PENDING → PUBLISHED / REJECTED" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#FFFAEB;strokeColor=#F79009;fontSize=12;" vertex="1" parent="system">
+          <mxGeometry x="280" y="540" width="330" height="65" as="geometry"/>
+        </mxCell>
+        <mxCell id="scopeNote" value="View Lyrics is read-only. No custom lyrics, language switching, or cloud storage." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#F9F5FF;strokeColor=#7F56D9;fontSize=12;" vertex="1" parent="system">
+          <mxGeometry x="800" y="540" width="330" height="65" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="staffHeader" value="STAFF MODERATION" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=14;fontColor=#B54708;" vertex="1" parent="system">
+          <mxGeometry x="50" y="655" width="220" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc18" value="UC-18: Review Pending Track" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#F79009;fontSize=13;fontStyle=1;" vertex="1" parent="system">
+          <mxGeometry x="150" y="700" width="210" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc19" value="UC-19: Approve Track" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#F79009;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="470" y="660" width="180" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc20" value="UC-20: Reject Track" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#F79009;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="470" y="760" width="180" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc21" value="UC-21: Enter Rejection Reason" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#F79009;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="760" y="760" width="210" height="64" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc22" value="UC-22: Review Content Report" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#F79009;fontSize=13;fontStyle=1;" vertex="1" parent="system">
+          <mxGeometry x="150" y="890" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc23" value="UC-23: Resolve Content Report" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#F79009;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="480" y="890" width="220" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc24" value="UC-24: Remove Violating Track" style="ellipse;whiteSpace=wrap;html=1;fillColor=#FFF4E5;strokeColor=#F79009;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="800" y="890" width="220" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="adminHeader" value="ADMINISTRATION" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontStyle=1;fontSize=14;fontColor=#6941C6;" vertex="1" parent="system">
+          <mxGeometry x="50" y="1110" width="220" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc25" value="UC-25: Manage User Accounts" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F4EBFF;strokeColor=#7F56D9;fontSize=13;fontStyle=1;" vertex="1" parent="system">
+          <mxGeometry x="150" y="1160" width="210" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc26" value="UC-26: Assign User Roles" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F4EBFF;strokeColor=#7F56D9;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="470" y="1160" width="190" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc27" value="UC-27: Manage Genres" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F4EBFF;strokeColor=#7F56D9;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="740" y="1160" width="180" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="uc28" value="UC-28: View System Statistics" style="ellipse;whiteSpace=wrap;html=1;fillColor=#F4EBFF;strokeColor=#7F56D9;fontSize=13;" vertex="1" parent="system">
+          <mxGeometry x="990" y="1160" width="210" height="70" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="authNote" value="Precondition for protected use cases: the actor is authenticated and has the required role." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#F2F4F7;strokeColor=#667085;fontSize=12;" vertex="1" parent="system">
+          <mxGeometry x="250" y="1310" width="390" height="75" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend" value="Solid line: association&#xa;Dashed arrow: «include» / «extend»" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F9FAFB;strokeColor=#98A2B3;fontSize=12;align=left;spacingLeft=12;" vertex="1" parent="system">
+          <mxGeometry x="760" y="1300" width="280" height="90" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="eGuest01" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="guest" target="uc01"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eGuest03" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="guest" target="uc03"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eGuest04" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="guest" target="uc04"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eGuest05" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="guest" target="uc05"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eGuest06" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="guest" target="uc06"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eGuest07" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="guest" target="uc07"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eUserGeneral" style="endArrow=block;endFill=0;html=1;strokeWidth=1.5;strokeColor=#475467;" edge="1" parent="1" source="user" target="guest"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eEmail02" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="email" target="uc02"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eEmail04" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="email" target="uc04"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="inc0102" value="«include»" style="dashed=1;endArrow=open;endFill=0;html=1;strokeColor=#0284C7;fontSize=12;" edge="1" parent="system" source="uc01" target="uc02"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="eUser08" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="user" target="uc08"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eUser09" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="user" target="uc09"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eUser10" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="user" target="uc10"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eUser11" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="user" target="uc11"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eUser12" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="user" target="uc12"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eUser13" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="user" target="uc13"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eUser14" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="user" target="uc14"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eUser15" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="user" target="uc15"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eUser17" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="user" target="uc17"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="eStaff18" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="staff" target="uc18"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eStaff22" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="staff" target="uc22"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ext1918" value="«extend»" style="dashed=1;endArrow=open;endFill=0;html=1;strokeColor=#F79009;fontSize=12;" edge="1" parent="system" source="uc19" target="uc18"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ext2018" value="«extend»" style="dashed=1;endArrow=open;endFill=0;html=1;strokeColor=#F79009;fontSize=12;" edge="1" parent="system" source="uc20" target="uc18"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="inc2021" value="«include»" style="dashed=1;endArrow=open;endFill=0;html=1;strokeColor=#F79009;fontSize=12;" edge="1" parent="system" source="uc20" target="uc21"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ext2322" value="«extend»" style="dashed=1;endArrow=open;endFill=0;html=1;strokeColor=#F79009;fontSize=12;" edge="1" parent="system" source="uc23" target="uc22"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ext2423" value="«extend»" style="dashed=1;endArrow=open;endFill=0;html=1;strokeColor=#F79009;fontSize=12;" edge="1" parent="system" source="uc24" target="uc23"><mxGeometry relative="1" as="geometry"/></mxCell>
+
+        <mxCell id="eAdmin25" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="admin" target="uc25"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eAdmin27" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="admin" target="uc27"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="eAdmin28" style="endArrow=none;html=1;strokeColor=#667085;" edge="1" parent="1" source="admin" target="uc28"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="ext2625" value="«extend»" style="dashed=1;endArrow=open;endFill=0;html=1;strokeColor=#7F56D9;fontSize=12;" edge="1" parent="system" source="uc26" target="uc25"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
