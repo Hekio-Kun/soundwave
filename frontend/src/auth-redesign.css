@@ -244,6 +244,8 @@
 .auth-v2-error > span { width: 27px; height: 27px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 8px; background: #fee4e2; }
 .auth-v2-error > div { display: flex; flex-direction: column; gap: 2px; }
 .auth-v2-error b { font-size: 9px; }.auth-v2-error small { color: #912018; font-size: 8px; line-height: 1.45; }
+.auth-v2-error-action { align-self: flex-start; margin-top: 5px; padding: 0; border: 0; background: transparent; color: #9f241d; font: inherit; font-size: 8px; font-weight: 800; text-decoration: underline; cursor: pointer; }
+.auth-v2-error-action:disabled { cursor: wait; opacity: .65; }
 @keyframes auth-error-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 .auth-v2-success { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 8px 0; }
 .auth-v2-success > span { width: 55px; height: 55px; display: grid; place-items: center; border-radius: 17px; background: #ecfdf3; color: #039855; }
