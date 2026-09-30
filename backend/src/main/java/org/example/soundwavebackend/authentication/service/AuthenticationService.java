@@ -196,12 +196,12 @@ public class AuthenticationService {
     private LoginResult createLoginResult(AppUser user, boolean rememberMe) {
         long days = rememberMe ? rememberRefreshTokenDays : refreshTokenDays;
         String rawRefreshToken = generateRefreshToken();
-        refreshTokenRepository.save(new RefreshToken(
+        RefreshToken session = refreshTokenRepository.save(new RefreshToken(
                 user, tokenHashService.hash(rawRefreshToken), nowUtc().plusDays(days)));
         String displayName = profileRepository.findByUserId(user.getId())
                 .map(UserProfile::getDisplayName).orElse(user.getEmail());
         AuthResponse response = new AuthResponse(
-                jwtService.createAccessToken(user), "Bearer", jwtService.getAccessTokenSeconds(),
+                jwtService.createAccessToken(user, session.getId()), "Bearer", jwtService.getAccessTokenSeconds(),
                 mapper.toUserResponse(user, displayName));
         return new LoginResult(response, rawRefreshToken, days * 24 * 60 * 60);
     }

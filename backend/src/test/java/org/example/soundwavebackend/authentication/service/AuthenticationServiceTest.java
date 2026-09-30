@@ -5,6 +5,7 @@ import org.example.soundwavebackend.authentication.dto.request.LoginRequest;
 import org.example.soundwavebackend.authentication.dto.request.ResetPasswordRequest;
 import org.example.soundwavebackend.authentication.entity.AppUser;
 import org.example.soundwavebackend.authentication.entity.PasswordResetToken;
+import org.example.soundwavebackend.authentication.entity.RefreshToken;
 import org.example.soundwavebackend.authentication.entity.Role;
 import org.example.soundwavebackend.authentication.entity.UserProfile;
 import org.example.soundwavebackend.authentication.entity.UserStatus;
@@ -138,5 +139,16 @@ class AuthenticationServiceTest {
         verify(resetToken).markUsed(any());
         verify(user).changePassword(eq("new-password-hash"), any());
         verify(refreshTokenRepository).revokeAllActiveByUserId(eq(42L), any());
+    }
+
+    @Test
+    void logoutRevokesTheCurrentSession() {
+        RefreshToken session = mock(RefreshToken.class);
+        when(tokenHashService.hash("raw-refresh-token")).thenReturn("refresh-token-hash");
+        when(refreshTokenRepository.findByTokenHash("refresh-token-hash")).thenReturn(Optional.of(session));
+
+        service.logout("raw-refresh-token");
+
+        verify(session).revoke(any());
     }
 }

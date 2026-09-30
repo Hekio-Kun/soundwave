@@ -24,12 +24,13 @@ public class JwtService {
         this.accessTokenMinutes = accessTokenMinutes;
     }
 
-    public String createAccessToken(AppUser user) {
+    public String createAccessToken(AppUser user, Long sessionId) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(user.getEmail())
                 .claim("uid", user.getId())
                 .claim("role", user.getRole().getCode())
+                .claim("sid", sessionId)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(accessTokenMinutes, ChronoUnit.MINUTES)))
                 .signWith(key)
@@ -38,6 +39,11 @@ public class JwtService {
 
     public String extractSubject(String token) {
         return parse(token).getSubject();
+    }
+
+    public Long extractSessionId(String token) {
+        Object sessionId = parse(token).get("sid");
+        return sessionId instanceof Number number ? number.longValue() : null;
     }
 
     public boolean isValid(String token) {
