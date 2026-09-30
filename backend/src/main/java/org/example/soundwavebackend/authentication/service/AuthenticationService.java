@@ -165,7 +165,8 @@ public class AuthenticationService {
         LocalDateTime now = nowUtc();
         token.markUsed(now);
         user.changePassword(passwordEncoder.encode(request.newPassword()), now);
-        return new MessageResponse("Password updated successfully. You can now log in.");
+        refreshTokenRepository.revokeAllActiveByUserId(user.getId(), now);
+        return new MessageResponse("Password updated successfully. Please log in again.");
     }
 
     /**
