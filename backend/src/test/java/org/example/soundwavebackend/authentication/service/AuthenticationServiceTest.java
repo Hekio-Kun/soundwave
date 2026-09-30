@@ -2,7 +2,9 @@ package org.example.soundwavebackend.authentication.service;
 
 import org.example.soundwavebackend.authentication.dto.request.RegisterRequest;
 import org.example.soundwavebackend.authentication.dto.request.LoginRequest;
+import org.example.soundwavebackend.authentication.dto.request.ResetPasswordRequest;
 import org.example.soundwavebackend.authentication.entity.AppUser;
+import org.example.soundwavebackend.authentication.entity.PasswordResetToken;
 import org.example.soundwavebackend.authentication.entity.Role;
 import org.example.soundwavebackend.authentication.entity.UserProfile;
 import org.example.soundwavebackend.authentication.entity.UserStatus;
@@ -113,5 +115,28 @@ class AuthenticationServiceTest {
 
         assertEquals("ACCOUNT_BANNED", exception.getCode());
         verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void resetPasswordRevokesAllActiveRefreshTokens() {
+        AppUser user = mock(AppUser.class);
+        PasswordResetToken resetToken = mock(PasswordResetToken.class);
+        ResetPasswordRequest request = new ResetPasswordRequest(
+                "user@example.com", "123456", "NewPassword1", "NewPassword1");
+
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
+        when(user.getId()).thenReturn(42L);
+        when(resetTokenRepository.findFirstByUserIdAndUsedAtIsNullOrderByCreatedAtDesc(42L))
+                .thenReturn(Optional.of(resetToken));
+        when(resetToken.getTokenHash()).thenReturn("otp-hash");
+        when(resetToken.isExpired(any())).thenReturn(false);
+        when(passwordEncoder.matches("123456", "otp-hash")).thenReturn(true);
+        when(passwordEncoder.encode("NewPassword1")).thenReturn("new-password-hash");
+
+        service.resetPassword(request);
+
+        verify(resetToken).markUsed(any());
+        verify(user).changePassword(eq("new-password-hash"), any());
+        verify(refreshTokenRepository).revokeAllActiveByUserId(eq(42L), any());
     }
 }
