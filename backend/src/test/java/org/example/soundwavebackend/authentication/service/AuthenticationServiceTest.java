@@ -1,9 +1,13 @@
 package org.example.soundwavebackend.authentication.service;
 
 import org.example.soundwavebackend.authentication.dto.request.RegisterRequest;
+import org.example.soundwavebackend.authentication.dto.request.LoginRequest;
 import org.example.soundwavebackend.authentication.entity.AppUser;
 import org.example.soundwavebackend.authentication.entity.Role;
 import org.example.soundwavebackend.authentication.entity.UserProfile;
+import org.example.soundwavebackend.authentication.entity.UserStatus;
+import org.example.soundwavebackend.authentication.exception.AccountBannedException;
+import org.example.soundwavebackend.authentication.exception.EmailNotVerifiedException;
 import org.example.soundwavebackend.authentication.exception.EmailAlreadyExistsException;
 import org.example.soundwavebackend.authentication.mapper.AuthenticationMapper;
 import org.example.soundwavebackend.authentication.repository.*;
@@ -19,6 +23,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -78,5 +83,35 @@ class AuthenticationServiceTest {
 
         verifyNoInteractions(mailService);
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void loginRejectsAccountWithUnverifiedEmailUsingSpecificCode() {
+        AppUser user = mock(AppUser.class);
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
+        when(user.getPasswordHash()).thenReturn("password-hash");
+        when(passwordEncoder.matches("Password1", "password-hash")).thenReturn(true);
+        when(user.getStatus()).thenReturn(UserStatus.PENDING);
+
+        EmailNotVerifiedException exception = assertThrows(EmailNotVerifiedException.class,
+                () -> service.login(new LoginRequest("user@example.com", "Password1", false)));
+
+        assertEquals("EMAIL_NOT_VERIFIED", exception.getCode());
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void loginRejectsBannedAccountUsingSpecificCode() {
+        AppUser user = mock(AppUser.class);
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
+        when(user.getPasswordHash()).thenReturn("password-hash");
+        when(passwordEncoder.matches("Password1", "password-hash")).thenReturn(true);
+        when(user.getStatus()).thenReturn(UserStatus.BANNED);
+
+        AccountBannedException exception = assertThrows(AccountBannedException.class,
+                () -> service.login(new LoginRequest("user@example.com", "Password1", false)));
+
+        assertEquals("ACCOUNT_BANNED", exception.getCode());
+        verifyNoInteractions(jwtService);
     }
 }

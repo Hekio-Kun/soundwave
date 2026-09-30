@@ -95,6 +95,12 @@ public class AuthenticationService {
     @Transactional
     public MessageResponse resendVerificationOtp(EmailRequest request) {
         AppUser user = findUser(request.email());
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new AccountBannedException();
+        }
+        if (user.getDeletedAt() != null) {
+            throw new AccountUnavailableException("ACCOUNT_UNAVAILABLE", "This account is unavailable.");
+        }
         if (user.getEmailVerifiedAt() != null) {
             throw new AccountUnavailableException("EMAIL_ALREADY_VERIFIED", "This email is already verified.");
         }
@@ -223,11 +229,14 @@ public class AuthenticationService {
     }
 
     private void ensureAccountCanLogin(AppUser user) {
-        if (user.getDeletedAt() != null || user.getStatus() == UserStatus.BANNED) {
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new AccountBannedException();
+        }
+        if (user.getDeletedAt() != null) {
             throw new AccountUnavailableException("ACCOUNT_UNAVAILABLE", "This account is unavailable.");
         }
         if (user.getStatus() != UserStatus.ACTIVE || user.getEmailVerifiedAt() == null) {
-            throw new AccountUnavailableException("EMAIL_NOT_VERIFIED", "Verify your email before logging in.");
+            throw new EmailNotVerifiedException();
         }
     }
 
