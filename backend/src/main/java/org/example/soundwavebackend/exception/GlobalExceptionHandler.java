@@ -6,9 +6,12 @@ import org.example.soundwavebackend.media.exception.InvalidAvatarFileException;
 import org.example.soundwavebackend.media.exception.CloudStorageUnavailableException;
 import org.example.soundwavebackend.media.exception.InvalidTrackAudioException;
 import org.example.soundwavebackend.media.exception.InvalidTrackCoverException;
+import org.example.soundwavebackend.moderation.exception.InvalidSubmissionStateException;
+import org.example.soundwavebackend.moderation.exception.SubmissionNotFoundException;
 import org.example.soundwavebackend.track.exception.TrackException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -93,6 +96,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleCloudStorage(CloudStorageUnavailableException exception,
                                                                 HttpServletRequest request) {
         return build(HttpStatus.SERVICE_UNAVAILABLE, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(SubmissionNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleSubmissionNotFound(SubmissionNotFoundException exception, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "SUBMISSION_NOT_FOUND", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(InvalidSubmissionStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidSubmissionState(InvalidSubmissionStateException exception, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "INVALID_SUBMISSION_STATE", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException exception, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "FORBIDDEN", "Access is denied.", request, Map.of());
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String code, String message,

@@ -66,6 +66,15 @@ public class UserProfile {
         this.updatedAt = updatedAt;
     }
 
+    public void update(String displayName, String bio, LocalDate dateOfBirth, String countryCode,
+                       LocalDateTime updatedAt) {
+        this.displayName = displayName;
+        this.bio = bio;
+        this.dateOfBirth = dateOfBirth;
+        this.countryCode = countryCode;
+        this.updatedAt = updatedAt;
+    }
+
     public void updateAvatar(String avatarPublicId, String avatarUrl, LocalDateTime updatedAt) {
         this.avatarPublicId = avatarPublicId;
         this.avatarUrl = avatarUrl;

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Nationalized;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -14,7 +15,7 @@ import java.time.ZoneOffset;
         name = "lyric_languages",
         uniqueConstraints = @UniqueConstraint(
                 name = "UQ_lyric_languages_code",
-                columnNames = "code"
+                columnNames = {"code"}
         )
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -26,6 +27,7 @@ public class LyricLanguage {
     @Column(nullable = false, unique = true, length = 10)
     private String code;
 
+    @Nationalized
     @Column(nullable = false, length = 50)
     private String name;
 

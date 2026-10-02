@@ -71,6 +71,11 @@ public class OfficialLyric {
         updatedAt = publishedAt;
     }
 
+    public void unpublish(LocalDateTime updatedAt) {
+        status = LyricStatus.DRAFT;
+        this.updatedAt = updatedAt;
+    }
+
     @PrePersist
     void initializeTimestamps() {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
