@@ -12,6 +12,7 @@ import { AlbumDetailsPage } from "./pages/AlbumDetailsPage";
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from "./pages/AuthPages";
 import { CreatorProfilePage } from "./pages/CreatorProfilePage";
 import { ExplorePage } from "./pages/ExplorePage";
+import { FilteredCatalogPage } from "./pages/FilteredCatalogPage";
 import { GenresPage } from "./pages/GenresPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { AdminDashboardPage, DashboardAccessDenied, StaffDashboardPage } from "./pages/OperationsDashboardPage";
@@ -302,18 +303,37 @@ export default function App() {
       return <ResetPasswordPage email={queryParams.get("email") || ""} onNavigate={navigate} />;
     }
 
-    // App Routes
-    if (pathname === "/" || pathname === "" || pathname === "/home" || pathname === "/explore" || pathname === "/landing") {
+    // App Routes - UC-08 Filtered Public Catalog / Browse Tracks
+    if (
+      pathname === "/browse" ||
+      pathname === "/catalog" ||
+      ((pathname === "/" || pathname === "" || pathname === "/home" || pathname === "/explore" || pathname === "/landing") &&
+        queryParams.has("genre"))
+    ) {
       const initialGenre = queryParams.get("genre") || undefined;
       const sort = queryParams.get("sort");
-      const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : undefined;
+      const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : sort === "title" ? "title" : undefined;
+      return (
+        <FilteredCatalogPage
+          currentTrack={currentTrack}
+          playing={playing}
+          onPlayTrack={playTrack}
+          onNavigate={navigate}
+          initialGenre={initialGenre}
+          initialSort={initialSort}
+        />
+      );
+    }
+
+    if (pathname === "/" || pathname === "" || pathname === "/home" || pathname === "/explore" || pathname === "/landing") {
+      const sort = queryParams.get("sort");
+      const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : sort === "title" ? "title" : undefined;
       return (
         <ExplorePage
           currentTrack={currentTrack}
           playing={playing}
           onPlayTrack={playTrack}
           onNavigate={navigate}
-          initialGenre={initialGenre}
           initialSort={initialSort}
         />
       );
@@ -333,7 +353,14 @@ export default function App() {
     }
 
     if (pathname === "/genres") {
-      return <GenresPage onNavigate={navigate} />;
+      return (
+        <FilteredCatalogPage
+          currentTrack={currentTrack}
+          playing={playing}
+          onPlayTrack={playTrack}
+          onNavigate={navigate}
+        />
+      );
     }
 
     if (pathname.startsWith("/track/")) {
