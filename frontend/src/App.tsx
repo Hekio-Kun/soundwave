@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
+import { LogoutConfirmationDialog } from "./components/LogoutConfirmationDialog";
 import { MusicPlayer } from "./components/MusicPlayer";
 import { DashboardLayout } from "./layouts/DashboardLayout";
 import { MusicAppShell } from "./layouts/MusicAppShell";
@@ -34,6 +35,15 @@ export default function App() {
   });
 
   const isAuthenticated = Boolean(user);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [logoutSubmitting, setLogoutSubmitting] = useState(false);
+  const [logoutNotice, setLogoutNotice] = useState("");
+
+  useEffect(() => {
+    if (!logoutNotice) return;
+    const timeoutId = window.setTimeout(() => setLogoutNotice(""), 3500);
+    return () => window.clearTimeout(timeoutId);
+  }, [logoutNotice]);
 
   const handleLoginSuccess = (session: AuthSession, rememberMe: boolean) => {
     const loggedInUser: CurrentUser = {
@@ -47,18 +57,28 @@ export default function App() {
     window.location.hash = session.user.role === "ADMIN" ? "#/admin/dashboard" : session.user.role === "STAFF" ? "#/staff/dashboard" : "#/";
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => setLogoutDialogOpen(true);
+
+  const confirmLogout = async () => {
+    setLogoutSubmitting(true);
+    let serverSessionRevoked = true;
     try {
       await authApi.logout();
     } catch {
-      // Local logout must still complete if the server session already expired.
+      serverSessionRevoked = false;
+    } finally {
+      setUser(null);
+      localStorage.removeItem("soundwave_user");
+      localStorage.removeItem("soundwave_access_token");
+      sessionStorage.removeItem("soundwave_user");
+      sessionStorage.removeItem("soundwave_access_token");
+      setLogoutSubmitting(false);
+      setLogoutDialogOpen(false);
+      setLogoutNotice(serverSessionRevoked
+        ? "You have logged out successfully."
+        : "You have been logged out from this device.");
+      window.location.hash = "#/";
     }
-    setUser(null);
-    localStorage.removeItem("soundwave_user");
-    localStorage.removeItem("soundwave_access_token");
-    sessionStorage.removeItem("soundwave_user");
-    sessionStorage.removeItem("soundwave_access_token");
-    window.location.hash = "#/";
   };
 
   // 2. Audio & Player State
@@ -476,6 +496,15 @@ export default function App() {
           navigate("/login");
         }}
       />
+
+      <LogoutConfirmationDialog
+        open={logoutDialogOpen}
+        submitting={logoutSubmitting}
+        onCancel={() => setLogoutDialogOpen(false)}
+        onConfirm={confirmLogout}
+      />
+
+      {logoutNotice ? <div className="app-toast" role="status">{logoutNotice}</div> : null}
 
       {/* Global Create Playlist Modal */}
       {isNewPlaylistModalOpen && (

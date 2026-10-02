@@ -95,6 +95,12 @@ public class AuthenticationService {
     @Transactional
     public MessageResponse resendVerificationOtp(EmailRequest request) {
         AppUser user = findUser(request.email());
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new AccountBannedException();
+        }
+        if (user.getDeletedAt() != null) {
+            throw new AccountUnavailableException("ACCOUNT_UNAVAILABLE", "This account is unavailable.");
+        }
         if (user.getEmailVerifiedAt() != null) {
             throw new AccountUnavailableException("EMAIL_ALREADY_VERIFIED", "This email is already verified.");
         }
@@ -159,7 +165,8 @@ public class AuthenticationService {
         LocalDateTime now = nowUtc();
         token.markUsed(now);
         user.changePassword(passwordEncoder.encode(request.newPassword()), now);
-        return new MessageResponse("Password updated successfully. You can now log in.");
+        refreshTokenRepository.revokeAllActiveByUserId(user.getId(), now);
+        return new MessageResponse("Password updated successfully. Please log in again.");
     }
 
     /**
@@ -189,12 +196,12 @@ public class AuthenticationService {
     private LoginResult createLoginResult(AppUser user, boolean rememberMe) {
         long days = rememberMe ? rememberRefreshTokenDays : refreshTokenDays;
         String rawRefreshToken = generateRefreshToken();
-        refreshTokenRepository.save(new RefreshToken(
+        RefreshToken session = refreshTokenRepository.save(new RefreshToken(
                 user, tokenHashService.hash(rawRefreshToken), nowUtc().plusDays(days)));
         String displayName = profileRepository.findByUserId(user.getId())
                 .map(UserProfile::getDisplayName).orElse(user.getEmail());
         AuthResponse response = new AuthResponse(
-                jwtService.createAccessToken(user), "Bearer", jwtService.getAccessTokenSeconds(),
+                jwtService.createAccessToken(user, session.getId()), "Bearer", jwtService.getAccessTokenSeconds(),
                 mapper.toUserResponse(user, displayName));
         return new LoginResult(response, rawRefreshToken, days * 24 * 60 * 60);
     }
@@ -223,11 +230,14 @@ public class AuthenticationService {
     }
 
     private void ensureAccountCanLogin(AppUser user) {
-        if (user.getDeletedAt() != null || user.getStatus() == UserStatus.BANNED) {
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new AccountBannedException();
+        }
+        if (user.getDeletedAt() != null) {
             throw new AccountUnavailableException("ACCOUNT_UNAVAILABLE", "This account is unavailable.");
         }
         if (user.getStatus() != UserStatus.ACTIVE || user.getEmailVerifiedAt() == null) {
-            throw new AccountUnavailableException("EMAIL_NOT_VERIFIED", "Verify your email before logging in.");
+            throw new EmailNotVerifiedException();
         }
     }
 
