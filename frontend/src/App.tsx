@@ -19,8 +19,9 @@ import { ProfilePage } from "./pages/ProfilePage";
 import { SearchPage } from "./pages/SearchPage";
 import { StudioPage } from "./pages/StudioPage";
 import { TrackDetailsPage } from "./pages/TrackDetailsPage";
+import { UploadTrackPage } from "./pages/UploadTrackPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
-import type { CurrentUser, LandingTrack, Playlist, StudioTrack } from "./types";
+import type { CurrentUser, LandingTrack, Playlist } from "./types";
 
 export default function App() {
   // 1. Authentication State
@@ -220,25 +221,7 @@ export default function App() {
     setPlaylists((prev) => prev.filter((pl) => pl.id !== playlistId));
   };
 
-  // 4. Studio Tracks State
-  const [studioTracks, setStudioTracks] = useState<StudioTrack[]>(initialStudioTracks);
-
-  const handleUploadTrack = (newTrackData: Omit<StudioTrack, "id" | "createdAt">) => {
-    const newTrack: StudioTrack = {
-      ...newTrackData,
-      id: Date.now(),
-      createdAt: "Today",
-    };
-    setStudioTracks((prev) => [newTrack, ...prev]);
-  };
-
-  const handleSubmitForReview = (trackId: number) => {
-    setStudioTracks((prev) =>
-      prev.map((t) => (t.id === trackId ? { ...t, status: "PENDING" as const } : t))
-    );
-  };
-
-  // 5. Routing State
+  // 4. Routing State
   const [route, setRoute] = useState(() => window.location.hash || "#/");
 
   useMotionReveal(route);
@@ -270,6 +253,12 @@ export default function App() {
     pathname === "/reset-password";
   const isDashboardRoute = pathname.startsWith("/admin") || pathname.startsWith("/staff");
   const isMusicRoute = !isAuthRoute && !isDashboardRoute;
+  const isExploreRoute =
+    pathname === "/" ||
+    pathname === "" ||
+    pathname === "/home" ||
+    pathname === "/explore" ||
+    pathname === "/landing";
 
   useEffect(() => {
     if (isDashboardRoute) {
@@ -303,7 +292,7 @@ export default function App() {
     }
 
     // App Routes
-    if (pathname === "/" || pathname === "" || pathname === "/home" || pathname === "/explore" || pathname === "/landing") {
+    if (isExploreRoute) {
       const initialGenre = queryParams.get("genre") || undefined;
       const sort = queryParams.get("sort");
       const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : undefined;
@@ -426,12 +415,20 @@ export default function App() {
       );
     }
 
+    if (pathname === "/studio/upload") {
+      return (
+        <UploadTrackPage
+          isAuthenticated={isAuthenticated}
+          canUpload={user?.role === "LISTENER"}
+          onNavigate={navigate}
+        />
+      );
+    }
+
     if (pathname === "/studio") {
       return (
         <StudioPage
-          tracks={studioTracks}
-          onUploadTrack={handleUploadTrack}
-          onSubmitForReview={handleSubmitForReview}
+          tracks={initialStudioTracks}
           onNavigate={navigate}
         />
       );
@@ -494,6 +491,7 @@ export default function App() {
           onRemoveFromQueue={handleRemoveFromQueue}
           onClearQueue={handleClearQueue}
           hasPlayer
+          showFooter={isExploreRoute}
         >
           <div key={route} className="app-route-stage app-route-stage--music">
             {renderContent()}

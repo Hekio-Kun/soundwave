@@ -17,52 +17,18 @@ import {
   UploadIcon,
 } from "../icons";
 import type { StudioTrack } from "../types";
+import {
+  readAudioDuration,
+  readLyricsFile,
+  validateAudioFile,
+  validateCoverFile,
+  validateLyricsFile,
+} from "../utils/trackUpload";
 
 type Props = {
   tracks: StudioTrack[];
-  onUploadTrack?: (track: Omit<StudioTrack, "id" | "createdAt">) => void;
-  onSubmitForReview?: (trackId: number) => void;
   onNavigate: (route: string) => void;
 };
-
-type FormMode = "create" | "edit";
-
-const MAX_AUDIO_SIZE = 30 * 1024 * 1024;
-const MAX_COVER_SIZE = 5 * 1024 * 1024;
-const AUDIO_EXTENSIONS = ["mp3", "wav", "flac"];
-const COVER_EXTENSIONS = ["jpg", "jpeg", "png"];
-
-function hasAllowedExtension(file: File, allowedExtensions: string[]) {
-  const extension = file.name.split(".").pop()?.toLowerCase();
-  return Boolean(extension && allowedExtensions.includes(extension));
-}
-
-function validateAudioFile(file: File) {
-  if (file.size > MAX_AUDIO_SIZE) return "Audio file must be smaller than 30MB.";
-  if (!hasAllowedExtension(file, AUDIO_EXTENSIONS)) return "Choose an MP3, WAV or FLAC audio file.";
-  return "";
-}
-
-function validateCoverFile(file: File) {
-  if (file.size > MAX_COVER_SIZE) return "Cover artwork must be smaller than 5MB.";
-  if (!hasAllowedExtension(file, COVER_EXTENSIONS)) return "Choose a JPG or PNG cover image.";
-  return "";
-}
-
-function readAudioDuration(file: File): Promise<number | undefined> {
-  return new Promise((resolve) => {
-    const audio = document.createElement("audio");
-    const objectUrl = URL.createObjectURL(file);
-    const finish = (duration?: number) => {
-      URL.revokeObjectURL(objectUrl);
-      resolve(duration);
-    };
-    audio.preload = "metadata";
-    audio.onloadedmetadata = () => finish(Number.isFinite(audio.duration) ? Math.round(audio.duration * 1000) : undefined);
-    audio.onerror = () => finish();
-    audio.src = objectUrl;
-  });
-}
 
 export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
   const [filterStatus, setFilterStatus] = useState<
@@ -85,7 +51,6 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
 
   // Modals state
   const [trackModalOpen, setTrackModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<FormMode>("create");
   const [editingTrackId, setEditingTrackId] = useState<number | null>(null);
 
   const [deleteConfirmTrack, setDeleteConfirmTrack] = useState<StudioTrack | null>(null);
@@ -185,33 +150,9 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
     };
   }, [trackModalOpen, isSaving]);
 
-  // Open Create Modal
-  const openCreateModal = () => {
-    setActionError(null);
-    setModalMode("create");
-    setEditingTrackId(null);
-    setTitle("");
-    setDescription("");
-    setSelectedAlbumId("");
-    setTrackNumber("");
-    setAudioFile(null);
-    setCoverFile(null);
-    setAudioFileName("");
-    setCoverFileName("");
-    setAudioDurationMs(undefined);
-    setLyricsContent("");
-    setLyricsFileName("");
-    setFormErrors({});
-    if (genres.length > 0) {
-      setSelectedGenreId(genres[0].id);
-    }
-    setTrackModalOpen(true);
-  };
-
   // Open Edit Modal (UC-19.3)
   const openEditModal = (track: StudioTrack) => {
     setActionError(null);
-    setModalMode("edit");
     setEditingTrackId(track.id);
     setTitle(track.title);
     setDescription(track.description ?? "");
@@ -250,17 +191,9 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
       return;
     }
 
-    const duration = await readAudioDuration(file);
-    if (!duration) {
-      setAudioFile(null);
-      setAudioDurationMs(undefined);
-      setFormErrors((previous) => ({ ...previous, audio: "The selected file could not be read as audio." }));
-      return;
-    }
-
     setAudioFile(file);
-    setAudioDurationMs(duration);
     setFormErrors((previous) => ({ ...previous, audio: "" }));
+    setAudioDurationMs(await readAudioDuration(file));
   };
 
   const handleCoverFileChange = (file: File | null) => {
@@ -281,7 +214,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
     setFormErrors((previous) => ({ ...previous, cover: "" }));
   };
 
-  // Form submission validation & handling (UC-19.1 & UC-19.3)
+  // Cập nhật thông tin và media của bản nháp hiện có (UC-19.3).
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const errors: Record<string, string> = {};
@@ -296,9 +229,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
       errors.genre = "Please select a music genre.";
     }
 
-    if (modalMode === "create" && !audioFile) {
-      errors.audio = "Please select an MP3, WAV or FLAC audio file.";
-    } else if (audioFile) {
+    if (audioFile) {
       const audioError = validateAudioFile(audioFile);
       if (audioError) errors.audio = audioError;
     }
@@ -308,11 +239,23 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
       if (coverError) errors.cover = coverError;
     }
 
+    if (description.trim().length > 2000) {
+      errors.description = "Description cannot exceed 2000 characters.";
+    }
+
+    if (trackNumber !== "" && (!Number.isInteger(trackNumber) || trackNumber < 1 || trackNumber > 32767)) {
+      errors.trackNumber = "Track number must be a whole number from 1 to 32767.";
+    }
+
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       const firstError = Object.keys(errors)[0];
       const targetId = firstError === "audio" || firstError === "cover"
         ? `${firstError}-file-input-button`
+        : firstError === "trackNumber"
+        ? "track-number"
+        : firstError === "description"
+        ? "track-desc"
         : `track-${firstError}`;
       requestAnimationFrame(() => document.getElementById(targetId)?.focus());
       return;
@@ -323,18 +266,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
     setActionSuccess(null);
 
     try {
-      if (modalMode === "create") {
-        await studioApi.createDraft({
-          title: title.trim(),
-          genreId: selectedGenreId,
-          albumId: selectedAlbumId ? Number(selectedAlbumId) : undefined,
-          trackNumber: trackNumber ? Number(trackNumber) : undefined,
-          description: description.trim() || undefined,
-          durationMs: audioDurationMs,
-          lyrics: lyricsContent.trim() || undefined,
-        }, audioFile!, coverFile ?? undefined);
-        setActionSuccess("Track uploaded and saved as a draft.");
-      } else if (editingTrackId) {
+      if (editingTrackId) {
         await studioApi.updateTrack(editingTrackId, {
           title: title.trim(),
           genreId: selectedGenreId,
@@ -366,9 +298,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
     if (!deleteConfirmTrack) return;
     try {
       setIsSaving(true);
-      await studioApi.deleteTrack(deleteConfirmTrack.id).catch(() => {
-        setTrackList((prev) => prev.filter((t) => t.id !== deleteConfirmTrack.id));
-      });
+      await studioApi.deleteTrack(deleteConfirmTrack.id);
       setDeleteConfirmTrack(null);
       await loadStudioData();
     } catch (err: unknown) {
@@ -383,17 +313,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
     if (!submittingNoteTrack) return;
     try {
       setIsSaving(true);
-      await studioApi
-        .submitForReview(submittingNoteTrack.id, submitterNote.trim() || undefined)
-        .catch(() => {
-          setTrackList((prev) =>
-            prev.map((t) =>
-              t.id === submittingNoteTrack.id
-                ? { ...t, status: "PENDING" as const }
-                : t
-            )
-          );
-        });
+      await studioApi.submitForReview(submittingNoteTrack.id, submitterNote.trim() || undefined);
       setSubmittingNoteTrack(null);
       setSubmitterNote("");
       await loadStudioData();
@@ -448,7 +368,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
         </div>
         <button
           className="button button-primary"
-          onClick={openCreateModal}
+          onClick={() => onNavigate("/studio/upload")}
           id="btn-open-create-track"
         >
           <UploadIcon width={18} height={18} />
@@ -750,7 +670,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
         )}
       </div>
 
-      {/* Upload & Edit Track Modal (UC-19.1 & UC-19.3) */}
+      {/* Edit Track Modal (UC-19.3) */}
       {trackModalOpen && (
         <div
           className="modal-backdrop"
@@ -769,10 +689,8 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                 <span className="studio-modal-heading__icon"><UploadIcon width={20} height={20} /></span>
                 <div>
                   <span className="eyebrow">CONTENT STUDIO</span>
-                  <h3 id="track-modal-title">{modalMode === "create" ? "Upload new track" : "Edit track"}</h3>
-                  <p>{modalMode === "create"
-                    ? "Add the audio and details now, then submit it for review when ready."
-                    : "Update the metadata or replace media before resubmitting."}</p>
+                  <h3 id="track-modal-title">Edit track</h3>
+                  <p>Update the metadata or replace media before resubmitting.</p>
                 </div>
               </div>
               <button
@@ -894,12 +812,17 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                     id="track-number"
                     type="number"
                     min="1"
+                    max="32767"
+                    step="1"
                     placeholder="1"
                     value={trackNumber}
-                    onChange={(e) =>
-                      setTrackNumber(e.target.value ? Number(e.target.value) : "")
-                    }
+                    aria-invalid={Boolean(formErrors.trackNumber)}
+                    onChange={(e) => {
+                      setTrackNumber(e.target.value ? Number(e.target.value) : "");
+                      if (formErrors.trackNumber) setFormErrors((previous) => ({ ...previous, trackNumber: "" }));
+                    }}
                   />
+                  {formErrors.trackNumber && <small className="auth-v2-field-error"><AlertIcon width={12} height={12} />{formErrors.trackNumber}</small>}
                 </div>
 
                 <div className="form-group">
@@ -909,8 +832,14 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                     placeholder="Brief description or mood of the track"
                     value={description}
                     rows={3}
-                    onChange={(e) => setDescription(e.target.value)}
+                    maxLength={2001}
+                    aria-invalid={Boolean(formErrors.description)}
+                    onChange={(e) => {
+                      setDescription(e.target.value);
+                      if (formErrors.description) setFormErrors((previous) => ({ ...previous, description: "" }));
+                    }}
                   />
+                  {formErrors.description && <small className="auth-v2-field-error"><AlertIcon width={12} height={12} />{formErrors.description}</small>}
                 </div>
               </div>
 
@@ -921,9 +850,8 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                   helperText="MP3, WAV or FLAC · Max 30MB"
                   accept=".mp3,.wav,.flac,audio/mpeg,audio/wav,audio/flac"
                   file={audioFile}
-                  existingFileLabel={modalMode === "edit" ? audioFileName : undefined}
+                  existingFileLabel={audioFileName}
                   error={formErrors.audio}
-                  required={modalMode === "create"}
                   disabled={isSaving}
                   onFileChange={(file) => void handleAudioFileChange(file)}
                 />
@@ -934,7 +862,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                   helperText="JPG or PNG · Max 5MB"
                   accept=".jpg,.jpeg,.png,image/jpeg,image/png"
                   file={coverFile}
-                  existingFileLabel={modalMode === "edit" ? coverFileName : undefined}
+                  existingFileLabel={coverFileName}
                   error={formErrors.cover}
                   disabled={isSaving}
                   onFileChange={handleCoverFileChange}
@@ -971,20 +899,32 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                 <div className="file-drop-zone">
                   <input
                     type="file"
-                    accept=".lrc,.txt,.srt,text/plain"
+                    accept=".lrc,.txt,text/plain"
                     id="lyrics-file-input"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      setLyricsFileName(file.name);
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const content = event.target?.result;
-                        if (typeof content === "string") {
+                      const lyricsError = validateLyricsFile(file);
+                      if (lyricsError) {
+                        setLyricsFileName("");
+                        setFormErrors((previous) => ({ ...previous, lyrics: lyricsError }));
+                        e.target.value = "";
+                        return;
+                      }
+                      void readLyricsFile(file)
+                        .then((content) => {
+                          setLyricsFileName(file.name);
                           setLyricsContent(content);
-                        }
-                      };
-                      reader.readAsText(file);
+                          setFormErrors((previous) => ({ ...previous, lyrics: "" }));
+                        })
+                        .catch((error: unknown) => {
+                          setLyricsFileName("");
+                          setFormErrors((previous) => ({
+                            ...previous,
+                            lyrics: error instanceof Error ? error.message : "Lyrics file could not be read.",
+                          }));
+                        });
+                      e.target.value = "";
                     }}
                     style={{ display: "none" }}
                   />
@@ -999,6 +939,13 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                     </span>
                   </label>
                 </div>
+
+                {formErrors.lyrics && (
+                  <small className="auth-v2-field-error">
+                    <AlertIcon width={12} height={12} />
+                    {formErrors.lyrics}
+                  </small>
+                )}
 
                 {lyricsContent && (
                   <div style={{ marginTop: "8px" }}>
@@ -1036,7 +983,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                 <div className="studio-upload-progress" role="status" aria-live="polite">
                   <span className="studio-upload-progress__bar" />
                   <div>
-                    <b>{modalMode === "create" ? "Uploading your track" : "Saving track changes"}</b>
+                    <b>Saving track changes</b>
                     <small>Please keep this window open while media is being processed.</small>
                   </div>
                 </div>
@@ -1057,9 +1004,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                   disabled={isSaving}
                   id="btn-save-track"
                 >
-                  {isSaving
-                    ? modalMode === "create" ? "Uploading..." : "Saving..."
-                    : modalMode === "create" ? "Upload & save draft" : "Save changes"}
+                  {isSaving ? "Saving..." : "Save changes"}
                 </button>
               </div>
             </form>

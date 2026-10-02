@@ -15,6 +15,7 @@ public record UpdateTrackRequest(
 
         Long albumId,
 
+        @Positive(message = "Track number must be greater than zero.")
         Short trackNumber,
 
         @Size(max = 2000, message = "Description cannot exceed 2000 characters.")

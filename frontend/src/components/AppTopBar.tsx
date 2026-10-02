@@ -58,7 +58,13 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
   };
 
   const hasDashboardAccess = user?.role === "ADMIN" || user?.role === "STAFF";
-  const workspaceRoute = user?.role === "ADMIN" ? "/admin/dashboard" : user?.role === "STAFF" ? "/staff/dashboard" : "/studio";
+  const workspaceRoute = user?.role === "ADMIN"
+    ? "/admin/dashboard"
+    : user?.role === "STAFF"
+    ? "/staff/dashboard"
+    : isAuthenticated
+    ? "/studio/upload"
+    : "/login";
   const workspaceLabel = hasDashboardAccess ? "Open dashboard" : "Upload music";
 
   return (

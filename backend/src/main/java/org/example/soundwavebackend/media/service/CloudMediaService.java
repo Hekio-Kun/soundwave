@@ -170,7 +170,8 @@ public class CloudMediaService {
                     "overwrite", false
             ));
         } catch (IOException | RuntimeException exception) {
-            log.warn("Không thể tải media lên Cloudinary, folder={}", folder);
+            log.warn("Không thể tải media lên Cloudinary, folder={}, cause={}: {}",
+                    folder, exception.getClass().getSimpleName(), exception.getMessage());
             throw new CloudStorageUnavailableException();
         }
     }
