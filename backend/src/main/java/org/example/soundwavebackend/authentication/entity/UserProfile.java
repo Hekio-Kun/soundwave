@@ -56,8 +56,9 @@ public class UserProfile {
         this.displayName = displayName;
     }
 
-    public void update(String displayName, String bio, LocalDate dateOfBirth, String countryCode,
+    public void update(String username, String displayName, String bio, LocalDate dateOfBirth, String countryCode,
                        LocalDateTime updatedAt) {
+        this.username = username;
         this.displayName = displayName;
         this.bio = bio;
         this.dateOfBirth = dateOfBirth;

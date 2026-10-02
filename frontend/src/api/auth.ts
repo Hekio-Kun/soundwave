@@ -6,7 +6,7 @@ export type AuthSession = {
   accessToken: string;
   tokenType: "Bearer";
   expiresInSeconds: number;
-  user: Omit<CurrentUser, "avatarUrl">;
+  user: CurrentUser;
 };
 
 type MessageResponse = { message: string };

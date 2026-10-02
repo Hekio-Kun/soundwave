@@ -79,9 +79,12 @@ export type CurrentUser = {
   id: number;
   userId?: number;
   email: string;
+  username?: string;
   displayName: string;
-  avatarUrl: string;
+  avatarUrl: string | null;
   role: "LISTENER" | "STAFF" | "ADMIN";
   bio?: string;
+  dateOfBirth?: string;
+  countryCode?: string;
 };
 

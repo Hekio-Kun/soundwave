@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
-import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
+import type { ProfileDetails } from "./api/profile";
+import { demoPlaylists, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
 import { LogoutConfirmationDialog } from "./components/LogoutConfirmationDialog";
 import { MusicPlayer } from "./components/MusicPlayer";
@@ -14,6 +15,7 @@ import { ExplorePage } from "./pages/ExplorePage";
 import { GenresPage } from "./pages/GenresPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { AdminDashboardPage, DashboardAccessDenied, StaffDashboardPage } from "./pages/OperationsDashboardPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { SearchPage } from "./pages/SearchPage";
 import { StudioPage } from "./pages/StudioPage";
 import { TrackDetailsPage } from "./pages/TrackDetailsPage";
@@ -24,7 +26,8 @@ export default function App() {
   // 1. Authentication State
   const [user, setUser] = useState<CurrentUser | null>(() => {
     const saved = localStorage.getItem("soundwave_user") ?? sessionStorage.getItem("soundwave_user");
-    if (saved) {
+    const accessToken = localStorage.getItem("soundwave_access_token") ?? sessionStorage.getItem("soundwave_access_token");
+    if (saved && accessToken) {
       try {
         return JSON.parse(saved) as CurrentUser;
       } catch {
@@ -48,14 +51,40 @@ export default function App() {
   const handleLoginSuccess = (session: AuthSession, rememberMe: boolean) => {
     const loggedInUser: CurrentUser = {
       ...session.user,
-      avatarUrl: demoUser.avatarUrl,
+      avatarUrl: session.user.avatarUrl,
     };
     setUser(loggedInUser);
+    localStorage.removeItem("soundwave_user");
+    localStorage.removeItem("soundwave_access_token");
+    sessionStorage.removeItem("soundwave_user");
+    sessionStorage.removeItem("soundwave_access_token");
     const storage = rememberMe ? localStorage : sessionStorage;
     storage.setItem("soundwave_user", JSON.stringify(loggedInUser));
     storage.setItem("soundwave_access_token", session.accessToken);
     window.location.hash = session.user.role === "ADMIN" ? "#/admin/dashboard" : session.user.role === "STAFF" ? "#/staff/dashboard" : "#/";
   };
+
+  const handleProfileUpdated = useCallback((profile: ProfileDetails) => {
+    setUser((current) => {
+      if (!current) return current;
+      const updatedUser: CurrentUser = {
+        ...current,
+        id: profile.userId,
+        userId: profile.userId,
+        email: profile.email,
+        username: profile.username,
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
+        role: profile.role,
+        bio: profile.bio ?? undefined,
+        dateOfBirth: profile.dateOfBirth ?? undefined,
+        countryCode: profile.countryCode ?? undefined,
+      };
+      const storage = localStorage.getItem("soundwave_access_token") ? localStorage : sessionStorage;
+      storage.setItem("soundwave_user", JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  }, []);
 
   const handleLogout = () => setLogoutDialogOpen(true);
 
@@ -351,15 +380,16 @@ export default function App() {
     }
 
     if (pathname === "/profile") {
-      return (
-        <CreatorProfilePage
-          creatorId={user?.userId ?? 101}
-          currentTrack={currentTrack}
-          playing={playing}
-          onPlayTrack={playTrack}
-          onNavigate={navigate}
-        />
-      );
+      return user
+        ? <ProfilePage onProfileUpdated={handleProfileUpdated} />
+        : (
+          <div className="state-page">
+            <span className="state-icon">!</span>
+            <h1>Log in to manage your profile</h1>
+            <p>Your profile settings are available after authentication.</p>
+            <button className="button button-primary" onClick={() => navigate("/login")}>Go to login</button>
+          </div>
+        );
     }
 
     if (pathname === "/library" || pathname === "/favorites") {

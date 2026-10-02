@@ -198,11 +198,12 @@ public class AuthenticationService {
         String rawRefreshToken = generateRefreshToken();
         RefreshToken session = refreshTokenRepository.save(new RefreshToken(
                 user, tokenHashService.hash(rawRefreshToken), nowUtc().plusDays(days)));
-        String displayName = profileRepository.findByUserId(user.getId())
-                .map(UserProfile::getDisplayName).orElse(user.getEmail());
+        UserProfile profile = profileRepository.findByUserId(user.getId()).orElse(null);
+        String displayName = profile == null ? user.getEmail() : profile.getDisplayName();
+        String avatarUrl = profile == null ? null : profile.getAvatarUrl();
         AuthResponse response = new AuthResponse(
                 jwtService.createAccessToken(user, session.getId()), "Bearer", jwtService.getAccessTokenSeconds(),
-                mapper.toUserResponse(user, displayName));
+                mapper.toUserResponse(user, displayName, avatarUrl));
         return new LoginResult(response, rawRefreshToken, days * 24 * 60 * 60);
     }
 

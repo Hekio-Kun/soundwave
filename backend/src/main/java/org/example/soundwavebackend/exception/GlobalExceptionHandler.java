@@ -2,11 +2,14 @@ package org.example.soundwavebackend.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.example.soundwavebackend.authentication.exception.*;
+import org.example.soundwavebackend.media.exception.InvalidAvatarFileException;
+import org.example.soundwavebackend.media.exception.CloudStorageUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -23,7 +26,7 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Please review the submitted fields.", request, errors);
     }
 
-    @ExceptionHandler(EmailAlreadyExistsException.class)
+    @ExceptionHandler({EmailAlreadyExistsException.class, UsernameAlreadyExistsException.class})
     public ResponseEntity<ApiErrorResponse> handleConflict(AuthenticationException exception, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, exception.getCode(), exception.getMessage(), request, Map.of());
     }
@@ -38,9 +41,26 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.FORBIDDEN, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
+    @ExceptionHandler(ProfileNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotFound(AuthenticationException exception, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
     @ExceptionHandler({InvalidOtpException.class, AccountUnavailableException.class})
     public ResponseEntity<ApiErrorResponse> handleBadRequest(AuthenticationException exception, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler({InvalidAvatarFileException.class, MaxUploadSizeExceededException.class})
+    public ResponseEntity<ApiErrorResponse> handleInvalidAvatar(Exception exception, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "INVALID_AVATAR_FILE",
+                "Avatar must be in JPG/PNG format and under 5MB.", request, Map.of("avatar", "Choose a JPG or PNG image under 5MB."));
+    }
+
+    @ExceptionHandler(CloudStorageUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleCloudStorage(CloudStorageUnavailableException exception,
+                                                                HttpServletRequest request) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String code, String message,
