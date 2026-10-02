@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Getter
 @Entity
@@ -27,4 +28,15 @@ public class Role {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public Role(String code, String name, String description) {
+        this.code = code;
+        this.name = name;
+        this.description = description;
+    }
+
+    @PrePersist
+    void initializeCreatedAt() {
+        createdAt = LocalDateTime.now(ZoneOffset.UTC);
+    }
 }
