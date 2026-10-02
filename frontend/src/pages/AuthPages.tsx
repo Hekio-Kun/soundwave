@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from "react";
-import { authApi, getAuthErrorMessage, type AuthSession } from "../api/auth";
+import { AuthApiError, authApi, getAuthErrorMessage, type AuthSession } from "../api/auth";
 import {
   AlertIcon,
   CheckIcon,
@@ -29,11 +29,19 @@ function focusFirstInvalid(errors: FieldErrors) {
   }
 }
 
-function AuthErrorNotice({ message, title = "Incomplete information" }: { message: string; title?: string }) {
+function AuthErrorNotice({
+  message,
+  title = "Incomplete information",
+  action,
+}: {
+  message: string;
+  title?: string;
+  action?: ReactNode;
+}) {
   return (
     <div className="auth-v2-error" role="alert" aria-live="polite">
       <span><AlertIcon width={17} height={17} /></span>
-      <div><b>{title}</b><small>{message}</small></div>
+      <div><b>{title}</b><small>{message}</small>{action}</div>
     </div>
   );
 }
@@ -177,6 +185,9 @@ export function LoginPage({ onLoginSuccess, onNavigate }: AuthProps) {
   const [rememberMe, setRememberMe] = useState(true);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [apiError, setApiError] = useState("");
+  const [apiErrorCode, setApiErrorCode] = useState("");
+  const [resendMessage, setResendMessage] = useState("");
+  const [resendingVerification, setResendingVerification] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (event: FormEvent) => {
@@ -194,20 +205,41 @@ export function LoginPage({ onLoginSuccess, onNavigate }: AuthProps) {
 
     setErrors({});
     setApiError("");
+    setApiErrorCode("");
+    setResendMessage("");
     setSubmitting(true);
     try {
       const session = await authApi.login(email.trim(), password, rememberMe);
       onLoginSuccess(session, rememberMe);
     } catch (error) {
       setApiError(getAuthErrorMessage(error, "Login failed. Please try again."));
+      setApiErrorCode(error instanceof AuthApiError ? error.code ?? "" : "");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const resendVerificationOtp = async () => {
+    setResendingVerification(true);
+    setResendMessage("");
+    try {
+      const result = await authApi.resendVerificationOtp(email.trim());
+      setApiError("");
+      setApiErrorCode("");
+      setResendMessage(result.message);
+    } catch (error) {
+      setApiError(getAuthErrorMessage(error, "Unable to resend the verification OTP."));
+      setApiErrorCode(error instanceof AuthApiError ? error.code ?? "" : "");
+    } finally {
+      setResendingVerification(false);
     }
   };
 
   const updateField = (id: string, setter: (value: string) => void) => (value: string) => {
     setter(value);
     setApiError("");
+    setApiErrorCode("");
+    setResendMessage("");
     setErrors((current) => ({ ...current, [id]: "" }));
   };
 
@@ -215,7 +247,28 @@ export function LoginPage({ onLoginSuccess, onNavigate }: AuthProps) {
     <AuthExperience mode="login" eyebrow="WELCOME BACK" title="Continue with SoundWave" description="Log in to open your personal library and continue listening where you left off." onNavigate={onNavigate}>
       <form onSubmit={handleSubmit} className="auth-v2-form" noValidate>
         {Object.values(errors).some(Boolean) ? <AuthErrorNotice message="Please review the fields marked below." /> : null}
-        {apiError ? <AuthErrorNotice title="Unable to log in" message={apiError} /> : null}
+        {apiError ? (
+          <AuthErrorNotice
+            title={apiErrorCode === "ACCOUNT_BANNED" ? "Account banned" : "Unable to log in"}
+            message={apiError}
+            action={apiErrorCode === "EMAIL_NOT_VERIFIED" ? (
+              <button
+                type="button"
+                className="auth-v2-error-action"
+                onClick={resendVerificationOtp}
+                disabled={resendingVerification}
+              >
+                {resendingVerification ? "Sending…" : "Resend verification OTP"}
+              </button>
+            ) : undefined}
+          />
+        ) : null}
+        {resendMessage ? (
+          <div className="auth-v2-verification-resend" role="status">
+            <CheckIcon width={17} height={17} />
+            <span><b>OTP sent</b><small>{resendMessage}</small></span>
+          </div>
+        ) : null}
         <TextField id="login-email" type="email" label="Email" value={email} onChange={updateField("login-email", setEmail)} placeholder="you@example.com" autoComplete="email" icon={<MailIcon width={17} height={17} />} error={errors["login-email"]} />
         <PasswordField id="login-password" label="Password" value={password} onChange={updateField("login-password", setPassword)} autoComplete="current-password" action={<button type="button" className="auth-v2-text-button" onClick={() => onNavigate("/forgot-password")}>Forgot Password?</button>} error={errors["login-password"]} />
 

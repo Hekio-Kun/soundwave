@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 
 @Getter
@@ -28,6 +29,21 @@ public class UserProfile {
     @Column(name = "display_name", nullable = false, length = 120)
     private String displayName;
 
+    @Column(length = 1000)
+    private String bio;
+
+    @Column(name = "avatar_public_id", length = 255)
+    private String avatarPublicId;
+
+    @Column(name = "avatar_url", length = 2048)
+    private String avatarUrl;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "country_code", columnDefinition = "char(2)")
+    private String countryCode;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -38,6 +54,21 @@ public class UserProfile {
         this.user = user;
         this.username = username;
         this.displayName = displayName;
+    }
+
+    public void update(String displayName, String bio, LocalDate dateOfBirth, String countryCode,
+                       LocalDateTime updatedAt) {
+        this.displayName = displayName;
+        this.bio = bio;
+        this.dateOfBirth = dateOfBirth;
+        this.countryCode = countryCode;
+        this.updatedAt = updatedAt;
+    }
+
+    public void updateAvatar(String avatarPublicId, String avatarUrl, LocalDateTime updatedAt) {
+        this.avatarPublicId = avatarPublicId;
+        this.avatarUrl = avatarUrl;
+        this.updatedAt = updatedAt;
     }
 
     @PrePersist

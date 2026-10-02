@@ -28,7 +28,7 @@ public class AppUser {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private UserStatus status;
 
     @Column(name = "email_verified_at")

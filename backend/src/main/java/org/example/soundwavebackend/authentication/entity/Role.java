@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @Getter
 @Entity
@@ -35,9 +36,7 @@ public class Role {
     }
 
     @PrePersist
-    void initializeTimestamps() {
-        if (createdAt == null) {
-            createdAt = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC);
-        }
+    void initializeCreatedAt() {
+        createdAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 }
