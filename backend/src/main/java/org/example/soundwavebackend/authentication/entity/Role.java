@@ -27,4 +27,17 @@ public class Role {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    public Role(String code, String name, String description) {
+        this.code = code;
+        this.name = name;
+        this.description = description;
+    }
+
+    @PrePersist
+    void initializeTimestamps() {
+        if (createdAt == null) {
+            createdAt = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC);
+        }
+    }
 }
