@@ -33,6 +33,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.UNAUTHORIZED, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
+    @ExceptionHandler({AccountBannedException.class, EmailNotVerifiedException.class})
+    public ResponseEntity<ApiErrorResponse> handleForbidden(AuthenticationException exception, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
     @ExceptionHandler({InvalidOtpException.class, AccountUnavailableException.class})
     public ResponseEntity<ApiErrorResponse> handleBadRequest(AuthenticationException exception, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
