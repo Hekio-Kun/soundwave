@@ -43,6 +43,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
+    @ExceptionHandler(org.example.soundwavebackend.track.exception.TrackException.class)
+    public ResponseEntity<ApiErrorResponse> handleTrackException(org.example.soundwavebackend.track.exception.TrackException exception,
+                                                                 HttpServletRequest request) {
+        return build(exception.getStatus(), exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String code, String message,
                                                     HttpServletRequest request, Map<String, String> fieldErrors) {
         ApiErrorResponse body = new ApiErrorResponse(
