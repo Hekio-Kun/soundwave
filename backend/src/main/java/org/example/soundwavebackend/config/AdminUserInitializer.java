@@ -20,7 +20,7 @@ import java.time.ZoneOffset;
 import java.util.Locale;
 
 /**
- * Tự động khởi tạo vai trò mặc định và tài khoản quản trị viên (Admin) khi hệ thống khởi động.
+ * Tự động khởi tạo vai trò và tài khoản hệ thống mặc định khi hệ thống khởi động.
  */
 @Slf4j
 @Component
@@ -33,7 +33,7 @@ public class AdminUserInitializer implements ApplicationRunner {
     private final org.example.soundwavebackend.catalog.repository.GenreRepository genreRepository;
 
     @Value("${app.admin.auto-create:true}")
-    private boolean autoCreate;
+    private boolean adminAutoCreate;
 
     @Value("${app.admin.email:admin@soundwave.com}")
     private String adminEmail;
@@ -47,13 +47,30 @@ public class AdminUserInitializer implements ApplicationRunner {
     @Value("${app.admin.display-name:System Administrator}")
     private String adminDisplayName;
 
+    @Value("${app.staff.auto-create:true}")
+    private boolean staffAutoCreate;
+
+    @Value("${app.staff.email:staff@soundwave.com}")
+    private String staffEmail;
+
+    @Value("${app.staff.password:Staff@123456}")
+    private String staffPassword;
+
+    @Value("${app.staff.username:staff}")
+    private String staffUsername;
+
+    @Value("${app.staff.display-name:Content Moderator}")
+    private String staffDisplayName;
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         initRoles();
-        initGenres();
-        if (autoCreate) {
-            initAdminAccount();
+        if (adminAutoCreate) {
+            initSystemAccount("ADMIN", adminEmail, adminPassword, adminUsername, adminDisplayName);
+        }
+        if (staffAutoCreate) {
+            initSystemAccount("STAFF", staffEmail, staffPassword, staffUsername, staffDisplayName);
         }
     }
 
@@ -88,28 +105,34 @@ public class AdminUserInitializer implements ApplicationRunner {
         }
     }
 
-    private void initAdminAccount() {
-        String normalizedEmail = adminEmail.trim().toLowerCase(Locale.ROOT);
+    private void initSystemAccount(
+            String roleCode,
+            String email,
+            String password,
+            String configuredUsername,
+            String displayName) {
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
         if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
-            log.info("Admin account already exists with email: {}", normalizedEmail);
+            log.info("{} account already exists with email: {}", roleCode, normalizedEmail);
             return;
         }
 
-        Role adminRole = roleRepository.findByCode("ADMIN")
-                .orElseThrow(() -> new IllegalStateException("ADMIN role could not be found"));
+        Role role = roleRepository.findByCode(roleCode)
+                .orElseThrow(() -> new IllegalStateException(roleCode + " role could not be found"));
 
-        AppUser adminUser = new AppUser(adminRole, normalizedEmail, passwordEncoder.encode(adminPassword));
-        adminUser.verifyEmail(LocalDateTime.now(ZoneOffset.UTC));
-        AppUser savedUser = userRepository.save(adminUser);
+        AppUser systemUser = new AppUser(role, normalizedEmail, passwordEncoder.encode(password));
+        systemUser.verifyEmail(LocalDateTime.now(ZoneOffset.UTC));
+        AppUser savedUser = userRepository.save(systemUser);
 
-        String username = adminUsername.trim().toLowerCase(Locale.ROOT);
+        String username = configuredUsername.trim().toLowerCase(Locale.ROOT);
         if (profileRepository.existsByUsername(username)) {
             username = username + "_" + savedUser.getId();
         }
 
-        UserProfile profile = new UserProfile(savedUser, username, adminDisplayName.trim());
+        UserProfile profile = new UserProfile(savedUser, username, displayName.trim());
         profileRepository.save(profile);
 
-        log.info("Successfully created default admin account (Email: {}, Username: {})", normalizedEmail, username);
+        log.info("Successfully created default {} account (Email: {}, Username: {})",
+                roleCode, normalizedEmail, username);
     }
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { DashboardIcon, HomeIcon, ShieldIcon } from "../icons";
+import { DashboardIcon, HomeIcon, ShieldIcon, UserIcon } from "../icons";
 import type { CurrentUser } from "../types";
 
 type Props = {
@@ -67,7 +67,9 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
             </button>
             {user ? (
               <div className="ops-shell-user">
-                <img src={user.avatarUrl} alt="" />
+                {user.avatarUrl
+                  ? <img src={user.avatarUrl} alt="" />
+                  : <span className="ops-shell-user-avatar"><UserIcon width={15} height={15} /></span>}
                 <span><b>{user.displayName}</b><small>{roleLabel}</small></span>
               </div>
             ) : null}
