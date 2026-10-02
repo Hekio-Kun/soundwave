@@ -27,7 +27,7 @@ import org.example.soundwavebackend.track.exception.GenreNotFoundException;
 import org.example.soundwavebackend.track.exception.TrackNotFoundException;
 import org.example.soundwavebackend.track.exception.TrackOperationNotAllowedException;
 import org.example.soundwavebackend.track.mapper.TrackMapper;
-import org.example.soundwavebackend.track.repository.TrackRepository;
+import org.example.soundwavebackend.catalog.repository.TrackRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;

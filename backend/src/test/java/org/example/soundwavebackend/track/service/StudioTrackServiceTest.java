@@ -20,7 +20,7 @@ import org.example.soundwavebackend.track.dto.response.StudioTrackResponse;
 import org.example.soundwavebackend.track.dto.response.TrackRejectionDetailsResponse;
 import org.example.soundwavebackend.track.exception.TrackOperationNotAllowedException;
 import org.example.soundwavebackend.track.mapper.TrackMapper;
-import org.example.soundwavebackend.track.repository.TrackRepository;
+import org.example.soundwavebackend.catalog.repository.TrackRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
