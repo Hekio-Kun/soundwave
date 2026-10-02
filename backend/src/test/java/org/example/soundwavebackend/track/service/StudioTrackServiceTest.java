@@ -8,6 +8,8 @@ import org.example.soundwavebackend.catalog.entity.Track;
 import org.example.soundwavebackend.catalog.entity.TrackPublicationStatus;
 import org.example.soundwavebackend.catalog.repository.AlbumRepository;
 import org.example.soundwavebackend.catalog.repository.GenreRepository;
+import org.example.soundwavebackend.media.dto.response.StoredAudioResponse;
+import org.example.soundwavebackend.media.service.CloudMediaService;
 import org.example.soundwavebackend.moderation.entity.SubmissionStatus;
 import org.example.soundwavebackend.moderation.entity.TrackSubmission;
 import org.example.soundwavebackend.moderation.repository.TrackSubmissionRepository;
@@ -24,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -41,6 +44,7 @@ class StudioTrackServiceTest {
     @Mock private AlbumRepository albumRepository;
     @Mock private AppUserRepository userRepository;
     @Mock private org.example.soundwavebackend.lyrics.service.OfficialLyricService officialLyricService;
+    @Mock private CloudMediaService cloudMediaService;
 
     private StudioTrackService service;
     private AppUser testUser;
@@ -50,7 +54,7 @@ class StudioTrackServiceTest {
     void setUp() {
         TrackMapper mapper = new TrackMapper();
         service = new StudioTrackService(trackRepository, submissionRepository, genreRepository,
-                albumRepository, userRepository, mapper, officialLyricService);
+                albumRepository, userRepository, mapper, officialLyricService, cloudMediaService);
 
         Role role = mock(Role.class);
         testUser = new AppUser(role, "creator@soundwave.com", "hash");
@@ -63,25 +67,31 @@ class StudioTrackServiceTest {
     @Test
     void createTrackDraft_success() {
         CreateTrackRequest request = new CreateTrackRequest("Song 1", 1L, null, null, "Desc",
-                "/audio/demo.mp3", "pub_audio_1", "mp3", 180000, null, null, "Sample lyrics line 1\nSample lyrics line 2");
+                180000, "Sample lyrics line 1\nSample lyrics line 2");
+        MockMultipartFile audio = new MockMultipartFile(
+                "audio", "song.mp3", "audio/mpeg", new byte[]{'I', 'D', '3', 0x01});
 
         when(userRepository.findByEmailIgnoreCase("creator@soundwave.com")).thenReturn(Optional.of(testUser));
         when(genreRepository.findById(1L)).thenReturn(Optional.of(testGenre));
         when(trackRepository.existsBySlug(anyString())).thenReturn(false);
-        when(trackRepository.save(any(Track.class))).thenAnswer(inv -> {
+        when(cloudMediaService.uploadTrackAudio(audio, 101L))
+                .thenReturn(new StoredAudioResponse("pub_audio_1", "https://media/song.mp3", "mp3", 180000));
+        when(trackRepository.saveAndFlush(any(Track.class))).thenAnswer(inv -> {
             Track t = inv.getArgument(0);
             ReflectionTestUtils.setField(t, "id", 501L);
             return t;
         });
 
-        StudioTrackResponse response = service.createTrackDraft(request, "creator@soundwave.com");
+        StudioTrackResponse response = service.createTrackDraft(request, audio, null, "creator@soundwave.com");
 
         assertNotNull(response);
         assertEquals(501L, response.id());
         assertEquals("Song 1", response.title());
         assertEquals("DRAFT", response.status());
+        assertEquals("https://media/song.mp3", response.audioUrl());
         assertEquals("Sample lyrics line 1\nSample lyrics line 2", response.lyrics());
-        verify(trackRepository).save(any(Track.class));
+        verify(trackRepository).saveAndFlush(any(Track.class));
+        verify(cloudMediaService).uploadTrackAudio(audio, 101L);
         verify(officialLyricService).saveOrUpdateTrackLyric(eq(501L), eq(request.lyrics()), eq(101L));
     }
 
