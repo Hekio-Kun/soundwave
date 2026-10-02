@@ -1,0 +1,35 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE Files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# Application Configuration & Secrets
+**/application.properties
+**/application-*.properties
+**/application-local.properties
+**/*.properties.local
+
+# Frontend Environment
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# General Environment & Secrets
+*.env
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
