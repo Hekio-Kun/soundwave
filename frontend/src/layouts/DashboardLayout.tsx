@@ -11,9 +11,9 @@ type Props = {
 };
 
 export function DashboardLayout({ children, activeRoute, user, onNavigate, onLogout }: Props) {
-  const isAdminArea = activeRoute.startsWith("/admin");
-  const dashboardRoute = user?.role === "ADMIN" ? "/admin/dashboard" : "/staff/dashboard";
-  const roleLabel = user?.role === "ADMIN" ? "Administrator" : user?.role === "STAFF" ? "Moderation Staff" : "Guest";
+  const isStaff = user?.role === "STAFF";
+  const isAdmin = user?.role === "ADMIN";
+  const roleLabel = isAdmin ? "Administrator" : isStaff ? "Moderation Staff" : "Guest";
 
   return (
     <div className="ops-shell">
@@ -24,23 +24,39 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
         </button>
 
         <div className="ops-shell-workspace">
-          <small>WORKSPACE</small>
-          <strong>{isAdminArea ? "Administration" : "Content Moderation"}</strong>
+          <small>{isStaff ? "STAFF WORKSPACE" : "ADMIN WORKSPACE"}</small>
+          <strong>{isStaff ? "Content Moderation" : "Platform Administration"}</strong>
           <span><i /> {roleLabel}</span>
         </div>
 
         <nav className="ops-shell-nav">
-          <span>OVERVIEW</span>
-          <button className="is-active" onClick={() => onNavigate(dashboardRoute)}>
-            {isAdminArea ? <ShieldIcon width={18} height={18} /> : <DashboardIcon width={18} height={18} />}
-            <span>Dashboard</span>
-          </button>
-          {user?.role === "ADMIN" ? (
-            <button className={!isAdminArea ? "is-active" : ""} onClick={() => onNavigate("/staff/dashboard")}>
+          <span>{isStaff ? "MODERATION TOOLS" : "OVERVIEW"}</span>
+          {isStaff ? (
+            <button
+              className={activeRoute.startsWith("/staff") ? "is-active" : ""}
+              onClick={() => onNavigate("/staff/dashboard")}
+            >
               <DashboardIcon width={18} height={18} />
-              <span>Content Moderation</span>
+              <span>Moderate Pending Tracks</span>
             </button>
-          ) : null}
+          ) : (
+            <>
+              <button
+                className={activeRoute.startsWith("/admin") ? "is-active" : ""}
+                onClick={() => onNavigate("/admin/dashboard")}
+              >
+                <ShieldIcon width={18} height={18} />
+                <span>System Dashboard</span>
+              </button>
+              <button
+                className={activeRoute.startsWith("/staff") ? "is-active" : ""}
+                onClick={() => onNavigate("/staff/dashboard")}
+              >
+                <DashboardIcon width={18} height={18} />
+                <span>Staff Moderation Queue</span>
+              </button>
+            </>
+          )}
         </nav>
 
         <div className="ops-shell-sidebar-footer">
@@ -57,7 +73,7 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
           <div className="ops-shell-breadcrumb">
             <span>SoundWave</span>
             <i>/</i>
-            <strong>{isAdminArea ? "Administration Dashboard" : "Moderation Dashboard"}</strong>
+            <strong>{isStaff ? "Staff Moderation Workspace" : "Administration Dashboard"}</strong>
           </div>
 
           <div className="ops-shell-actions">

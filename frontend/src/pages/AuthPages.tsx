@@ -278,6 +278,31 @@ export function LoginPage({ onLoginSuccess, onNavigate }: AuthProps) {
         </div>
 
         <button type="submit" className="button button-primary button-large auth-v2-submit" disabled={submitting}>{submitting ? "Logging in…" : "Login"}</button>
+
+        <div style={{ marginTop: "12px", display: "flex", gap: "8px", justifyContent: "center" }}>
+          <button
+            type="button"
+            className="button button-ghost button-small"
+            style={{ fontSize: "11px", padding: "4px 10px" }}
+            onClick={() => {
+              setEmail("staff@soundwave.com");
+              setPassword("Admin@123456");
+            }}
+          >
+            Fill Staff Account
+          </button>
+          <button
+            type="button"
+            className="button button-ghost button-small"
+            style={{ fontSize: "11px", padding: "4px 10px" }}
+            onClick={() => {
+              setEmail("admin@soundwave.com");
+              setPassword("Admin@123456");
+            }}
+          >
+            Fill Admin Account
+          </button>
+        </div>
       </form>
 
       <div className="auth-v2-access-note">

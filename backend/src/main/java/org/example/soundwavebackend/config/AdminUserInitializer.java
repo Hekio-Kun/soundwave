@@ -19,9 +19,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Locale;
 
-/**
- * Tự động khởi tạo vai trò mặc định và tài khoản quản trị viên (Admin) khi hệ thống khởi động.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -46,12 +43,25 @@ public class AdminUserInitializer implements ApplicationRunner {
     @Value("${app.admin.display-name:System Administrator}")
     private String adminDisplayName;
 
+    @Value("${app.staff.email:staff@soundwave.com}")
+    private String staffEmail;
+
+    @Value("${app.staff.password:Admin@123456}")
+    private String staffPassword;
+
+    @Value("${app.staff.username:staff}")
+    private String staffUsername;
+
+    @Value("${app.staff.display-name:Moderation Staff}")
+    private String staffDisplayName;
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         initRoles();
         if (autoCreate) {
             initAdminAccount();
+            initStaffAccount();
         }
     }
 
@@ -91,5 +101,30 @@ public class AdminUserInitializer implements ApplicationRunner {
         profileRepository.save(profile);
 
         log.info("Successfully created default admin account (Email: {}, Username: {})", normalizedEmail, username);
+    }
+
+    private void initStaffAccount() {
+        String normalizedEmail = staffEmail.trim().toLowerCase(Locale.ROOT);
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            log.info("Staff account already exists with email: {}", normalizedEmail);
+            return;
+        }
+
+        Role staffRole = roleRepository.findByCode("STAFF")
+                .orElseThrow(() -> new IllegalStateException("STAFF role could not be found"));
+
+        AppUser staffUser = new AppUser(staffRole, normalizedEmail, passwordEncoder.encode(staffPassword));
+        staffUser.verifyEmail(LocalDateTime.now(ZoneOffset.UTC));
+        AppUser savedUser = userRepository.save(staffUser);
+
+        String username = staffUsername.trim().toLowerCase(Locale.ROOT);
+        if (profileRepository.existsByUsername(username)) {
+            username = username + "_" + savedUser.getId();
+        }
+
+        UserProfile profile = new UserProfile(savedUser, username, staffDisplayName.trim());
+        profileRepository.save(profile);
+
+        log.info("Successfully created default staff account (Email: {}, Username: {})", normalizedEmail, username);
     }
 }

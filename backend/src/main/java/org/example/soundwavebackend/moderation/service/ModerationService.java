@@ -114,8 +114,11 @@ public class ModerationService {
 
     @Transactional(readOnly = true)
     public SubmissionStatsResponse getQueueStats() {
-        long count = submissionRepository.countByStatus(SubmissionStatus.PENDING);
-        return new SubmissionStatsResponse(count);
+        long pending = submissionRepository.countByStatus(SubmissionStatus.PENDING);
+        long approved = submissionRepository.countByStatus(SubmissionStatus.APPROVED);
+        long rejected = submissionRepository.countByStatus(SubmissionStatus.REJECTED);
+        long total = submissionRepository.count();
+        return new SubmissionStatsResponse(pending, approved, rejected, total);
     }
 
     @Transactional
@@ -147,7 +150,7 @@ public class ModerationService {
         AppUser submitter = userRepository.findById(submission.getSubmittedByUserId()).orElse(null);
         UserProfile submitterProfile = profileRepository.findByUserId(submission.getSubmittedByUserId()).orElse(null);
         String submitterDisplayName = submitterProfile != null && submitterProfile.getDisplayName() != null && !submitterProfile.getDisplayName().isBlank()
-                ? submitterProfile.getDisplayName() : (submitter != null ? submitter.getEmail() : "Artist");
+                ? submitterProfile.getDisplayName() : (submitter != null ? submitter.getEmail() : "Creator");
 
         if (submitter != null) {
             mailService.sendTrackApprovedEmail(submitter.getEmail(), submitterDisplayName, track.getTitle());
@@ -187,7 +190,7 @@ public class ModerationService {
         AppUser submitter = userRepository.findById(submission.getSubmittedByUserId()).orElse(null);
         UserProfile submitterProfile = profileRepository.findByUserId(submission.getSubmittedByUserId()).orElse(null);
         String submitterDisplayName = submitterProfile != null && submitterProfile.getDisplayName() != null && !submitterProfile.getDisplayName().isBlank()
-                ? submitterProfile.getDisplayName() : (submitter != null ? submitter.getEmail() : "Artist");
+                ? submitterProfile.getDisplayName() : (submitter != null ? submitter.getEmail() : "Creator");
 
         if (submitter != null) {
             mailService.sendTrackRejectedEmail(submitter.getEmail(), submitterDisplayName, track.getTitle(), rejectionReason);

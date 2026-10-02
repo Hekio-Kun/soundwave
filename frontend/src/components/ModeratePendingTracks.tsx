@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   moderationApi,
   type PageResponse,
@@ -13,9 +13,18 @@ import {
   CloseIcon,
   DiscIcon,
   EyeIcon,
+  RefreshIcon,
   SearchIcon,
   TrendingUpIcon,
+  UserIcon,
 } from "../icons";
+
+function formatDuration(ms?: number | null): string {
+  if (!ms || ms <= 0) return "--:--";
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
 
 function formatDate(isoString?: string | null): string {
   if (!isoString) return "--";
@@ -33,6 +42,24 @@ function formatDate(isoString?: string | null): string {
   }
 }
 
+function formatRelativeTime(isoString?: string | null): string {
+  if (!isoString) return "--";
+  try {
+    const submitted = new Date(isoString).getTime();
+    const diffMs = Date.now() - submitted;
+    if (diffMs < 0) return "Just now";
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  } catch {
+    return formatDate(isoString);
+  }
+}
+
 type Props = {
   onNavigate: (route: string) => void;
   initialSubmissionId?: number | null;
@@ -42,6 +69,7 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
   const [stats, setStats] = useState<SubmissionStats | null>(null);
   const [queuePage, setQueuePage] = useState<PageResponse<SubmissionQueueItem> | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -74,6 +102,30 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
   const [rejectNote, setRejectNote] = useState<string>("");
   const [isSubmittingReject, setIsSubmittingReject] = useState<boolean>(false);
 
+  // Rule 4.7: Scroll Lock when confirmation modals are open
+  useEffect(() => {
+    const isDialogOpen = Boolean(approvingTarget || rejectingTarget);
+    if (isDialogOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [approvingTarget, rejectingTarget]);
+
+  // Rule 4.7: Escape Key Listener for confirmation modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (approvingTarget) setApprovingTarget(null);
+        if (rejectingTarget) setRejectingTarget(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [approvingTarget, rejectingTarget]);
+
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
     window.setTimeout(() => setToast(null), 4000);
@@ -88,8 +140,12 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
     }
   };
 
-  const loadQueue = async () => {
-    setLoading(true);
+  const loadQueue = async (isManualRefresh = false) => {
+    if (isManualRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     try {
       const data = await moderationApi.getQueue({
@@ -104,6 +160,7 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
       setError(msg);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -123,6 +180,11 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
+  const handleManualRefresh = () => {
+    void loadStats();
+    void loadQueue(true);
+  };
+
   // Approve action
   const handleConfirmApprove = async () => {
     if (!approvingTarget) return;
@@ -131,7 +193,7 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
 
     setIsSubmittingApprove(true);
     try {
-      await moderationApi.approveSubmission(targetId, approveNote);
+      await moderationApi.approveSubmission(targetId, approveNote.trim() || undefined);
       showToast(`Track "${title}" has been successfully approved!`);
       setApprovingTarget(null);
       setApproveNote("");
@@ -158,7 +220,11 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
 
     setIsSubmittingReject(true);
     try {
-      await moderationApi.rejectSubmission(targetId, rejectionReason.trim(), rejectNote.trim());
+      await moderationApi.rejectSubmission(
+        targetId,
+        rejectionReason.trim(),
+        rejectNote.trim() || undefined
+      );
       showToast(`Track "${title}" has been rejected.`);
       setRejectingTarget(null);
       setRejectionReason("");
@@ -175,24 +241,42 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
 
   return (
     <div className="mod-track-view">
-      {/* Top statistics overview */}
+      {/* Top Statistics KPI Cards (Interactive Filter Triggers) */}
       <section className="ops-metric-grid" aria-label="Moderation statistics">
-        <article className="ops-metric ops-metric--amber">
+        <article
+          className={`ops-metric ops-metric--amber staff-kpi-card ${
+            statusFilter === "PENDING" ? "is-active-filter" : ""
+          }`}
+          onClick={() => {
+            setStatusFilter("PENDING");
+            setPage(0);
+          }}
+          title="Click to view pending submissions"
+        >
           <div className="ops-metric-top">
             <span className="ops-metric-icon">
               <ClockIcon />
             </span>
             <span className="ops-metric-change">
               <TrendingUpIcon width={13} height={13} />
-              FIFO Queue
+              FIFO Priority
             </span>
           </div>
           <strong>{stats ? stats.pendingCount : "--"}</strong>
-          <span className="ops-metric-label">Pending Tracks</span>
-          <small>Prioritized by earliest submission time</small>
+          <span className="ops-metric-label">Pending Review</span>
+          <small>Prioritized by earliest wait time</small>
         </article>
 
-        <article className="ops-metric ops-metric--green">
+        <article
+          className={`ops-metric ops-metric--green staff-kpi-card ${
+            statusFilter === "APPROVED" ? "is-active-filter" : ""
+          }`}
+          onClick={() => {
+            setStatusFilter("APPROVED");
+            setPage(0);
+          }}
+          title="Click to view approved tracks"
+        >
           <div className="ops-metric-top">
             <span className="ops-metric-icon">
               <CheckIcon />
@@ -202,49 +286,95 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
               Approved
             </span>
           </div>
-          <strong>{statusFilter === "APPROVED" && queuePage ? queuePage.totalElements : "1+"}</strong>
+          <strong>{stats ? stats.approvedCount : "--"}</strong>
           <span className="ops-metric-label">Approved Tracks</span>
-          <small>Tracks published to public catalog</small>
+          <small>Live in public music catalog</small>
         </article>
 
-        <article className="ops-metric ops-metric--red">
+        <article
+          className={`ops-metric ops-metric--red staff-kpi-card ${
+            statusFilter === "REJECTED" ? "is-active-filter" : ""
+          }`}
+          onClick={() => {
+            setStatusFilter("REJECTED");
+            setPage(0);
+          }}
+          title="Click to view rejected submissions"
+        >
           <div className="ops-metric-top">
             <span className="ops-metric-icon">
               <AlertIcon />
             </span>
-            <span className="ops-metric-change">Requires Action</span>
+            <span className="ops-metric-change">Actioned</span>
           </div>
-          <strong>{statusFilter === "REJECTED" && queuePage ? queuePage.totalElements : "1+"}</strong>
-          <span className="ops-metric-label">Rejected Tracks</span>
-          <small>Feedback and reason sent to artists</small>
+          <strong>{stats ? stats.rejectedCount : "--"}</strong>
+          <span className="ops-metric-label">Rejected Submissions</span>
+          <small>Feedback returned to creators</small>
         </article>
 
-        <article className="ops-metric ops-metric--violet">
+        <article
+          className={`ops-metric ops-metric--violet staff-kpi-card ${
+            statusFilter === "ALL" ? "is-active-filter" : ""
+          }`}
+          onClick={() => {
+            setStatusFilter("ALL");
+            setPage(0);
+          }}
+          title="Click to view full archive"
+        >
           <div className="ops-metric-top">
             <span className="ops-metric-icon">
               <DiscIcon />
             </span>
-            <span className="ops-metric-change">Total Archive</span>
+            <span className="ops-metric-change">Full Archive</span>
           </div>
-          <strong>{statusFilter === "ALL" && queuePage ? queuePage.totalElements : "6"}</strong>
+          <strong>{stats ? stats.totalCount : "--"}</strong>
           <span className="ops-metric-label">Total Submissions</span>
-          <small>All moderation submission history</small>
+          <small>All-time submission history</small>
         </article>
       </section>
 
-      {/* Main Review Queue Panel */}
-      <article className="ops-panel ops-review-panel" style={{ marginTop: "18px" }}>
-        <div className="ops-panel-heading">
-          <div>
-            <h2>Moderate Pending Tracks</h2>
-            <p>Review tracks prioritized by wait time (FIFO)</p>
+      {/* Main Review Queue Workspace Panel */}
+      <article className="ops-panel staff-review-panel">
+        <div className="staff-panel-header">
+          <div className="staff-panel-header-copy">
+            <div className="staff-panel-title-wrap">
+              <h2>Moderation Queue</h2>
+              <span className="staff-status-pill">
+                {statusFilter === "PENDING"
+                  ? "Pending Review (FIFO)"
+                  : statusFilter === "APPROVED"
+                  ? "Approved Archive"
+                  : statusFilter === "REJECTED"
+                  ? "Rejected Archive"
+                  : "All Submissions"}
+              </span>
+            </div>
+            <p>
+              {statusFilter === "PENDING"
+                ? "Submissions awaiting moderator review, sorted strictly by submission time."
+                : `Viewing ${statusFilter.toLowerCase()} moderation records.`}
+            </p>
           </div>
-          <span className="ops-queue-count">
-            {queuePage ? `${queuePage.totalElements} tracks` : "Loading..."}
-          </span>
+
+          <div className="staff-panel-header-actions">
+            <span className="staff-count-tag">
+              {queuePage ? `${queuePage.totalElements} items` : "Loading..."}
+            </span>
+            <button
+              className="button button-ghost button-small staff-refresh-btn"
+              onClick={handleManualRefresh}
+              disabled={refreshing || loading}
+              title="Refresh queue"
+              aria-label="Refresh queue"
+            >
+              <RefreshIcon width={14} height={14} className={refreshing ? "spin-icon" : ""} />
+              <span>Refresh</span>
+            </button>
+          </div>
         </div>
 
-        {/* Search & Filter Toolbar */}
+        {/* Toolbar: Segmented Filter Tabs & Search */}
         <div className="mod-toolbar">
           <div className="mod-filter-tabs">
             <button
@@ -263,7 +393,7 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
                 setPage(0);
               }}
             >
-              Approved
+              Approved ({stats?.approvedCount ?? 0})
             </button>
             <button
               className={statusFilter === "REJECTED" ? "is-active" : ""}
@@ -272,7 +402,7 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
                 setPage(0);
               }}
             >
-              Rejected
+              Rejected ({stats?.rejectedCount ?? 0})
             </button>
             <button
               className={statusFilter === "ALL" ? "is-active" : ""}
@@ -281,7 +411,7 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
                 setPage(0);
               }}
             >
-              All
+              All ({stats?.totalCount ?? 0})
             </button>
           </div>
 
@@ -289,9 +419,10 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
             <SearchIcon width={16} height={16} />
             <input
               type="text"
-              placeholder="Search by track title, artist or email..."
+              placeholder="Search by track title, creator or album..."
               value={searchInput}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchInput(e.target.value)}
+              aria-label="Search submissions"
             />
             {searchInput ? (
               <button
@@ -305,64 +436,141 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
           </div>
         </div>
 
-        {/* Content list */}
+        {/* Content list / Loading skeletons / Empty state */}
         {loading ? (
-          <div className="mod-loading-state">
-            <div className="mod-spinner" />
-            <span>Loading data from SoundWave server...</span>
+          <div className="staff-skeleton-list">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="staff-skeleton-row">
+                <div className="staff-skeleton-cover" />
+                <div className="staff-skeleton-info">
+                  <div className="staff-skeleton-line staff-skeleton-line--long" />
+                  <div className="staff-skeleton-line staff-skeleton-line--short" />
+                </div>
+                <div className="staff-skeleton-pill" />
+                <div className="staff-skeleton-actions" />
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="mod-error-state">
-            <AlertIcon width={28} height={28} />
-            <b>An error occurred</b>
+            <AlertIcon width={32} height={32} />
+            <b>Failed to load moderation queue</b>
             <p>{error}</p>
-            <button className="button button-primary button-small" onClick={() => void loadQueue()}>
-              Retry
+            <button
+              className="button button-primary button-small"
+              onClick={() => void loadQueue()}
+            >
+              Retry Loading
             </button>
           </div>
         ) : !queuePage || queuePage.content.length === 0 ? (
-          <div className="ops-empty-state">
-            <CheckIcon width={32} height={32} />
-            <b>No tracks found in this queue</b>
-            <span>No records match the current filter or search criteria.</span>
+          <div className="ops-empty-state staff-empty-state">
+            <div className="staff-empty-icon">
+              <CheckIcon width={32} height={32} />
+            </div>
+            <b>No submissions found</b>
+            <p>
+              {searchInput
+                ? `No submissions matched "${searchInput}". Try adjusting your keywords.`
+                : statusFilter === "PENDING"
+                ? "The queue is completely caught up! No pending tracks require moderation right now."
+                : "No track submissions match the selected filter."}
+            </p>
+            {searchInput ? (
+              <button
+                className="button button-ghost button-small"
+                onClick={() => setSearchInput("")}
+              >
+                Clear Search Filter
+              </button>
+            ) : (
+              <button
+                className="button button-ghost button-small"
+                onClick={handleManualRefresh}
+              >
+                Refresh Queue
+              </button>
+            )}
           </div>
         ) : (
-          <div className="ops-review-list">
+          <div className="staff-queue-list">
             {queuePage.content.map((item) => (
               <article
-                className={`ops-review-row ${item.status === "PENDING" ? "is-priority" : ""}`}
+                className={`staff-queue-card ${
+                  item.status === "PENDING" ? "is-pending-card" : ""
+                }`}
                 key={item.id}
               >
-                <img
-                  src={item.coverUrl ?? "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800"}
-                  alt=""
-                />
+                {/* Track Thumbnail with inspect overlay */}
+                <div className="staff-card-cover-wrap">
+                  <img
+                    src={
+                      item.coverUrl ||
+                      "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400"
+                    }
+                    alt={item.trackTitle}
+                    className="staff-card-cover"
+                  />
+                  <button
+                    type="button"
+                    className="staff-cover-play-btn"
+                    onClick={() => setSelectedSubmissionId(item.id)}
+                    title="Inspect track & audio stream"
+                    aria-label={`Inspect ${item.trackTitle}`}
+                  >
+                    <EyeIcon width={16} height={16} />
+                  </button>
+                </div>
 
+                {/* Track & Creator Info */}
                 <div
-                  className="ops-review-copy"
+                  className="staff-card-details"
                   onClick={() => setSelectedSubmissionId(item.id)}
-                  style={{ cursor: "pointer" }}
-                  title="Click to view submission details"
+                  title="Click to view full review modal"
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setSelectedSubmissionId(item.id);
+                    }
+                  }}
                 >
-                  <div className="ops-review-title-line">
-                    <strong>{item.trackTitle}</strong>
+                  <div className="staff-card-title-line">
+                    <strong className="staff-track-title">{item.trackTitle}</strong>
                     {item.albumTitle ? (
                       <span className="mod-badge mod-badge--album" title={`Album: ${item.albumTitle}`}>
                         <DiscIcon width={12} height={12} /> {item.albumTitle}
                       </span>
+                    ) : (
+                      <span className="mod-badge mod-badge--single">Single</span>
+                    )}
+                    <span className="mod-badge mod-badge--format">
+                      {item.genreName || "Music"}
+                    </span>
+                    {item.durationMs ? (
+                      <span className="staff-duration-pill">
+                        {formatDuration(item.durationMs)}
+                      </span>
                     ) : null}
                   </div>
 
-                  <p>
-                    {item.submitterDisplayName ?? "Artist"} <i /> {item.genreName ?? "Pop"}
-                  </p>
-
-                  <small>
-                    <ClockIcon width={12} height={12} /> Submitted: {formatDate(item.submittedAt)}
-                  </small>
+                  <div className="staff-card-creator-line">
+                    <span className="staff-creator-name">
+                      <UserIcon width={12} height={12} />
+                      Creator: <b>{item.submitterDisplayName || "Unknown Creator"}</b>
+                    </span>
+                    {item.submitterEmail ? (
+                      <span className="staff-creator-email">({item.submitterEmail})</span>
+                    ) : null}
+                    <span className="staff-timeline-chip">
+                      <ClockIcon width={12} height={12} />
+                      Wait time: {formatRelativeTime(item.submittedAt)} ({formatDate(item.submittedAt)})
+                    </span>
+                  </div>
                 </div>
 
-                <div className="ops-review-state">
+                {/* Status Badge */}
+                <div className="staff-card-status">
                   <span
                     className={`ops-status ${
                       item.status === "APPROVED"
@@ -377,42 +585,48 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
                       ? "Approved"
                       : item.status === "REJECTED"
                       ? "Rejected"
-                      : "Pending"}
+                      : "Pending Review"}
                   </span>
                 </div>
 
-                <div className="ops-review-actions">
+                {/* Action Buttons */}
+                <div className="staff-card-actions">
                   <button
-                    className="ops-icon-action"
-                    aria-label={`Open review for ${item.trackTitle}`}
-                    title="Open details & preview track"
+                    className="button button-ghost button-small staff-action-review"
                     onClick={() => setSelectedSubmissionId(item.id)}
+                    title="Inspect full track details & stream audio"
+                    aria-label={`Review ${item.trackTitle}`}
                   >
-                    <EyeIcon width={17} height={17} />
+                    <EyeIcon width={15} height={15} />
+                    <span>Review</span>
                   </button>
 
                   {item.status === "PENDING" ? (
                     <>
                       <button
-                        className="ops-decision ops-decision--approve"
+                        className="button button-small staff-action-approve"
                         onClick={() => {
                           setApprovingTarget(item);
                           setApproveNote("");
                         }}
+                        title="Quick approve track"
+                        aria-label={`Approve ${item.trackTitle}`}
                       >
-                        <CheckIcon width={15} height={15} />
-                        Approve
+                        <CheckIcon width={14} height={14} />
+                        <span>Approve</span>
                       </button>
                       <button
-                        className="ops-decision ops-decision--reject"
+                        className="button button-small staff-action-reject"
                         onClick={() => {
                           setRejectingTarget(item);
                           setRejectionReason("");
                           setRejectNote("");
                         }}
+                        title="Quick reject track"
+                        aria-label={`Reject ${item.trackTitle}`}
                       >
-                        <CloseIcon width={15} height={15} />
-                        Reject
+                        <CloseIcon width={14} height={14} />
+                        <span>Reject</span>
                       </button>
                     </>
                   ) : null}
@@ -422,23 +636,25 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
           </div>
         )}
 
-        {/* Pagination bar */}
+        {/* Pagination Bar */}
         {queuePage && queuePage.totalPages > 1 ? (
-          <div className="mod-pagination">
+          <div className="mod-pagination staff-pagination">
             <button
               disabled={queuePage.first}
               onClick={() => setPage((p) => Math.max(0, p - 1))}
               className="button button-ghost button-small"
+              aria-label="Previous page"
             >
               ← Previous
             </button>
-            <span>
+            <span className="staff-pagination-text">
               Page <b>{queuePage.number + 1}</b> of {queuePage.totalPages} ({queuePage.totalElements} results)
             </span>
             <button
               disabled={queuePage.last}
               onClick={() => setPage((p) => p + 1)}
               className="button button-ghost button-small"
+              aria-label="Next page"
             >
               Next →
             </button>
@@ -450,61 +666,71 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
       {approvingTarget ? (
         <div className="modal-overlay" role="presentation" onClick={() => setApprovingTarget(null)}>
           <div
-            className="modal-card ops-reject-dialog"
+            className="modal-card ops-reject-dialog staff-dialog-card"
             role="dialog"
             aria-modal="true"
+            aria-labelledby="approve-dialog-title"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <div>
-                <span className="ops-dialog-icon" style={{ background: "#ecfdf3", color: "#039855" }}>
+              <div className="staff-modal-header-info">
+                <span className="ops-dialog-icon is-green">
                   <CheckIcon />
                 </span>
-                <h2>Confirm Track Approval</h2>
+                <div>
+                  <h2 id="approve-dialog-title" className="staff-modal-title">Confirm Track Approval</h2>
+                  <p className="staff-modal-subtitle">
+                    Publication to SoundWave catalog
+                  </p>
+                </div>
               </div>
               <button
                 className="icon-button"
                 onClick={() => setApprovingTarget(null)}
-                aria-label="Close"
+                aria-label="Close dialog"
                 disabled={isSubmittingApprove}
               >
                 <CloseIcon width={18} height={18} />
               </button>
             </div>
 
-            <p>
-              You are approving the track <b>“{approvingTarget.trackTitle}”</b>. It will be moved to
-              <b> PUBLISHED</b> status and made available to listeners.
+            <p className="dialog-description">
+              You are approving the submission for <b>“{approvingTarget.trackTitle}”</b> uploaded by{" "}
+              <b>{approvingTarget.submitterDisplayName || "the creator"}</b>. The track status will be updated to
+              <b> PUBLISHED</b> and available for streaming.
             </p>
 
-            <label className="ops-reason-field" style={{ marginTop: "14px" }}>
-              <span>Reviewer Note (Optional)</span>
-              <textarea
-                rows={3}
-                placeholder="e.g. Meets 320kbps audio quality standard, metadata accurate..."
-                value={approveNote}
-                onChange={(e) => setApproveNote(e.target.value)}
-                disabled={isSubmittingApprove}
-              />
-            </label>
+            <form noValidate onSubmit={(e) => { e.preventDefault(); void handleConfirmApprove(); }}>
+              <label className="ops-reason-field" htmlFor="approve-reviewer-note">
+                <span>Reviewer Note (Optional)</span>
+                <textarea
+                  id="approve-reviewer-note"
+                  rows={3}
+                  placeholder="e.g. Master file validated, clear mix, metadata verified..."
+                  value={approveNote}
+                  onChange={(e) => setApproveNote(e.target.value)}
+                  disabled={isSubmittingApprove}
+                />
+              </label>
 
-            <div className="modal-actions" style={{ marginTop: "18px" }}>
-              <button
-                className="button button-ghost"
-                onClick={() => setApprovingTarget(null)}
-                disabled={isSubmittingApprove}
-              >
-                Cancel
-              </button>
-              <button
-                className="button button-primary"
-                style={{ background: "#039855", borderColor: "#039855" }}
-                onClick={() => void handleConfirmApprove()}
-                disabled={isSubmittingApprove}
-              >
-                {isSubmittingApprove ? "Processing..." : "Confirm Approval"}
-              </button>
-            </div>
+              <div className="staff-dialog-actions">
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={() => setApprovingTarget(null)}
+                  disabled={isSubmittingApprove}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="button button-primary staff-action-approve"
+                  disabled={isSubmittingApprove}
+                >
+                  {isSubmittingApprove ? "Processing..." : "Confirm & Publish"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}
@@ -513,77 +739,93 @@ export function ModeratePendingTracks({ onNavigate, initialSubmissionId }: Props
       {rejectingTarget ? (
         <div className="modal-overlay" role="presentation" onClick={() => setRejectingTarget(null)}>
           <div
-            className="modal-card ops-reject-dialog"
+            className="modal-card ops-reject-dialog staff-dialog-card"
             role="dialog"
             aria-modal="true"
+            aria-labelledby="reject-dialog-title"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <div>
-                <span className="ops-dialog-icon">
+              <div className="staff-modal-header-info">
+                <span className="ops-dialog-icon is-red">
                   <AlertIcon />
                 </span>
-                <h2>Reject Track Submission</h2>
+                <div>
+                  <h2 id="reject-dialog-title" className="staff-modal-title">Reject Track Submission</h2>
+                  <p className="staff-modal-subtitle">
+                    Actionable feedback sent to creator
+                  </p>
+                </div>
               </div>
               <button
                 className="icon-button"
                 onClick={() => setRejectingTarget(null)}
-                aria-label="Close"
+                aria-label="Close dialog"
                 disabled={isSubmittingReject}
               >
                 <CloseIcon width={18} height={18} />
               </button>
             </div>
 
-            <p>
-              You are rejecting the track <b>“{rejectingTarget.trackTitle}”</b>. The rejection reason will
-              be sent via email to the artist so they can revise and re-submit.
+            <p className="dialog-description">
+              You are rejecting the submission for <b>“{rejectingTarget.trackTitle}”</b>. The creator will
+              receive your feedback so they can fix audio or metadata issues and re-submit.
             </p>
 
-            <label className="ops-reason-field" style={{ marginTop: "14px" }}>
-              <span>
-                Rejection Reason <strong style={{ color: "#d92d20" }}>*</strong> (Minimum 10 characters)
-              </span>
-              <textarea
-                rows={3}
-                autoFocus
-                placeholder="Provide a clear reason (e.g. Audio distortion detected, copyright verification needed, low bitrate...)"
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                disabled={isSubmittingReject}
-              />
-              <small style={{ color: rejectionReason.trim().length >= 10 ? "#039855" : "#98a2b3" }}>
-                Entered: {rejectionReason.trim().length}/10 characters minimum
-              </small>
-            </label>
+            <form noValidate onSubmit={(e) => { e.preventDefault(); void handleConfirmReject(); }}>
+              <label className="ops-reason-field" htmlFor="reject-reason-input">
+                <span>
+                  Rejection Reason <strong className="text-danger">*</strong> (Minimum 10 characters)
+                </span>
+                <textarea
+                  id="reject-reason-input"
+                  rows={3}
+                  autoFocus
+                  placeholder="Explain the specific issue (e.g. Clipping distortion in master audio, incomplete metadata, unlicensed sample)..."
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  disabled={isSubmittingReject}
+                  aria-invalid={rejectionReason.trim().length > 0 && rejectionReason.trim().length < 10}
+                  aria-describedby="reject-char-counter"
+                />
+                <small
+                  id="reject-char-counter"
+                  className={rejectionReason.trim().length >= 10 ? "text-success" : "text-muted"}
+                >
+                  Entered: {rejectionReason.trim().length} / 10 characters minimum
+                </small>
+              </label>
 
-            <label className="ops-reason-field" style={{ marginTop: "10px" }}>
-              <span>Internal Reviewer Note (Optional)</span>
-              <textarea
-                rows={2}
-                placeholder="Internal notes for editorial team..."
-                value={rejectNote}
-                onChange={(e) => setRejectNote(e.target.value)}
-                disabled={isSubmittingReject}
-              />
-            </label>
+              <label className="ops-reason-field" htmlFor="reject-internal-note">
+                <span>Internal Staff Note (Optional)</span>
+                <textarea
+                  id="reject-internal-note"
+                  rows={2}
+                  placeholder="Internal notes for operations record..."
+                  value={rejectNote}
+                  onChange={(e) => setRejectNote(e.target.value)}
+                  disabled={isSubmittingReject}
+                />
+              </label>
 
-            <div className="modal-actions" style={{ marginTop: "18px" }}>
-              <button
-                className="button button-ghost"
-                onClick={() => setRejectingTarget(null)}
-                disabled={isSubmittingReject}
-              >
-                Cancel
-              </button>
-              <button
-                className="button ops-danger-button"
-                disabled={rejectionReason.trim().length < 10 || isSubmittingReject}
-                onClick={() => void handleConfirmReject()}
-              >
-                {isSubmittingReject ? "Processing..." : "Confirm Rejection"}
-              </button>
-            </div>
+              <div className="staff-dialog-actions">
+                <button
+                  type="button"
+                  className="button button-ghost"
+                  onClick={() => setRejectingTarget(null)}
+                  disabled={isSubmittingReject}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="button ops-danger-button"
+                  disabled={rejectionReason.trim().length < 10 || isSubmittingReject}
+                >
+                  {isSubmittingReject ? "Processing..." : "Confirm Rejection"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       ) : null}
