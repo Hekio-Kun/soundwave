@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { covers } from "../data";
 import { CheckIcon, CloseIcon, FileTextIcon, PlusIcon, UploadIcon } from "../icons";
 import type { StudioTrack } from "../types";
 
@@ -36,7 +37,7 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
 
     onUploadTrack({
       title: title.trim(),
-      coverUrl: "/pics/album.png",
+      coverUrl: covers.dawn,
       audioUrl: "/audio/soundwave-demo.wav",
       durationMs: 240000,
       genreSlug,
@@ -146,7 +147,7 @@ export function StudioPage({ tracks, onUploadTrack, onSubmitForReview, onNavigat
                 <tr key={t.id}>
                   <td>
                     <div className="table-track-cell">
-                      <img src={t.coverUrl ?? "/pics/album.png"} alt="" />
+                      <img src={t.coverUrl ?? covers.dawn} alt="" />
                       <div>
                         <b>{t.title}</b>
                         <small>{t.albumTitle ?? "Single"}</small>

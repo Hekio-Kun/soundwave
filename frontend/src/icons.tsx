@@ -45,3 +45,6 @@ export const ActivityIcon = (p: IconProps) => <svg {...base} {...p}><path d="M22
 export const EyeIcon = (p: IconProps) => <svg {...base} {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>;
 export const MailIcon = (p: IconProps) => <svg {...base} {...p}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>;
 export const LockIcon = (p: IconProps) => <svg {...base} {...p}><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg>;
+export const EditIcon = (p: IconProps) => <svg {...base} {...p}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+export const ArrowUpIcon = (p: IconProps) => <svg {...base} {...p}><path d="m18 15-6-6-6 6"/></svg>;
+export const ArrowDownIcon = (p: IconProps) => <svg {...base} {...p}><path d="m6 9 6 6 6-6"/></svg>;
