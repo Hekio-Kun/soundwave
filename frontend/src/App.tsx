@@ -413,9 +413,19 @@ export default function App() {
         : <DashboardAccessDenied onNavigate={navigate} />;
     }
 
-    if (pathname === "/staff" || pathname === "/staff/dashboard") {
+    if (
+      pathname === "/staff" ||
+      pathname === "/staff/dashboard" ||
+      pathname.startsWith("/staff/submissions/") ||
+      pathname.startsWith("/staff/moderation/")
+    ) {
+      const parts = pathname.split("/");
+      const submissionId =
+        pathname.startsWith("/staff/submissions/") || pathname.startsWith("/staff/moderation/")
+          ? Number(parts[3]) || null
+          : null;
       return user?.role === "STAFF" || user?.role === "ADMIN"
-        ? <StaffDashboardPage onNavigate={navigate} />
+        ? <StaffDashboardPage onNavigate={navigate} initialSubmissionId={submissionId} />
         : <DashboardAccessDenied onNavigate={navigate} />;
     }
 

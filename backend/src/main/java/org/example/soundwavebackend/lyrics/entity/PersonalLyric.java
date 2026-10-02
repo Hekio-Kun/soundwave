@@ -14,8 +14,8 @@ import java.time.ZoneOffset;
 @Table(
         name = "personal_lyrics",
         uniqueConstraints = @UniqueConstraint(
-                name = "UQ_personal_lyrics_user_track_language",
-                columnNames = {"user_id", "track_id", "language_code"}
+                name = "UQ_personal_lyrics_user_track_lang_type",
+                columnNames = {"user_id", "track_id", "language_id", "lyric_type"}
         )
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -30,8 +30,11 @@ public class PersonalLyric {
     @Column(name = "track_id", nullable = false)
     private Long trackId;
 
-    @Column(name = "language_code", nullable = false, length = 10)
-    private String languageCode;
+    @Column(name = "language_id", nullable = false)
+    private Short languageId;
+
+    @Column(name = "lyric_type", nullable = false, length = 20)
+    private String lyricType;
 
     @Lob
     @Nationalized
@@ -44,10 +47,11 @@ public class PersonalLyric {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public PersonalLyric(Long userId, Long trackId, String languageCode, String lyricContent) {
+    public PersonalLyric(Long userId, Long trackId, Short languageId, String lyricType, String lyricContent) {
         this.userId = userId;
         this.trackId = trackId;
-        this.languageCode = languageCode;
+        this.languageId = languageId;
+        this.lyricType = lyricType;
         this.lyricContent = lyricContent;
     }
 

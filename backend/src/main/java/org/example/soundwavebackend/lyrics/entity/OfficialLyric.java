@@ -15,7 +15,7 @@ import java.time.ZoneOffset;
         name = "official_lyrics",
         uniqueConstraints = @UniqueConstraint(
                 name = "UQ_official_lyrics_track_language",
-                columnNames = {"track_id", "language_code"}
+                columnNames = {"track_id", "language_id"}
         )
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -27,8 +27,8 @@ public class OfficialLyric {
     @Column(name = "track_id", nullable = false)
     private Long trackId;
 
-    @Column(name = "language_code", nullable = false, length = 10)
-    private String languageCode;
+    @Column(name = "language_id", nullable = false)
+    private Short languageId;
 
     @Lob
     @Nationalized
@@ -48,9 +48,9 @@ public class OfficialLyric {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public OfficialLyric(Long trackId, String languageCode, String lyricContent, Long createdByUserId) {
+    public OfficialLyric(Long trackId, Short languageId, String lyricContent, Long createdByUserId) {
         this.trackId = trackId;
-        this.languageCode = languageCode;
+        this.languageId = languageId;
         this.lyricContent = lyricContent;
         this.createdByUserId = createdByUserId;
         this.status = LyricStatus.DRAFT;
@@ -61,9 +61,14 @@ public class OfficialLyric {
         this.updatedAt = updatedAt;
     }
 
-    public void publish(LocalDateTime publishedAt) {
-        status = LyricStatus.PUBLISHED;
-        updatedAt = publishedAt;
+    public void publish(LocalDateTime updatedAt) {
+        this.status = LyricStatus.PUBLISHED;
+        this.updatedAt = updatedAt;
+    }
+
+    public void unpublish(LocalDateTime updatedAt) {
+        this.status = LyricStatus.DRAFT;
+        this.updatedAt = updatedAt;
     }
 
     @PrePersist

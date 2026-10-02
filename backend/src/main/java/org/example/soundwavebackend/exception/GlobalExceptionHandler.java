@@ -43,6 +43,21 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
+    @ExceptionHandler(org.example.soundwavebackend.moderation.exception.SubmissionNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleSubmissionNotFound(org.example.soundwavebackend.moderation.exception.SubmissionNotFoundException exception, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, "SUBMISSION_NOT_FOUND", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(org.example.soundwavebackend.moderation.exception.InvalidSubmissionStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidSubmissionState(org.example.soundwavebackend.moderation.exception.InvalidSubmissionStateException exception, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "INVALID_SUBMISSION_STATE", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(org.springframework.security.access.AccessDeniedException exception, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "FORBIDDEN", "Access is denied.", request, Map.of());
+    }
+
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String code, String message,
                                                     HttpServletRequest request, Map<String, String> fieldErrors) {
         ApiErrorResponse body = new ApiErrorResponse(
