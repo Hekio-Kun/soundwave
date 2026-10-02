@@ -35,8 +35,11 @@ build/
 ### Application Configuration & Secrets ###
 src/main/resources/application.properties
 src/main/resources/application-*.properties
-!src/main/resources/application.properties.example
+src/main/resources/application-local.properties
+*.properties.local
 *.env
 .env
 .env.*
+!.env.example
+
 
