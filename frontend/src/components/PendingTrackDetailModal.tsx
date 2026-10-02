@@ -13,6 +13,7 @@ import {
   HeadphonesIcon,
   PauseIcon,
   PlayIcon,
+  UserIcon,
   VolumeIcon,
 } from "../icons";
 
@@ -38,6 +39,20 @@ function formatDate(isoString?: string | null): string {
     return isoString;
   }
 }
+
+function formatSeconds(totalSeconds: number): string {
+  if (isNaN(totalSeconds) || totalSeconds < 0) return "0:00";
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+const PRESET_REASONS = [
+  "Audio clipping or severe distortion detected in master stream.",
+  "Incomplete or placeholder metadata (title, artist or artwork).",
+  "Unlicensed sample, beat, or suspected copyright infringement.",
+  "Audio file corrupted or encoding does not meet platform standards.",
+];
 
 type Props = {
   submissionId: number;
@@ -128,7 +143,7 @@ export function PendingTrackDetailModal({
       audioRef.current
         .play()
         .then(() => setIsPlaying(true))
-        .catch((e) => console.error("Audio play error:", e));
+        .catch((e) => console.error("Audio playback error:", e));
     }
   };
 
@@ -144,33 +159,27 @@ export function PendingTrackDetailModal({
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
+      audioRef.current.volume = volume;
     }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Number(e.target.value);
-    setCurrentTime(val);
+    const targetTime = Number(e.target.value);
+    setCurrentTime(targetTime);
     if (audioRef.current) {
-      audioRef.current.currentTime = val;
+      audioRef.current.currentTime = targetTime;
     }
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Number(e.target.value);
-    setVolume(val);
+    const newVol = Number(e.target.value);
+    setVolume(newVol);
     if (audioRef.current) {
-      audioRef.current.volume = val;
+      audioRef.current.volume = newVol;
     }
   };
 
-  const formatSeconds = (sec: number) => {
-    if (!sec || isNaN(sec)) return "0:00";
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
-  const handleConfirmApprove = async () => {
+  const handleApprove = async () => {
     if (!detail) return;
     setSubmittingAction(true);
     setActionError(null);
@@ -186,8 +195,8 @@ export function PendingTrackDetailModal({
     }
   };
 
-  const handleConfirmReject = async () => {
-    if (!detail || !rejectionReason.trim()) return;
+  const handleReject = async () => {
+    if (!detail) return;
     if (rejectionReason.trim().length < 10) {
       setActionError("Rejection reason must be at least 10 characters.");
       return;
@@ -213,116 +222,138 @@ export function PendingTrackDetailModal({
   return (
     <div className="modal-overlay" role="presentation" onClick={onClose}>
       <div
-        className="modal-card mod-detail-modal staff-modal-card"
+        className="modal-card staff-inspector-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="pending-track-dialog-title"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="modal-header">
-          <div className="staff-modal-header-info">
+        <div className="modal-header staff-inspector-header">
+          <div className="staff-inspector-title-meta">
             <span
-              className={`ops-dialog-icon ${
+              className={`staff-inspector-icon ${
                 detail?.status === "APPROVED"
-                  ? "is-green"
+                  ? "is-approved"
                   : detail?.status === "REJECTED"
-                  ? "is-red"
-                  : "is-amber"
+                  ? "is-rejected"
+                  : "is-pending"
               }`}
             >
-              <HeadphonesIcon />
+              <HeadphonesIcon width={20} height={20} />
             </span>
             <div>
-              <h2 id="pending-track-dialog-title" className="staff-modal-title">
-                Pending Track Review
+              <h2 id="pending-track-dialog-title" className="staff-inspector-heading">
+                Track Inspection Studio
               </h2>
-              <p className="staff-modal-subtitle">
-                Submission #{submissionId} · FIFO Queue Priority
+              <p className="staff-inspector-subheading">
+                Submission #{submissionId} · FIFO Quality Audit
               </p>
             </div>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close dialog">
+          <button
+            type="button"
+            className="icon-button"
+            onClick={onClose}
+            aria-label="Close inspector dialog"
+          >
             <CloseIcon width={18} height={18} />
           </button>
         </div>
 
         {/* Loading / Error / Body */}
         {loading ? (
-          <div className="mod-loading-state">
-            <div className="mod-spinner" />
-            <span>Loading track audio stream and submission metadata...</span>
+          <div className="staff-inspector-loading">
+            <div className="staff-inspector-spinner" />
+            <span>Loading lossless audio stream and metadata...</span>
           </div>
         ) : error ? (
-          <div className="mod-error-state">
+          <div className="staff-inspector-error">
             <AlertIcon width={32} height={32} />
             <b>Failed to load submission details</b>
             <p>{error}</p>
-            <button className="button button-ghost button-small" onClick={onClose}>
+            <button
+              type="button"
+              className="button button-ghost button-small"
+              onClick={onClose}
+            >
               Close
             </button>
           </div>
         ) : detail ? (
-          <div className="staff-modal-body">
-            {/* Status and Timestamp Bar */}
-            <div className="staff-modal-statusbar">
-              <div className="staff-modal-statusbar-status">
-                <span className="text-muted">Status:</span>
+          <div className="staff-inspector-body">
+            {/* Top Status & Timestamp Banner */}
+            <div className="staff-inspector-status-banner">
+              <div className="staff-status-group">
+                <span className="staff-status-label">Current Audit Status:</span>
                 <span
-                  className={`ops-status ${
+                  className={`staff-status-chip ${
                     detail.status === "APPROVED"
-                      ? "is-success"
+                      ? "is-approved"
                       : detail.status === "REJECTED"
-                      ? "is-danger"
-                      : "is-warning"
+                      ? "is-rejected"
+                      : "is-pending"
                   }`}
                 >
                   <i />
-                  <b>{detail.status}</b>
+                  <span>
+                    {detail.status === "APPROVED"
+                      ? "Approved & Published"
+                      : detail.status === "REJECTED"
+                      ? "Rejected"
+                      : "Pending Review"}
+                  </span>
                 </span>
               </div>
-              <div className="staff-modal-statusbar-time">
-                <ClockIcon width={14} height={14} />
+
+              <div className="staff-time-group">
+                <ClockIcon width={13} height={13} />
                 <span>Submitted: <b>{formatDate(detail.submittedAt)}</b></span>
               </div>
             </div>
 
-            {/* Track Hero Card */}
-            <div className="staff-modal-hero">
-              <img
-                src={
-                  detail.track.coverUrl ||
-                  "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400"
-                }
-                alt={detail.track.title}
-                className="staff-modal-cover"
-              />
-              <div className="staff-modal-hero-info">
-                <div className="staff-badge-group">
-                  <span className="mod-badge mod-badge--format">
+            {/* Track Hero Card & Integrated Stream Player */}
+            <div className="staff-inspector-hero-card">
+              <div className="staff-hero-artwork-wrap">
+                <img
+                  src={
+                    detail.track.coverUrl ||
+                    "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400"
+                  }
+                  alt={detail.track.title}
+                  className="staff-hero-artwork"
+                />
+              </div>
+
+              <div className="staff-hero-info-col">
+                <div className="staff-hero-badge-row">
+                  <span className="staff-meta-pill is-genre">
                     {detail.track.genre?.name || "Music"}
                   </span>
                   {detail.track.album ? (
-                    <span className="mod-badge mod-badge--album">
-                      <DiscIcon width={12} height={12} /> Album: {detail.track.album.title}
+                    <span className="staff-meta-pill is-album">
+                      <DiscIcon width={12} height={12} />
+                      Album: {detail.track.album.title}
                     </span>
                   ) : (
-                    <span className="mod-badge mod-badge--single">Single Release</span>
+                    <span className="staff-meta-pill is-single">Single Release</span>
                   )}
-                  <span className="staff-duration-pill">
+                  <span className="staff-meta-pill is-format">
                     {detail.track.audioFormat.toUpperCase()} · {formatDuration(detail.track.durationMs)}
                   </span>
                 </div>
 
-                <h3 className="staff-modal-track-name">
-                  {detail.track.title}
-                </h3>
-                <p className="staff-modal-creator-tag">
+                <h3 className="staff-hero-track-title">{detail.track.title}</h3>
+
+                <p className="staff-hero-creator-line">
                   Uploaded by: <b>{detail.submitter?.displayName || detail.submitter?.email}</b>
+                  {detail.submitter?.email ? (
+                    <span className="staff-creator-email">({detail.submitter.email})</span>
+                  ) : null}
                 </p>
 
-                {/* Sleek Light-Themed Audio Preview Player */}
-                <div className="staff-player-container">
+                {/* Built-in High Quality Audio Player */}
+                <div className="staff-audio-studio-player">
                   <audio
                     ref={audioRef}
                     src={detail.track.audioUrl}
@@ -331,43 +362,54 @@ export function PendingTrackDetailModal({
                     onEnded={() => setIsPlaying(false)}
                     preload="metadata"
                   />
-                  <div className="staff-player-row">
+
+                  <div className="staff-player-controls-row">
                     <button
                       type="button"
                       onClick={togglePlay}
-                      className="staff-player-play-btn"
-                      title={isPlaying ? "Pause audio preview" : "Play audio preview"}
+                      className={`staff-player-main-btn ${isPlaying ? "is-playing" : ""}`}
+                      title={isPlaying ? "Pause audio stream" : "Play audio stream"}
                       aria-label={isPlaying ? "Pause audio preview" : "Play audio preview"}
                     >
                       {isPlaying ? (
-                        <PauseIcon width={17} height={17} />
+                        <PauseIcon width={18} height={18} />
                       ) : (
-                        <PlayIcon width={17} height={17} />
+                        <PlayIcon width={18} height={18} />
                       )}
                     </button>
 
-                    <div className="staff-player-timeline">
+                    {/* Equalizer animation bars while playing */}
+                    <div className={`staff-equalizer-bars ${isPlaying ? "is-active" : ""}`}>
+                      <span />
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+
+                    {/* Timeline Seekbar */}
+                    <div className="staff-player-seek-wrap">
+                      <div className="staff-player-times">
+                        <span className="staff-time-current">{formatSeconds(currentTime)}</span>
+                        <span className="staff-time-total">
+                          {formatSeconds(
+                            duration || (detail.track.durationMs ? detail.track.durationMs / 1000 : 0)
+                          )}
+                        </span>
+                      </div>
                       <input
                         type="range"
                         min={0}
                         max={duration || (detail.track.durationMs ? detail.track.durationMs / 1000 : 100)}
                         value={currentTime}
                         onChange={handleSeek}
-                        className="staff-player-slider"
-                        aria-label="Track progress slider"
+                        className="staff-player-slider-bar"
+                        aria-label="Seek track position"
                       />
-                      <div className="staff-player-timestamps">
-                        <span>{formatSeconds(currentTime)}</span>
-                        <span>
-                          {formatSeconds(
-                            duration || (detail.track.durationMs ? detail.track.durationMs / 1000 : 0)
-                          )}
-                        </span>
-                      </div>
                     </div>
 
-                    <div className="staff-player-volume">
-                      <VolumeIcon width={15} height={15} />
+                    {/* Volume Slider */}
+                    <div className="staff-player-vol-wrap">
+                      <VolumeIcon width={16} height={16} />
                       <input
                         type="range"
                         min={0}
@@ -375,7 +417,7 @@ export function PendingTrackDetailModal({
                         step={0.05}
                         value={volume}
                         onChange={handleVolumeChange}
-                        className="staff-player-vol-slider"
+                        className="staff-vol-slider-bar"
                         title="Volume"
                         aria-label="Volume slider"
                       />
@@ -386,226 +428,257 @@ export function PendingTrackDetailModal({
             </div>
 
             {/* Submitter Note Highlight Box */}
-            <div className="staff-note-callout">
-              <div className="staff-note-callout-header">
+            <div className="staff-note-box">
+              <div className="staff-note-header">
                 <FileTextIcon width={14} height={14} />
-                <span>Submitter Note (from Creator)</span>
+                <span>Creator Note (Submitted by Artist)</span>
               </div>
-              <p className="staff-note-callout-text">
+              <p className="staff-note-content">
                 {detail.submitterNote ? (
                   `“${detail.submitterNote}”`
                 ) : (
-                  <span className="text-muted">
-                    No submitter note attached to this submission.
+                  <span className="staff-text-muted">
+                    No special note attached to this submission.
                   </span>
                 )}
               </p>
             </div>
 
-            {/* Metadata Grid */}
-            <div className="staff-specs-grid">
-              <div className="staff-spec-item">
+            {/* Technical Specifications Grid */}
+            <div className="staff-specs-matrix">
+              <div className="staff-matrix-cell">
                 <small>Creator / Submitter</small>
                 <strong>{detail.submitter?.displayName || "--"}</strong>
               </div>
-              <div className="staff-spec-item">
+              <div className="staff-matrix-cell">
                 <small>Submitter Email</small>
                 <strong>{detail.submitter?.email || "--"}</strong>
               </div>
-              <div className="staff-spec-item">
-                <small>Submitter Handle</small>
+              <div className="staff-matrix-cell">
+                <small>Submitter Username</small>
                 <strong>@{detail.submitter?.username || "--"}</strong>
               </div>
-              <div className="staff-spec-item">
-                <small>Track Slug</small>
+              <div className="staff-matrix-cell">
+                <small>Catalog Slug</small>
                 <code>{detail.track.slug}</code>
               </div>
-              <div className="staff-spec-item">
+              <div className="staff-matrix-cell">
                 <small>Track Number</small>
                 <strong>{detail.track.trackNumber ?? "Single"}</strong>
               </div>
-              <div className="staff-spec-item">
-                <small>Audio Stream Format</small>
+              <div className="staff-matrix-cell">
+                <small>Master Audio Format</small>
                 <strong>{detail.track.audioFormat.toUpperCase()}</strong>
               </div>
             </div>
 
-            {/* Track Description if available */}
+            {/* Description if provided */}
             {detail.track.description ? (
-              <div className="staff-track-desc-box">
+              <div className="staff-desc-box">
                 <small>Track Description</small>
                 <p>{detail.track.description}</p>
               </div>
             ) : null}
 
-            {/* Moderation History if reviewed */}
+            {/* Previous Review History (if actioned) */}
             {detail.status !== "PENDING" ? (
               <div
-                className={`staff-audit-result-box ${
-                  detail.status === "APPROVED"
-                    ? "staff-audit-result-box--approved"
-                    : "staff-audit-result-box--rejected"
+                className={`staff-decision-summary ${
+                  detail.status === "APPROVED" ? "is-approved" : "is-rejected"
                 }`}
               >
-                <div className="staff-audit-title">
-                  Moderation Result · {detail.status}
+                <div className="staff-decision-title">
+                  {detail.status === "APPROVED" ? (
+                    <>
+                      <CheckIcon width={16} height={16} />
+                      <span>Approved for Streaming</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertIcon width={16} height={16} />
+                      <span>Submission Rejected</span>
+                    </>
+                  )}
                 </div>
+
                 {detail.rejectionReason ? (
-                  <p className="error-text">
-                    <b>Rejection Reason:</b> {detail.rejectionReason}
+                  <p className="staff-decision-reason">
+                    <b>Reason:</b> {detail.rejectionReason}
                   </p>
                 ) : null}
+
                 {detail.reviewerNote ? (
-                  <p>
+                  <p className="staff-decision-note">
                     <b>Reviewer Note:</b> {detail.reviewerNote}
                   </p>
                 ) : null}
-                <small className="text-muted">
-                  Reviewed by <b>{detail.reviewer?.displayName || detail.reviewer?.email || "Staff"}</b> at{" "}
+
+                <small className="staff-decision-meta">
+                  Reviewed by <b>{detail.reviewer?.displayName || detail.reviewer?.email || "Staff"}</b> on{" "}
                   {formatDate(detail.reviewedAt)}
                 </small>
               </div>
             ) : null}
 
-            {/* Actions for PENDING status */}
+            {/* Moderation Decision Form (for PENDING tracks) */}
             {detail.status === "PENDING" ? (
-              <div className="staff-modal-action-footer">
+              <div className="staff-moderation-decision-area">
                 {actionType === "APPROVE" ? (
-                  <div className="staff-inline-action-panel staff-inline-action-panel--approve">
-                    <h4 className="title-green">
+                  <div className="staff-decision-panel is-approve">
+                    <h4 className="staff-decision-panel-title text-success">
                       Approve “{detail.track.title}”
                     </h4>
-                    <p className="copy-green">
-                      This track will immediately be set to <b>PUBLISHED</b> and visible in the public music catalog. An email notification will be sent to the creator.
+                    <p className="staff-decision-panel-desc">
+                      This track will immediately be set to <b>PUBLISHED</b> and become available in the SoundWave catalog. An automated confirmation email will be sent to the creator.
                     </p>
-                    <div className="form-group">
-                      <label className="label-green" htmlFor="modal-approve-note">
-                        Reviewer Note (Optional):
-                      </label>
+
+                    <label className="staff-input-group" htmlFor="modal-approve-note">
+                      <span className="staff-input-label">Internal Reviewer Note (Optional)</span>
                       <input
                         id="modal-approve-note"
                         type="text"
-                        className="text-input"
+                        className="staff-text-input"
                         placeholder="e.g. Master file sounds balanced, high dynamic range, ready for release."
                         value={approveNote}
                         onChange={(e) => setApproveNote(e.target.value)}
+                        disabled={submittingAction}
                       />
-                    </div>
+                    </label>
+
                     {actionError ? (
-                      <p className="auth-v2-field-error">
-                        <AlertIcon width={12} height={12} />
-                        {actionError}
+                      <p className="staff-action-error">
+                        <AlertIcon width={13} height={13} />
+                        <span>{actionError}</span>
                       </p>
                     ) : null}
-                    <div className="staff-dialog-actions">
+
+                    <div className="staff-decision-actions-row">
                       <button
                         type="button"
-                        className="button button-ghost button-small"
+                        className="button button-ghost"
                         onClick={() => setActionType(null)}
                         disabled={submittingAction}
                       >
-                        Cancel
+                        Back
                       </button>
                       <button
                         type="button"
-                        className="button button-primary button-small staff-action-approve"
-                        onClick={handleConfirmApprove}
+                        className="button staff-btn-confirm-approve"
+                        onClick={() => void handleApprove()}
                         disabled={submittingAction}
                       >
-                        {submittingAction ? "Approving..." : "Confirm & Publish Track"}
+                        {submittingAction ? "Publishing..." : "Confirm & Publish Track"}
                       </button>
                     </div>
                   </div>
                 ) : actionType === "REJECT" ? (
-                  <div className="staff-inline-action-panel staff-inline-action-panel--reject">
-                    <h4 className="title-red">
+                  <div className="staff-decision-panel is-reject">
+                    <h4 className="staff-decision-panel-title text-danger">
                       Reject “{detail.track.title}”
                     </h4>
-                    <p className="copy-red">
-                      Please provide a clear and constructive reason. The creator will receive this feedback via email and system notification so they can revise and re-submit.
+                    <p className="staff-decision-panel-desc">
+                      Provide clear, constructive feedback. The creator will receive this note to fix issues and resubmit.
                     </p>
-                    <div className="form-group">
-                      <label className="label-red" htmlFor="modal-reject-reason">
-                        Rejection Reason * (Minimum 10 characters)
-                      </label>
+
+                    {/* Presets */}
+                    <div className="staff-preset-chips-section">
+                      <span className="staff-preset-title">Quick presets:</span>
+                      <div className="staff-preset-chips">
+                        {PRESET_REASONS.map((preset, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            className="staff-preset-btn"
+                            onClick={() => setRejectionReason(preset)}
+                            disabled={submittingAction}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <label className="staff-input-group" htmlFor="modal-reject-reason">
+                      <span className="staff-input-label">
+                        Rejection Reason <span className="staff-text-danger">*</span> (Minimum 10 characters)
+                      </span>
                       <textarea
                         id="modal-reject-reason"
-                        className="text-input"
                         rows={3}
-                        placeholder="Specify what needs to be revised (e.g. Clipping distortion in master audio, incomplete metadata, unlicensed sample)..."
+                        className="staff-textarea"
+                        placeholder="Explain specifically why the track cannot be published..."
                         value={rejectionReason}
                         onChange={(e) => setRejectionReason(e.target.value)}
-                        aria-invalid={rejectionReason.trim().length < 10}
+                        disabled={submittingAction}
                       />
-                      <small className={rejectionReason.trim().length >= 10 ? "text-success" : "text-muted"}>
-                        Entered: {rejectionReason.trim().length} / 10 characters minimum
-                      </small>
-                    </div>
-                    <div className="form-group">
-                      <label className="label-red" htmlFor="modal-reject-note">
-                        Internal Staff Note (Optional):
-                      </label>
+                      <span
+                        className={
+                          rejectionReason.trim().length >= 10
+                            ? "staff-text-success font-medium"
+                            : "staff-text-muted"
+                        }
+                      >
+                        {rejectionReason.trim().length} / 10 characters minimum
+                      </span>
+                    </label>
+
+                    <label className="staff-input-group" htmlFor="modal-reject-internal-note">
+                      <span className="staff-input-label">Internal Staff Note (Optional)</span>
                       <input
-                        id="modal-reject-note"
+                        id="modal-reject-internal-note"
                         type="text"
-                        className="text-input"
-                        placeholder="Internal note for moderation archive..."
+                        className="staff-text-input"
+                        placeholder="Internal notes for ops team..."
                         value={rejectNote}
                         onChange={(e) => setRejectNote(e.target.value)}
+                        disabled={submittingAction}
                       />
-                    </div>
+                    </label>
+
                     {actionError ? (
-                      <p className="auth-v2-field-error">
-                        <AlertIcon width={12} height={12} />
-                        {actionError}
+                      <p className="staff-action-error">
+                        <AlertIcon width={13} height={13} />
+                        <span>{actionError}</span>
                       </p>
                     ) : null}
-                    <div className="staff-dialog-actions">
+
+                    <div className="staff-decision-actions-row">
                       <button
                         type="button"
-                        className="button button-ghost button-small"
+                        className="button button-ghost"
                         onClick={() => setActionType(null)}
                         disabled={submittingAction}
                       >
-                        Cancel
+                        Back
                       </button>
                       <button
                         type="button"
-                        className="button button-primary button-small staff-action-reject"
-                        onClick={handleConfirmReject}
-                        disabled={submittingAction || rejectionReason.trim().length < 10}
+                        className="button staff-btn-confirm-reject"
+                        onClick={() => void handleReject()}
+                        disabled={rejectionReason.trim().length < 10 || submittingAction}
                       >
-                        {submittingAction ? "Rejecting..." : "Confirm Rejection"}
+                        {submittingAction ? "Processing..." : "Confirm Rejection"}
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="staff-modal-action-bar">
+                  <div className="staff-initial-action-buttons">
                     <button
                       type="button"
-                      className="button button-ghost button-small"
-                      onClick={onClose}
+                      className="button staff-btn-approve-primary"
+                      onClick={() => setActionType("APPROVE")}
                     >
-                      Close
+                      <CheckIcon width={16} height={16} />
+                      <span>Approve & Publish</span>
                     </button>
-                    <div className="staff-modal-decision-btns">
-                      <button
-                        type="button"
-                        className="button button-small staff-action-reject"
-                        onClick={() => setActionType("REJECT")}
-                      >
-                        <CloseIcon width={14} height={14} />
-                        Reject Track
-                      </button>
-                      <button
-                        type="button"
-                        className="button button-primary button-small staff-action-approve"
-                        onClick={() => setActionType("APPROVE")}
-                      >
-                        <CheckIcon width={14} height={14} />
-                        Approve Track
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="button staff-btn-reject-primary"
+                      onClick={() => setActionType("REJECT")}
+                    >
+                      <CloseIcon width={16} height={16} />
+                      <span>Reject Submission</span>
+                    </button>
                   </div>
                 )}
               </div>
