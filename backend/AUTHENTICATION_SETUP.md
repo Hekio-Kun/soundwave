@@ -11,7 +11,14 @@ MAIL_USERNAME=<Gmail sender address>
 MAIL_PASSWORD=<Gmail app password without spaces>
 MAIL_FROM=<same Gmail sender address>
 JWT_SECRET=<random secret with at least 32 characters>
+ADMIN_AUTO_CREATE=true
+ADMIN_EMAIL=admin@soundwave.com
+ADMIN_PASSWORD=Admin@123456
+ADMIN_USERNAME=admin
+ADMIN_DISPLAY_NAME=System Administrator
 ```
+
+The application automatically seeds system roles (`LISTENER`, `STAFF`, `ADMIN`) and creates the default Admin account on startup if it does not already exist.
 
 For local frontend development, the default allowed origins are `http://127.0.0.1:4174` and `http://localhost:4174`.
 
