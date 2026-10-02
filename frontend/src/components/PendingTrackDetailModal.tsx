@@ -13,7 +13,6 @@ import {
   HeadphonesIcon,
   PauseIcon,
   PlayIcon,
-  UserIcon,
   VolumeIcon,
 } from "../icons";
 
@@ -71,6 +70,26 @@ export function PendingTrackDetailModal({
   const [rejectNote, setRejectNote] = useState("");
   const [submittingAction, setSubmittingAction] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Rule 4.7: Scroll Lock when modal is open
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, []);
+
+  // Rule 4.7: Escape key listener to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
 
   useEffect(() => {
     let isMounted = true;
@@ -169,6 +188,10 @@ export function PendingTrackDetailModal({
 
   const handleConfirmReject = async () => {
     if (!detail || !rejectionReason.trim()) return;
+    if (rejectionReason.trim().length < 10) {
+      setActionError("Rejection reason must be at least 10 characters.");
+      return;
+    }
     setSubmittingAction(true);
     setActionError(null);
     try {
@@ -190,80 +213,61 @@ export function PendingTrackDetailModal({
   return (
     <div className="modal-overlay" role="presentation" onClick={onClose}>
       <div
-        className="modal-card mod-detail-modal"
+        className="modal-card mod-detail-modal staff-modal-card"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="pending-track-dialog-title"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: "760px", width: "95%", maxHeight: "90vh", overflowY: "auto" }}
       >
         {/* Header */}
         <div className="modal-header">
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <div className="staff-modal-header-info">
             <span
-              className="ops-dialog-icon"
-              style={{
-                background:
-                  detail?.status === "APPROVED"
-                    ? "#ecfdf3"
-                    : detail?.status === "REJECTED"
-                    ? "#fef2f2"
-                    : "#fffbeb",
-                color:
-                  detail?.status === "APPROVED"
-                    ? "#039855"
-                    : detail?.status === "REJECTED"
-                    ? "#d92d20"
-                    : "#b45309",
-              }}
+              className={`ops-dialog-icon ${
+                detail?.status === "APPROVED"
+                  ? "is-green"
+                  : detail?.status === "REJECTED"
+                  ? "is-red"
+                  : "is-amber"
+              }`}
             >
               <HeadphonesIcon />
             </span>
             <div>
-              <h2 style={{ fontSize: "17px", fontWeight: "700", margin: 0 }}>
+              <h2 id="pending-track-dialog-title" className="staff-modal-title">
                 Pending Track Review
               </h2>
-              <small style={{ color: "#64748b", fontSize: "11px" }}>
-                Submission #{submissionId} · Prioritized by FIFO Queue
-              </small>
+              <p className="staff-modal-subtitle">
+                Submission #{submissionId} · FIFO Queue Priority
+              </p>
             </div>
           </div>
-          <button className="icon-button" onClick={onClose} aria-label="Close">
+          <button className="icon-button" onClick={onClose} aria-label="Close dialog">
             <CloseIcon width={18} height={18} />
           </button>
         </div>
 
         {/* Loading / Error / Body */}
         {loading ? (
-          <div className="mod-loading-state" style={{ padding: "40px 0" }}>
+          <div className="mod-loading-state">
             <div className="mod-spinner" />
-            <span>Loading pending track details...</span>
+            <span>Loading track audio stream and submission metadata...</span>
           </div>
         ) : error ? (
-          <div className="mod-error-state" style={{ margin: "20px 0" }}>
-            <AlertIcon width={28} height={28} />
-            <b>Failed to load review details</b>
+          <div className="mod-error-state">
+            <AlertIcon width={32} height={32} />
+            <b>Failed to load submission details</b>
             <p>{error}</p>
             <button className="button button-ghost button-small" onClick={onClose}>
               Close
             </button>
           </div>
         ) : detail ? (
-          <div style={{ padding: "4px 0 16px" }}>
+          <div className="staff-modal-body">
             {/* Status and Timestamp Bar */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "8px 12px",
-                background: "#f8fafc",
-                borderRadius: "8px",
-                marginBottom: "16px",
-                fontSize: "11.5px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <span style={{ color: "#64748b" }}>Status:</span>
+            <div className="staff-modal-statusbar">
+              <div className="staff-modal-statusbar-status">
+                <span className="text-muted">Status:</span>
                 <span
                   className={`ops-status ${
                     detail.status === "APPROVED"
@@ -272,99 +276,53 @@ export function PendingTrackDetailModal({
                       ? "is-danger"
                       : "is-warning"
                   }`}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}
                 >
                   <i />
                   <b>{detail.status}</b>
                 </span>
               </div>
-              <div style={{ color: "#64748b", display: "flex", alignItems: "center", gap: "5px" }}>
-                <ClockIcon width={13} height={13} />
-                <span>Submitted at: <b>{formatDate(detail.submittedAt)}</b></span>
+              <div className="staff-modal-statusbar-time">
+                <ClockIcon width={14} height={14} />
+                <span>Submitted: <b>{formatDate(detail.submittedAt)}</b></span>
               </div>
             </div>
 
             {/* Track Hero Card */}
-            <div className="mod-detail-hero">
+            <div className="staff-modal-hero">
               <img
                 src={
                   detail.track.coverUrl ||
                   "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400"
                 }
                 alt={detail.track.title}
-                className="mod-detail-cover"
+                className="staff-modal-cover"
               />
-              <div className="mod-detail-hero-info" style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                  <span
-                    style={{
-                      background: "#e0f2fe",
-                      color: "#0369a1",
-                      padding: "2px 8px",
-                      borderRadius: "6px",
-                      fontSize: "10px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {detail.track.genre?.name || "General"}
+              <div className="staff-modal-hero-info">
+                <div className="staff-badge-group">
+                  <span className="mod-badge mod-badge--format">
+                    {detail.track.genre?.name || "Music"}
                   </span>
                   {detail.track.album ? (
-                    <span
-                      style={{
-                        background: "#f3e8ff",
-                        color: "#7e22ce",
-                        padding: "2px 8px",
-                        borderRadius: "6px",
-                        fontSize: "10px",
-                        fontWeight: 600,
-                      }}
-                    >
-                      Album: {detail.track.album.title}
+                    <span className="mod-badge mod-badge--album">
+                      <DiscIcon width={12} height={12} /> Album: {detail.track.album.title}
                     </span>
                   ) : (
-                    <span
-                      style={{
-                        background: "#f1f5f9",
-                        color: "#64748b",
-                        padding: "2px 8px",
-                        borderRadius: "6px",
-                        fontSize: "10px",
-                      }}
-                    >
-                      Single Release
-                    </span>
+                    <span className="mod-badge mod-badge--single">Single Release</span>
                   )}
-                  <span
-                    style={{
-                      background: "#fef3c7",
-                      color: "#92400e",
-                      padding: "2px 8px",
-                      borderRadius: "6px",
-                      fontSize: "10px",
-                      fontWeight: 600,
-                    }}
-                  >
+                  <span className="staff-duration-pill">
                     {detail.track.audioFormat.toUpperCase()} · {formatDuration(detail.track.durationMs)}
                   </span>
                 </div>
 
-                <h3 style={{ fontSize: "20px", fontWeight: "700", marginTop: "4px" }}>
+                <h3 className="staff-modal-track-name">
                   {detail.track.title}
                 </h3>
-                <p className="mod-detail-artist" style={{ fontSize: "12px", color: "#475569" }}>
+                <p className="staff-modal-creator-tag">
                   Uploaded by: <b>{detail.submitter?.displayName || detail.submitter?.email}</b>
                 </p>
 
-                {/* Built-in Audio Player Preview */}
-                <div
-                  style={{
-                    marginTop: "12px",
-                    background: "#0f172a",
-                    padding: "12px 14px",
-                    borderRadius: "10px",
-                    color: "#fff",
-                  }}
-                >
+                {/* Sleek Light-Themed Audio Preview Player */}
+                <div className="staff-player-container">
                   <audio
                     ref={audioRef}
                     src={detail.track.audioUrl}
@@ -373,48 +331,32 @@ export function PendingTrackDetailModal({
                     onEnded={() => setIsPlaying(false)}
                     preload="metadata"
                   />
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div className="staff-player-row">
                     <button
                       type="button"
                       onClick={togglePlay}
-                      className="button button-primary"
-                      style={{
-                        width: "36px",
-                        height: "36px",
-                        borderRadius: "50%",
-                        padding: 0,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        background: "#06b6d4",
-                      }}
-                      title={isPlaying ? "Pause audio" : "Play audio preview"}
+                      className="staff-player-play-btn"
+                      title={isPlaying ? "Pause audio preview" : "Play audio preview"}
+                      aria-label={isPlaying ? "Pause audio preview" : "Play audio preview"}
                     >
                       {isPlaying ? (
-                        <PauseIcon width={16} height={16} />
+                        <PauseIcon width={17} height={17} />
                       ) : (
-                        <PlayIcon width={16} height={16} />
+                        <PlayIcon width={17} height={17} />
                       )}
                     </button>
 
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+                    <div className="staff-player-timeline">
                       <input
                         type="range"
                         min={0}
                         max={duration || (detail.track.durationMs ? detail.track.durationMs / 1000 : 100)}
                         value={currentTime}
                         onChange={handleSeek}
-                        style={{ width: "100%", accentColor: "#06b6d4", cursor: "pointer" }}
+                        className="staff-player-slider"
+                        aria-label="Track progress slider"
                       />
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          fontSize: "10px",
-                          color: "#94a3b8",
-                        }}
-                      >
+                      <div className="staff-player-timestamps">
                         <span>{formatSeconds(currentTime)}</span>
                         <span>
                           {formatSeconds(
@@ -424,8 +366,8 @@ export function PendingTrackDetailModal({
                       </div>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <VolumeIcon width={14} height={14} style={{ color: "#94a3b8" }} />
+                    <div className="staff-player-volume">
+                      <VolumeIcon width={15} height={15} />
                       <input
                         type="range"
                         min={0}
@@ -433,8 +375,9 @@ export function PendingTrackDetailModal({
                         step={0.05}
                         value={volume}
                         onChange={handleVolumeChange}
-                        style={{ width: "50px", accentColor: "#06b6d4", cursor: "pointer" }}
+                        className="staff-player-vol-slider"
                         title="Volume"
+                        aria-label="Volume slider"
                       />
                     </div>
                   </div>
@@ -443,73 +386,45 @@ export function PendingTrackDetailModal({
             </div>
 
             {/* Submitter Note Highlight Box */}
-            <div
-              style={{
-                marginTop: "16px",
-                background: "#f0fdf4",
-                border: "1px solid #bbf7d0",
-                borderRadius: "10px",
-                padding: "12px 14px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  color: "#15803d",
-                  fontSize: "11px",
-                  fontWeight: "700",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.03em",
-                  marginBottom: "4px",
-                }}
-              >
+            <div className="staff-note-callout">
+              <div className="staff-note-callout-header">
                 <FileTextIcon width={14} height={14} />
-                <span>Submitter Note (from Artist)</span>
+                <span>Submitter Note (from Creator)</span>
               </div>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: "12.5px",
-                  color: "#14532d",
-                  lineHeight: "1.55",
-                  fontStyle: "italic",
-                }}
-              >
+              <p className="staff-note-callout-text">
                 {detail.submitterNote ? (
                   `“${detail.submitterNote}”`
                 ) : (
-                  <span style={{ color: "#64748b", fontStyle: "normal" }}>
-                    No submitter note attached to this track.
+                  <span className="text-muted">
+                    No submitter note attached to this submission.
                   </span>
                 )}
               </p>
             </div>
 
             {/* Metadata Grid */}
-            <div className="mod-detail-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-              <div className="mod-grid-item">
-                <small>Submitter Artist</small>
+            <div className="staff-specs-grid">
+              <div className="staff-spec-item">
+                <small>Creator / Submitter</small>
                 <strong>{detail.submitter?.displayName || "--"}</strong>
               </div>
-              <div className="mod-grid-item">
+              <div className="staff-spec-item">
                 <small>Submitter Email</small>
                 <strong>{detail.submitter?.email || "--"}</strong>
               </div>
-              <div className="mod-grid-item">
-                <small>Submitter Username</small>
+              <div className="staff-spec-item">
+                <small>Submitter Handle</small>
                 <strong>@{detail.submitter?.username || "--"}</strong>
               </div>
-              <div className="mod-grid-item">
+              <div className="staff-spec-item">
                 <small>Track Slug</small>
                 <code>{detail.track.slug}</code>
               </div>
-              <div className="mod-grid-item">
+              <div className="staff-spec-item">
                 <small>Track Number</small>
                 <strong>{detail.track.trackNumber ?? "Single"}</strong>
               </div>
-              <div className="mod-grid-item">
+              <div className="staff-spec-item">
                 <small>Audio Stream Format</small>
                 <strong>{detail.track.audioFormat.toUpperCase()}</strong>
               </div>
@@ -517,49 +432,35 @@ export function PendingTrackDetailModal({
 
             {/* Track Description if available */}
             {detail.track.description ? (
-              <div style={{ marginTop: "12px", padding: "10px 14px", background: "#f8fafc", borderRadius: "8px" }}>
-                <small style={{ color: "#64748b", fontSize: "10px", fontWeight: "700", textTransform: "uppercase" }}>
-                  Track Description
-                </small>
-                <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#334155", lineHeight: "1.5" }}>
-                  {detail.track.description}
-                </p>
+              <div className="staff-track-desc-box">
+                <small>Track Description</small>
+                <p>{detail.track.description}</p>
               </div>
             ) : null}
 
             {/* Moderation History if reviewed */}
             {detail.status !== "PENDING" ? (
               <div
-                style={{
-                  marginTop: "16px",
-                  padding: "12px 14px",
-                  borderRadius: "10px",
-                  background: detail.status === "APPROVED" ? "#f0fdf4" : "#fef2f2",
-                  border: detail.status === "APPROVED" ? "1px solid #bbf7d0" : "1px solid #fecaca",
-                }}
+                className={`staff-audit-result-box ${
+                  detail.status === "APPROVED"
+                    ? "staff-audit-result-box--approved"
+                    : "staff-audit-result-box--rejected"
+                }`}
               >
-                <div
-                  style={{
-                    fontSize: "11px",
-                    fontWeight: "700",
-                    textTransform: "uppercase",
-                    color: detail.status === "APPROVED" ? "#166534" : "#991b1b",
-                    marginBottom: "4px",
-                  }}
-                >
+                <div className="staff-audit-title">
                   Moderation Result · {detail.status}
                 </div>
                 {detail.rejectionReason ? (
-                  <p style={{ margin: "4px 0", fontSize: "12px", color: "#b91c1c" }}>
+                  <p className="error-text">
                     <b>Rejection Reason:</b> {detail.rejectionReason}
                   </p>
                 ) : null}
                 {detail.reviewerNote ? (
-                  <p style={{ margin: "4px 0", fontSize: "12px", color: "#334155" }}>
+                  <p>
                     <b>Reviewer Note:</b> {detail.reviewerNote}
                   </p>
                 ) : null}
-                <small style={{ color: "#64748b", display: "block", marginTop: "4px" }}>
+                <small className="text-muted">
                   Reviewed by <b>{detail.reviewer?.displayName || detail.reviewer?.email || "Staff"}</b> at{" "}
                   {formatDate(detail.reviewedAt)}
                 </small>
@@ -568,47 +469,35 @@ export function PendingTrackDetailModal({
 
             {/* Actions for PENDING status */}
             {detail.status === "PENDING" ? (
-              <div
-                style={{
-                  marginTop: "20px",
-                  paddingTop: "16px",
-                  borderTop: "1px solid #e2e8f0",
-                }}
-              >
+              <div className="staff-modal-action-footer">
                 {actionType === "APPROVE" ? (
-                  <div
-                    style={{
-                      background: "#f0fdf4",
-                      padding: "14px",
-                      borderRadius: "10px",
-                      border: "1px solid #bbf7d0",
-                    }}
-                  >
-                    <h4 style={{ margin: "0 0 6px", fontSize: "14px", color: "#166534" }}>
+                  <div className="staff-inline-action-panel staff-inline-action-panel--approve">
+                    <h4 className="title-green">
                       Approve “{detail.track.title}”
                     </h4>
-                    <p style={{ margin: "0 0 10px", fontSize: "11.5px", color: "#15803d" }}>
-                      This track will immediately be set to <b>PUBLISHED</b> and visible in the public music catalog. An email notification will be sent to the artist.
+                    <p className="copy-green">
+                      This track will immediately be set to <b>PUBLISHED</b> and visible in the public music catalog. An email notification will be sent to the creator.
                     </p>
-                    <div className="form-group" style={{ marginBottom: "10px" }}>
-                      <label style={{ fontSize: "11px", fontWeight: "600", color: "#14532d" }}>
+                    <div className="form-group">
+                      <label className="label-green" htmlFor="modal-approve-note">
                         Reviewer Note (Optional):
                       </label>
                       <input
+                        id="modal-approve-note"
                         type="text"
                         className="text-input"
-                        placeholder="e.g. Master file sounds balanced and ready for publication."
+                        placeholder="e.g. Master file sounds balanced, high dynamic range, ready for release."
                         value={approveNote}
                         onChange={(e) => setApproveNote(e.target.value)}
-                        style={{ fontSize: "12px" }}
                       />
                     </div>
                     {actionError ? (
-                      <p style={{ color: "#b91c1c", fontSize: "11px", margin: "0 0 8px" }}>
+                      <p className="auth-v2-field-error">
+                        <AlertIcon width={12} height={12} />
                         {actionError}
                       </p>
                     ) : null}
-                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                    <div className="staff-dialog-actions">
                       <button
                         type="button"
                         className="button button-ghost button-small"
@@ -619,8 +508,7 @@ export function PendingTrackDetailModal({
                       </button>
                       <button
                         type="button"
-                        className="button button-primary button-small"
-                        style={{ background: "#16a34a", borderColor: "#16a34a" }}
+                        className="button button-primary button-small staff-action-approve"
                         onClick={handleConfirmApprove}
                         disabled={submittingAction}
                       >
@@ -629,52 +517,50 @@ export function PendingTrackDetailModal({
                     </div>
                   </div>
                 ) : actionType === "REJECT" ? (
-                  <div
-                    style={{
-                      background: "#fef2f2",
-                      padding: "14px",
-                      borderRadius: "10px",
-                      border: "1px solid #fecaca",
-                    }}
-                  >
-                    <h4 style={{ margin: "0 0 6px", fontSize: "14px", color: "#991b1b" }}>
+                  <div className="staff-inline-action-panel staff-inline-action-panel--reject">
+                    <h4 className="title-red">
                       Reject “{detail.track.title}”
                     </h4>
-                    <p style={{ margin: "0 0 10px", fontSize: "11.5px", color: "#b91c1c" }}>
-                      Please provide a clear and constructive reason. The artist will receive this feedback via email and system notification to help them fix the issue.
+                    <p className="copy-red">
+                      Please provide a clear and constructive reason. The creator will receive this feedback via email and system notification so they can revise and re-submit.
                     </p>
-                    <div className="form-group" style={{ marginBottom: "8px" }}>
-                      <label style={{ fontSize: "11px", fontWeight: "600", color: "#7f1d1d" }}>
-                        Rejection Reason *
+                    <div className="form-group">
+                      <label className="label-red" htmlFor="modal-reject-reason">
+                        Rejection Reason * (Minimum 10 characters)
                       </label>
                       <textarea
+                        id="modal-reject-reason"
                         className="text-input"
                         rows={3}
-                        placeholder="Specify what needs to be revised (e.g. Audio distortion at 1:45, incomplete lyrics, copyright clearance issue)..."
+                        placeholder="Specify what needs to be revised (e.g. Clipping distortion in master audio, incomplete metadata, unlicensed sample)..."
                         value={rejectionReason}
                         onChange={(e) => setRejectionReason(e.target.value)}
-                        style={{ fontSize: "12px", width: "100%", resize: "vertical" }}
+                        aria-invalid={rejectionReason.trim().length < 10}
                       />
+                      <small className={rejectionReason.trim().length >= 10 ? "text-success" : "text-muted"}>
+                        Entered: {rejectionReason.trim().length} / 10 characters minimum
+                      </small>
                     </div>
-                    <div className="form-group" style={{ marginBottom: "10px" }}>
-                      <label style={{ fontSize: "11px", fontWeight: "600", color: "#7f1d1d" }}>
+                    <div className="form-group">
+                      <label className="label-red" htmlFor="modal-reject-note">
                         Internal Staff Note (Optional):
                       </label>
                       <input
+                        id="modal-reject-note"
                         type="text"
                         className="text-input"
-                        placeholder="Internal note for staff archive..."
+                        placeholder="Internal note for moderation archive..."
                         value={rejectNote}
                         onChange={(e) => setRejectNote(e.target.value)}
-                        style={{ fontSize: "12px" }}
                       />
                     </div>
                     {actionError ? (
-                      <p style={{ color: "#b91c1c", fontSize: "11px", margin: "0 0 8px" }}>
+                      <p className="auth-v2-field-error">
+                        <AlertIcon width={12} height={12} />
                         {actionError}
                       </p>
                     ) : null}
-                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                    <div className="staff-dialog-actions">
                       <button
                         type="button"
                         className="button button-ghost button-small"
@@ -685,23 +571,16 @@ export function PendingTrackDetailModal({
                       </button>
                       <button
                         type="button"
-                        className="button button-primary button-small"
-                        style={{ background: "#dc2626", borderColor: "#dc2626" }}
+                        className="button button-primary button-small staff-action-reject"
                         onClick={handleConfirmReject}
-                        disabled={submittingAction || !rejectionReason.trim()}
+                        disabled={submittingAction || rejectionReason.trim().length < 10}
                       >
                         {submittingAction ? "Rejecting..." : "Confirm Rejection"}
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
+                  <div className="staff-modal-action-bar">
                     <button
                       type="button"
                       className="button button-ghost button-small"
@@ -709,16 +588,10 @@ export function PendingTrackDetailModal({
                     >
                       Close
                     </button>
-                    <div style={{ display: "flex", gap: "10px" }}>
+                    <div className="staff-modal-decision-btns">
                       <button
                         type="button"
-                        className="button button-small"
-                        style={{
-                          background: "#fee2e2",
-                          color: "#991b1b",
-                          borderColor: "#fca5a5",
-                          fontWeight: 600,
-                        }}
+                        className="button button-small staff-action-reject"
                         onClick={() => setActionType("REJECT")}
                       >
                         <CloseIcon width={14} height={14} />
@@ -726,12 +599,7 @@ export function PendingTrackDetailModal({
                       </button>
                       <button
                         type="button"
-                        className="button button-primary button-small"
-                        style={{
-                          background: "#16a34a",
-                          borderColor: "#16a34a",
-                          fontWeight: 600,
-                        }}
+                        className="button button-primary button-small staff-action-approve"
                         onClick={() => setActionType("APPROVE")}
                       >
                         <CheckIcon width={14} height={14} />

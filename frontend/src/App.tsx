@@ -376,6 +376,28 @@ export default function App() {
     }
   }, [audio, isDashboardRoute]);
 
+  useEffect(() => {
+    if (user?.role === "STAFF") {
+      if (
+        pathname === "/login" ||
+        pathname === "/register" ||
+        pathname === "/" ||
+        pathname === "" ||
+        pathname.startsWith("/admin")
+      ) {
+        window.location.hash = "#/staff/dashboard";
+      }
+    } else if (user?.role === "ADMIN") {
+      if (
+        pathname === "/login" ||
+        pathname === "/register" ||
+        pathname.startsWith("/staff")
+      ) {
+        window.location.hash = "#/admin/dashboard";
+      }
+    }
+  }, [user, pathname]);
+
   // Render Page Content
   const renderContent = () => {
     // Marketing Routes
@@ -569,7 +591,7 @@ export default function App() {
     if (pathname === "/admin" || pathname === "/admin/dashboard") {
       return user?.role === "ADMIN"
         ? <AdminDashboardPage onNavigate={navigate} />
-        : <DashboardAccessDenied onNavigate={navigate} />;
+        : <DashboardAccessDenied onNavigate={navigate} requiredRole="Administrator" />;
     }
 
     if (
@@ -585,7 +607,7 @@ export default function App() {
           : null;
       return user?.role === "STAFF" || user?.role === "ADMIN"
         ? <StaffDashboardPage onNavigate={navigate} initialSubmissionId={submissionId} />
-        : <DashboardAccessDenied onNavigate={navigate} />;
+        : <DashboardAccessDenied onNavigate={navigate} requiredRole="Moderation Staff" />;
     }
 
     // Default fallback to Explore

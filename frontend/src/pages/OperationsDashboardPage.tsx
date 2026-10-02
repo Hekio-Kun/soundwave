@@ -265,32 +265,22 @@ export function AdminDashboardPage({ onNavigate }: DashboardProps) {
   );
 }
 
-export function StaffDashboardPage({ onNavigate, initialSubmissionId }: DashboardProps) {
-  return (
-    <div className="ops-dashboard ops-dashboard--staff">
-      <DashboardHeading
-        eyebrow="CONTENT MODERATION"
-        title="Moderate Pending Tracks"
-        description="Review track submissions prioritized by FIFO queue, inspect audio quality and metadata, and approve or reject with clear feedback."
-        icon={<DashboardIcon width={15} height={15} />}
-      >
-        <span className="ops-shift-chip">
-          <ClockIcon width={15} height={15} /> SoundWave · Moderator Workspace
-        </span>
-      </DashboardHeading>
+export { StaffDashboardPage } from "./StaffDashboardPage";
 
-      <ModeratePendingTracks onNavigate={onNavigate} initialSubmissionId={initialSubmissionId} />
-    </div>
-  );
-}
-
-export function DashboardAccessDenied({ onNavigate }: DashboardProps) {
+export function DashboardAccessDenied({
+  onNavigate,
+  requiredRole = "authorized",
+}: {
+  onNavigate: (route: string) => void;
+  initialSubmissionId?: number | null;
+  requiredRole?: string;
+}) {
   return (
     <div className="ops-access-denied">
       <span><ShieldIcon width={32} height={32} /></span>
       <small>403 · RESTRICTED AREA</small>
       <h1>Access denied</h1>
-      <p>This dashboard is available only to accounts with the required role. Log in with a Staff or Admin account.</p>
+      <p>This workspace is available only to accounts with the {requiredRole} role. Please log in with an authorized account.</p>
       <div><button className="button button-primary" onClick={() => onNavigate("/login")}>Login with another account</button><button className="button button-secondary" onClick={() => onNavigate("/")}>Back to Explore</button></div>
     </div>
   );
