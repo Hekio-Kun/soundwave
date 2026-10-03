@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
   moderationApi,
   type PageResponse,
@@ -113,17 +114,8 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
   const [rejectNote, setRejectNote] = useState<string>("");
   const [isSubmittingReject, setIsSubmittingReject] = useState<boolean>(false);
 
-  // Rule 4.7: Scroll Lock when confirmation modals are open with proper cleanup
-  useEffect(() => {
-    const isDialogOpen = Boolean(approvingTarget || rejectingTarget);
-    if (!isDialogOpen) return;
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [approvingTarget, rejectingTarget]);
+  // Rule 4.7: Scroll Lock when confirmation modals are open with proper restoration across all scroll containers
+  useModalScrollLock(Boolean(approvingTarget || rejectingTarget));
 
   // Rule 4.7: Escape Key Listener for confirmation modals
   useEffect(() => {

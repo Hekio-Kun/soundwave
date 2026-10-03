@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { TrackCard, SectionHeader } from "../components/MusicCards";
 import { tracks } from "../data";
 import { CheckIcon, FileTextIcon, HeadphonesIcon, HeartFillIcon, HeartIcon, PauseIcon, PlayIcon, PlusIcon, UserIcon } from "../icons";
@@ -43,6 +44,22 @@ export function TrackDetailsPage({
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [reportCategory, setReportCategory] = useState("copyright");
   const [reportDesc, setReportDesc] = useState("");
+
+  // Rule 4.7: Modal background scroll lock
+  useModalScrollLock(Boolean(playlistModalOpen || reportModalOpen));
+
+  // Rule 4.7: Escape key handler
+  useEffect(() => {
+    if (!playlistModalOpen && !reportModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPlaylistModalOpen(false);
+        setReportModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [playlistModalOpen, reportModalOpen]);
 
   const recommendations = useMemo(() => {
     const sameCreator = tracks.filter((item) => item.id !== track.id && item.creator.userId === track.creator.userId);

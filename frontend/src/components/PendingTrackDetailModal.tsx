@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
   moderationApi,
   type SubmissionDetail,
@@ -88,14 +89,8 @@ export function PendingTrackDetailModal({
   const [submittingAction, setSubmittingAction] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Rule 4.7: Scroll Lock with restoration
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, []);
+  // Rule 4.7: Scroll Lock with restoration across all containers (.ops-shell-content, .app-scroll-region, body)
+  useModalScrollLock(true);
 
   // Rule 4.7: Escape key listener
   useEffect(() => {

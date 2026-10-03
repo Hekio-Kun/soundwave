@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { tracks } from "../data";
 import { CloseIcon, PlusIcon, SearchIcon, CheckIcon } from "../icons";
 import type { LandingTrack } from "../types";
@@ -35,6 +36,19 @@ export function AddTrackToPlaylistModal({
         (t.album?.title.toLowerCase().includes(q) ?? false)
     );
   }, [approvedTracks, search]);
+
+  // Rule 4.7: Modal background scroll lock
+  useModalScrollLock(open);
+
+  // Rule 4.7: Escape key handler
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
 
   if (!open) return null;
 

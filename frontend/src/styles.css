@@ -2604,9 +2604,24 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 }
 
 /* --------------------------------------------------------------------------
-   15. Modals & Dialogs
+   15. Modals & Dialogs (Rule 4.7 Scroll Lock & Containment)
    -------------------------------------------------------------------------- */
-.modal-overlay {
+html.modal-open,
+body.modal-open {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+body.modal-open .ops-shell-content,
+body.modal-open .app-scroll-region,
+body.modal-open .ops-shell-main {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  touch-action: none;
+}
+
+.modal-overlay,
+.modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(16, 24, 40, 0.5);
@@ -2615,8 +2630,9 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
   align-items: center;
   justify-content: center;
   padding: 20px;
-  z-index: 100;
+  z-index: 1000;
   animation: fadeIn 0.16s ease-out;
+  overscroll-behavior: contain !important;
 }
 
 @keyframes fadeIn {
@@ -2637,6 +2653,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
   animation: dialog-in 0.18s ease-out;
   max-height: min(90vh, 760px);
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modal-card--wide,
@@ -2657,6 +2674,28 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
   animation: dialog-in 0.18s ease-out;
   max-height: min(90vh, 760px);
   overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.modal-card::-webkit-scrollbar,
+.dialog-box::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-card::-webkit-scrollbar-track,
+.dialog-box::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-card::-webkit-scrollbar-thumb,
+.dialog-box::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
+}
+
+.modal-card::-webkit-scrollbar-thumb:hover,
+.dialog-box::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .modal-header,

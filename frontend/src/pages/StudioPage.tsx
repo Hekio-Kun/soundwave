@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
   studioApi,
   TrackApiError,
@@ -136,16 +137,18 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
     void loadStudioData();
   }, [filterStatus]);
 
+  // Rule 4.7: Modal background scroll lock
+  useModalScrollLock(
+    Boolean(trackModalOpen || deleteConfirmTrack || rejectionModalTrack || submittingNoteTrack)
+  );
+
   useEffect(() => {
     if (!trackModalOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !isSaving) setTrackModalOpen(false);
     };
     document.addEventListener("keydown", handleEscape);
     return () => {
-      document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleEscape);
     };
   }, [trackModalOpen, isSaving]);

@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { AlertIcon, CloseIcon } from "../icons";
 
 type Props = {
@@ -19,6 +21,17 @@ export function DeleteConfirmationModal({
   onCancel,
   submitting = false,
 }: Props) {
+  useModalScrollLock(open);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !submitting) onCancel();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, submitting, onCancel]);
+
   if (!open) return null;
 
   return (

@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { AlertIcon } from "../icons";
 
 type Props = {
@@ -9,6 +10,8 @@ type Props = {
 };
 
 export function LogoutConfirmationDialog({ open, submitting, onCancel, onConfirm }: Props) {
+  useModalScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (event: KeyboardEvent) => {

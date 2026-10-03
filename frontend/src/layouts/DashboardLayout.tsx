@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
   ClockIcon,
   CloseIcon,
@@ -37,15 +38,8 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [mobileDrawerOpen]);
 
-  // Lock body scroll when mobile drawer is open
-  useEffect(() => {
-    if (!mobileDrawerOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [mobileDrawerOpen]);
+  // Lock scroll across all containers when mobile drawer is open
+  useModalScrollLock(mobileDrawerOpen);
 
   const handleNavClick = (route: string) => {
     setMobileDrawerOpen(false);
