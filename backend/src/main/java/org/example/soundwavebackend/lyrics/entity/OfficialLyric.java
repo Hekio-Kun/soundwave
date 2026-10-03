@@ -15,7 +15,7 @@ import java.time.ZoneOffset;
         name = "official_lyrics",
         uniqueConstraints = @UniqueConstraint(
                 name = "UQ_official_lyrics_track_language",
-                columnNames = {"track_id", "language_code"}
+                columnNames = {"track_id", "language_id"}
         )
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -27,8 +27,9 @@ public class OfficialLyric {
     @Column(name = "track_id", nullable = false)
     private Long trackId;
 
-    @Column(name = "language_code", nullable = false, length = 10)
-    private String languageCode;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "language_id", nullable = false)
+    private LyricLanguage language;
 
     @Lob
     @Nationalized
@@ -48,12 +49,16 @@ public class OfficialLyric {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public OfficialLyric(Long trackId, String languageCode, String lyricContent, Long createdByUserId) {
+    public OfficialLyric(Long trackId, LyricLanguage language, String lyricContent, Long createdByUserId) {
         this.trackId = trackId;
-        this.languageCode = languageCode;
+        this.language = language;
         this.lyricContent = lyricContent;
         this.createdByUserId = createdByUserId;
         this.status = LyricStatus.DRAFT;
+    }
+
+    public String getLanguageCode() {
+        return language != null ? language.getCode() : null;
     }
 
     public void updateContent(String lyricContent, LocalDateTime updatedAt) {
@@ -66,10 +71,17 @@ public class OfficialLyric {
         updatedAt = publishedAt;
     }
 
+    public void unpublish(LocalDateTime updatedAt) {
+        status = LyricStatus.DRAFT;
+        this.updatedAt = updatedAt;
+    }
+
     @PrePersist
     void initializeTimestamps() {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-        createdAt = now;
+        if (createdAt == null) {
+            createdAt = now;
+        }
         updatedAt = now;
     }
 }

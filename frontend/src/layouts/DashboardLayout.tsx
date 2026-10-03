@@ -1,5 +1,15 @@
-import type { ReactNode } from "react";
-import { DashboardIcon, HomeIcon, ShieldIcon, UserIcon } from "../icons";
+import { useEffect, useState, type ReactNode } from "react";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
+import {
+  ClockIcon,
+  CloseIcon,
+  DashboardIcon,
+  HomeIcon,
+  LogoutIcon,
+  MenuIcon,
+  ShieldIcon,
+  UserIcon,
+} from "../icons";
 import type { CurrentUser } from "../types";
 
 type Props = {
@@ -11,72 +21,258 @@ type Props = {
 };
 
 export function DashboardLayout({ children, activeRoute, user, onNavigate, onLogout }: Props) {
-  const isAdminArea = activeRoute.startsWith("/admin");
-  const dashboardRoute = user?.role === "ADMIN" ? "/admin/dashboard" : "/staff/dashboard";
-  const roleLabel = user?.role === "ADMIN" ? "Administrator" : user?.role === "STAFF" ? "Moderation Staff" : "Guest";
+  const isStaff = user?.role === "STAFF";
+  const isAdmin = user?.role === "ADMIN";
+  const roleLabel = isAdmin ? "Administrator" : isStaff ? "Content Moderator" : "Staff";
+
+  // Mobile Drawer State
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  // Close drawer on escape key
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileDrawerOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mobileDrawerOpen]);
+
+  // Lock scroll across all containers when mobile drawer is open
+  useModalScrollLock(mobileDrawerOpen);
+
+  const handleNavClick = (route: string) => {
+    setMobileDrawerOpen(false);
+    onNavigate(route);
+  };
+
+  const renderSidebarContent = () => (
+    <>
+      <div className="ops-sidebar-header">
+        <button
+          type="button"
+          className="ops-shell-brand"
+          onClick={() => handleNavClick("/")}
+          aria-label="Return to SoundWave Explore"
+          title="Return to SoundWave"
+        >
+          <div className="ops-brand-logo-wrap">
+            <img src="/soundwave-logo.png" alt="SoundWave" />
+          </div>
+          <div className="ops-brand-info">
+            <span className="ops-brand-name">SoundWave</span>
+            <span className="ops-brand-badge">OPS WORKSPACE</span>
+          </div>
+        </button>
+
+        {mobileDrawerOpen ? (
+          <button
+            type="button"
+            className="icon-button ops-mobile-close-btn"
+            onClick={() => setMobileDrawerOpen(false)}
+            aria-label="Close navigation menu"
+          >
+            <CloseIcon width={18} height={18} />
+          </button>
+        ) : null}
+      </div>
+
+      {/* Staff Workspace Status Box */}
+      <div className="ops-shell-workspace">
+        <div className="ops-workspace-top">
+          <span className="ops-workspace-eyebrow">
+            {isAdmin ? "ADMIN" : "MODERATION"}
+          </span>
+          <span className="ops-workspace-live-dot" title="Active session">
+            <i /> Live
+          </span>
+        </div>
+        <strong className="ops-workspace-title">
+          {isAdmin ? "Platform Admin" : "Track Moderation"}
+        </strong>
+      </div>
+
+      {/* Navigation Menu */}
+      <nav className="ops-shell-nav" aria-label="Operations Navigation">
+        <span className="ops-nav-heading">MENU</span>
+
+        {isStaff ? (
+          <>
+            <button
+              type="button"
+              className={activeRoute.startsWith("/staff") ? "is-active" : ""}
+              onClick={() => handleNavClick("/staff/dashboard")}
+              title="Pending track submissions"
+            >
+              <DashboardIcon width={17} height={17} />
+              <span>Pending Tracks</span>
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className={activeRoute.startsWith("/admin") ? "is-active" : ""}
+              onClick={() => handleNavClick("/admin/dashboard")}
+            >
+              <ShieldIcon width={17} height={17} />
+              <span>System Dashboard</span>
+            </button>
+            <button
+              type="button"
+              className={activeRoute.startsWith("/staff") ? "is-active" : ""}
+              onClick={() => handleNavClick("/staff/dashboard")}
+            >
+              <DashboardIcon width={17} height={17} />
+              <span>Staff Moderation Queue</span>
+            </button>
+          </>
+        )}
+
+        <span className="ops-nav-heading" style={{ marginTop: "16px" }}>
+          QUICK ACCESS
+        </span>
+        <button
+          type="button"
+          className="ops-nav-subitem"
+          onClick={() => handleNavClick("/")}
+        >
+          <HomeIcon width={16} height={16} />
+          <span>Explore SoundWave</span>
+        </button>
+      </nav>
+
+      {/* Sidebar Footer User Card & Logout */}
+      <div className="ops-shell-sidebar-footer">
+        {user ? (
+          <div className="ops-sidebar-user-card">
+            <div className="ops-sidebar-user-avatar">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.displayName} />
+              ) : (
+                <UserIcon width={16} height={16} />
+              )}
+            </div>
+            <div className="ops-sidebar-user-meta">
+              <span className="ops-sidebar-user-name" title={user.displayName}>
+                {user.displayName}
+              </span>
+              <span className="ops-sidebar-user-email" title={user.email}>
+                {user.email}
+              </span>
+            </div>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          className="ops-sidebar-logout-btn"
+          onClick={onLogout}
+          title="Log out of SoundWave"
+        >
+          <LogoutIcon width={15} height={15} />
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <div className="ops-shell">
-      <aside className="ops-shell-sidebar" aria-label="Dashboard navigation">
-        <button className="ops-shell-brand" onClick={() => onNavigate("/")} aria-label="Return to SoundWave">
-          <img src="/soundwave-logo.png" alt="" />
-          <span>SoundWave</span>
-        </button>
-
-        <div className="ops-shell-workspace">
-          <small>WORKSPACE</small>
-          <strong>{isAdminArea ? "Administration" : "Content Moderation"}</strong>
-          <span><i /> {roleLabel}</span>
-        </div>
-
-        <nav className="ops-shell-nav">
-          <span>OVERVIEW</span>
-          <button className="is-active" onClick={() => onNavigate(dashboardRoute)}>
-            {isAdminArea ? <ShieldIcon width={18} height={18} /> : <DashboardIcon width={18} height={18} />}
-            <span>Dashboard</span>
-          </button>
-          {user?.role === "ADMIN" ? (
-            <button className={!isAdminArea ? "is-active" : ""} onClick={() => onNavigate("/staff/dashboard")}>
-              <DashboardIcon width={18} height={18} />
-              <span>Content Moderation</span>
-            </button>
-          ) : null}
-        </nav>
-
-        <div className="ops-shell-sidebar-footer">
-          <button onClick={() => onNavigate("/")}>
-            <HomeIcon width={18} height={18} />
-            <span>Back to Explore</span>
-          </button>
-          <small>SoundWave Operations · 2026</small>
-        </div>
+      {/* Desktop Left Sidebar */}
+      <aside className="ops-shell-sidebar" aria-label="Desktop navigation">
+        {renderSidebarContent()}
       </aside>
 
+      {/* Mobile Drawer Backdrop & Sidebar */}
+      {mobileDrawerOpen ? (
+        <div
+          className="ops-drawer-overlay"
+          role="presentation"
+          onClick={() => setMobileDrawerOpen(false)}
+        >
+          <aside
+            className="ops-mobile-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Mobile navigation drawer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {renderSidebarContent()}
+          </aside>
+        </div>
+      ) : null}
+
+      {/* Main Content Area */}
       <div className="ops-shell-main">
+        {/* Topbar */}
         <header className="ops-shell-topbar">
-          <div className="ops-shell-breadcrumb">
-            <span>SoundWave</span>
-            <i>/</i>
-            <strong>{isAdminArea ? "Administration Dashboard" : "Moderation Dashboard"}</strong>
+          <div className="ops-topbar-left">
+            {/* Mobile Menu Hamburger Button */}
+            <button
+              type="button"
+              className="icon-button ops-mobile-menu-btn"
+              onClick={() => setMobileDrawerOpen(true)}
+              aria-label="Open navigation menu"
+              aria-expanded={mobileDrawerOpen}
+            >
+              <MenuIcon width={20} height={20} />
+            </button>
+
+            <div className="ops-shell-breadcrumb">
+              <span className="ops-breadcrumb-root">SoundWave</span>
+              <span className="ops-breadcrumb-sep">/</span>
+              <strong className="ops-breadcrumb-current">
+                {isAdmin ? "Admin" : "Moderation"}
+              </strong>
+            </div>
           </div>
 
           <div className="ops-shell-actions">
-            <button className="ops-shell-home-button" onClick={() => onNavigate("/")}>
-              <HomeIcon width={16} height={16} />
-              Explore Music
+            {/* Active Shift Indicator */}
+            <div className="ops-topbar-shift-badge">
+              <span className="ops-shift-pulse-ring" />
+              <span>Live Queue</span>
+            </div>
+
+            <button
+              type="button"
+              className="ops-topbar-home-btn"
+              onClick={() => onNavigate("/")}
+              title="Return to music streaming"
+            >
+              <HomeIcon width={15} height={15} />
+              <span>Public App</span>
             </button>
+
             {user ? (
-              <div className="ops-shell-user">
-                {user.avatarUrl
-                  ? <img src={user.avatarUrl} alt="" />
-                  : <span className="ops-shell-user-avatar"><UserIcon width={15} height={15} /></span>}
-                <span><b>{user.displayName}</b><small>{roleLabel}</small></span>
+              <div className="ops-topbar-user-pill">
+                <div className="ops-topbar-avatar">
+                  {user.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="" />
+                  ) : (
+                    <UserIcon width={14} height={14} />
+                  )}
+                </div>
+                <div className="ops-topbar-user-text">
+                  <b>{user.displayName}</b>
+                  <small>{roleLabel}</small>
+                </div>
+                <button
+                  type="button"
+                  className="ops-topbar-logout-btn"
+                  onClick={onLogout}
+                  title="Sign out"
+                  aria-label="Sign out"
+                >
+                  <LogoutIcon width={14} height={14} />
+                </button>
               </div>
             ) : null}
-            {user ? <button className="ops-shell-logout" onClick={onLogout}>Logout</button> : null}
           </div>
         </header>
 
+        {/* Scrollable Main View */}
         <main className="ops-shell-content">{children}</main>
       </div>
     </div>

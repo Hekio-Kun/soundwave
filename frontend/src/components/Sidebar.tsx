@@ -1,4 +1,4 @@
-import { CompassIcon, DashboardIcon, DiscIcon, HeartIcon, LibraryIcon, PlusIcon, SearchIcon, ShieldIcon, UploadIcon } from "../icons";
+import { CompassIcon, DashboardIcon, DiscIcon, FilterIcon, HeartIcon, LibraryIcon, PlusIcon, SearchIcon, ShieldIcon, UploadIcon } from "../icons";
 import type { CurrentUser } from "../types";
 
 type Props = {
@@ -58,18 +58,18 @@ export function Sidebar({ activeRoute, onNavigate, onCreatePlaylist, isAuthentic
         <div className="nav-group">
           <span className="nav-group-title">DISCOVER</span>
           <button
-            className={`nav-item ${activeRoute === "/" || activeRoute === "/home" || isCurrent("/explore") ? "nav-item--active" : ""}`}
+            className={`nav-item ${activeRoute === "/" || activeRoute === "/home" || (activeRoute.startsWith("/explore") && !activeRoute.includes("genre")) ? "nav-item--active" : ""}`}
             onClick={() => onNavigate("/")}
           >
             <CompassIcon />
             <span>Explore</span>
           </button>
           <button
-            className={`nav-item ${isCurrent("/genres") ? "nav-item--active" : ""}`}
-            onClick={() => onNavigate("/genres")}
+            className={`nav-item ${activeRoute.startsWith("/browse") || activeRoute.includes("genre") ? "nav-item--active" : ""}`}
+            onClick={() => onNavigate("/browse")}
           >
-            <DiscIcon />
-            <span>Genres</span>
+            <FilterIcon width={18} height={18} />
+            <span>Browse Catalog</span>
           </button>
           <button
             className={`nav-item ${isCurrent("/search") ? "nav-item--active" : ""}`}

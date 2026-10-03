@@ -88,6 +88,63 @@ public class Track {
         this.audioFormat = audioFormat;
         this.durationMs = durationMs;
         this.publicationStatus = TrackPublicationStatus.DRAFT;
+        this.playCount = 0;
+    }
+
+    public Track(Long uploaderUserId, Genre genre, Album album, String title, String slug,
+                 String description, Short trackNumber, String audioPublicId, String audioUrl,
+                 String audioFormat, Integer durationMs, String coverPublicId, String coverUrl) {
+        this.uploaderUserId = uploaderUserId;
+        this.genre = genre;
+        this.album = album;
+        this.title = title;
+        this.slug = slug;
+        this.description = description;
+        this.trackNumber = trackNumber;
+        this.audioPublicId = audioPublicId;
+        this.audioUrl = audioUrl;
+        this.audioFormat = audioFormat;
+        this.durationMs = durationMs != null ? durationMs : 0;
+        this.coverPublicId = coverPublicId;
+        this.coverUrl = coverUrl;
+        this.publicationStatus = TrackPublicationStatus.DRAFT;
+        this.playCount = 0;
+    }
+
+    public boolean isEditable() {
+        return publicationStatus == TrackPublicationStatus.DRAFT || publicationStatus == TrackPublicationStatus.REJECTED;
+    }
+
+    public boolean isDeletable() {
+        return publicationStatus == TrackPublicationStatus.DRAFT || publicationStatus == TrackPublicationStatus.REJECTED;
+    }
+
+    public void updateDraftDetails(String title, String slug, Genre genre, Album album,
+                                   String description, Short trackNumber,
+                                   String audioPublicId, String audioUrl, String audioFormat, Integer durationMs,
+                                   String coverPublicId, String coverUrl, LocalDateTime updatedAt) {
+        this.title = title;
+        this.slug = slug;
+        this.genre = genre;
+        this.album = album;
+        this.description = description;
+        this.trackNumber = trackNumber;
+        if (audioUrl != null && !audioUrl.isBlank()) {
+            this.audioPublicId = audioPublicId != null ? audioPublicId : this.audioPublicId;
+            this.audioUrl = audioUrl;
+            this.audioFormat = audioFormat != null ? audioFormat : this.audioFormat;
+            this.durationMs = durationMs != null ? durationMs : this.durationMs;
+        }
+        if (coverUrl != null && !coverUrl.isBlank()) {
+            this.coverPublicId = coverPublicId != null ? coverPublicId : this.coverPublicId;
+            this.coverUrl = coverUrl;
+        }
+        this.updatedAt = updatedAt;
+    }
+
+    public void submitForReview(LocalDateTime submittedAt) {
+        this.publicationStatus = TrackPublicationStatus.PENDING;
+        this.updatedAt = submittedAt;
     }
 
     public void assignAlbum(Album album, Short trackNumber, LocalDateTime updatedAt) {

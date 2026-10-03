@@ -33,10 +33,14 @@ public class Role {
         this.code = code;
         this.name = name;
         this.description = description;
+        this.createdAt = LocalDateTime.now(ZoneOffset.UTC);
     }
 
     @PrePersist
     void initializeCreatedAt() {
-        createdAt = LocalDateTime.now(ZoneOffset.UTC);
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now(ZoneOffset.UTC);
+        }
     }
 }
+

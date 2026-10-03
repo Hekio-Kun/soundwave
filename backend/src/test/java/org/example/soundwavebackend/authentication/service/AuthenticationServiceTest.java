@@ -44,6 +44,7 @@ class AuthenticationServiceTest {
     @Mock private AuthenticationMailService mailService;
     @Mock private JwtService jwtService;
     @Mock private AuthenticationMapper mapper;
+    @Mock private AuthRateLimiterService authRateLimiterService;
 
     private AuthenticationService service;
 
@@ -51,7 +52,8 @@ class AuthenticationServiceTest {
     void setUp() {
         service = new AuthenticationService(userRepository, roleRepository, profileRepository,
                 verificationTokenRepository, resetTokenRepository, refreshTokenRepository,
-                passwordEncoder, otpGenerator, tokenHashService, mailService, jwtService, mapper);
+                passwordEncoder, otpGenerator, tokenHashService, mailService, jwtService, mapper,
+                authRateLimiterService);
         ReflectionTestUtils.setField(service, "otpExpirationMinutes", 10L);
         ReflectionTestUtils.setField(service, "otpResendSeconds", 60L);
         ReflectionTestUtils.setField(service, "refreshTokenDays", 7L);
@@ -144,11 +146,67 @@ class AuthenticationServiceTest {
     @Test
     void logoutRevokesTheCurrentSession() {
         RefreshToken session = mock(RefreshToken.class);
+        AppUser user = mock(AppUser.class);
+        when(user.getId()).thenReturn(10L);
+        when(session.getUser()).thenReturn(user);
         when(tokenHashService.hash("raw-refresh-token")).thenReturn("refresh-token-hash");
         when(refreshTokenRepository.findByTokenHash("refresh-token-hash")).thenReturn(Optional.of(session));
 
         service.logout("raw-refresh-token");
 
         verify(session).revoke(any());
+    }
+
+    @Test
+    void loginRejectsWhenAccountIsLockedOut() {
+        when(authRateLimiterService.isLoginBlocked("user@example.com")).thenReturn(true);
+
+        org.example.soundwavebackend.authentication.exception.AccountUnavailableException ex =
+                assertThrows(org.example.soundwavebackend.authentication.exception.AccountUnavailableException.class,
+                        () -> service.login(new LoginRequest("user@example.com", "Password1", false)));
+
+        assertEquals("LOGIN_LOCKED", ex.getCode());
+        verify(userRepository, never()).findByEmailIgnoreCase(any());
+    }
+
+    @Test
+    void refreshRevokesAllActiveSessionsWhenTokenReuseDetectedOutsideGracePeriod() {
+        RefreshToken stored = mock(RefreshToken.class);
+        AppUser user = mock(AppUser.class);
+        when(user.getId()).thenReturn(99L);
+        when(stored.getUser()).thenReturn(user);
+        when(stored.getRevokedAt()).thenReturn(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).minusSeconds(60));
+        when(tokenHashService.hash("reused-token")).thenReturn("reused-hash");
+        when(refreshTokenRepository.findByTokenHash("reused-hash")).thenReturn(Optional.of(stored));
+
+        assertThrows(org.example.soundwavebackend.authentication.exception.InvalidRefreshTokenException.class,
+                () -> service.refresh("reused-token"));
+
+        verify(refreshTokenRepository).revokeAllActiveByUserId(eq(99L), any());
+    }
+
+    @Test
+    void refreshReturnsActiveSessionWhenCalledWithinGracePeriod() {
+        RefreshToken stored = mock(RefreshToken.class);
+        RefreshToken activeSession = mock(RefreshToken.class);
+        AppUser user = mock(AppUser.class);
+        when(user.getId()).thenReturn(99L);
+        when(user.getEmail()).thenReturn("user@example.com");
+        when(user.getStatus()).thenReturn(UserStatus.ACTIVE);
+        when(user.getEmailVerifiedAt()).thenReturn(java.time.LocalDateTime.now());
+        when(stored.getUser()).thenReturn(user);
+        when(stored.getRevokedAt()).thenReturn(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).minusSeconds(2));
+        when(tokenHashService.hash("reused-token")).thenReturn("reused-hash");
+        when(refreshTokenRepository.findByTokenHash("reused-hash")).thenReturn(Optional.of(stored));
+        when(activeSession.getId()).thenReturn(101L);
+        when(refreshTokenRepository.findFirstByUserIdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(eq(99L), any()))
+                .thenReturn(Optional.of(activeSession));
+        when(jwtService.createAccessToken(eq(user), eq(101L))).thenReturn("new-jwt-token");
+        when(jwtService.getAccessTokenSeconds()).thenReturn(900L);
+
+        org.example.soundwavebackend.authentication.dto.response.LoginResult result = service.refresh("reused-token");
+
+        assertEquals("new-jwt-token", result.response().accessToken());
+        verify(refreshTokenRepository, never()).revokeAllActiveByUserId(any(), any());
     }
 }

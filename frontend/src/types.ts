@@ -64,15 +64,23 @@ export type Playlist = {
 export type StudioTrack = {
   id: number;
   title: string;
+  slug?: string;
+  description?: string;
   coverUrl: string | null;
   audioUrl: string;
   durationMs: number;
+  genreId?: number;
   genreSlug: string;
   genreName: string;
+  albumId?: number;
   albumTitle?: string;
-  status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED";
+  trackNumber?: number;
+  status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "TAKEN_DOWN";
   latestRejectionReason?: string;
+  reviewerNote?: string;
   createdAt: string;
+  updatedAt?: string;
+  lyrics?: string;
 };
 
 export type CurrentUser = {

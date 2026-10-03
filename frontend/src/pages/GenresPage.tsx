@@ -22,7 +22,7 @@ export function GenresPage({ onNavigate }: Props) {
             key={genre.id}
             className="genre-big-card"
             style={{ backgroundColor: genre.color, color: genre.accent }}
-            onClick={() => onNavigate(`/explore?genre=${genre.slug}`)}
+            onClick={() => onNavigate(`/browse?genre=${genre.slug}`)}
           >
             <div className="genre-big-header">
               <span className="genre-big-num">{String(idx + 1).padStart(2, "0")}</span>
