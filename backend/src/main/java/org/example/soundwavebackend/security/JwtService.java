@@ -58,6 +58,30 @@ public class JwtService {
         return accessTokenMinutes * 60;
     }
 
+    public record JwtPayload(String subject, Long sessionId, String role, Long userId) {}
+
+    /**
+     * Xác thực chữ ký số và trích xuất claims của JWT chỉ trong 1 lần parse duy nhất.
+     */
+    public java.util.Optional<JwtPayload> validateAndExtract(String token) {
+        if (token == null || token.isBlank()) return java.util.Optional.empty();
+        try {
+            Claims claims = parse(token);
+            if (claims.getExpiration() == null || claims.getExpiration().before(new Date())) {
+                return java.util.Optional.empty();
+            }
+            String subject = claims.getSubject();
+            Object sidObj = claims.get("sid");
+            Long sid = sidObj instanceof Number number ? number.longValue() : null;
+            String role = claims.get("role", String.class);
+            Object uidObj = claims.get("uid");
+            Long uid = uidObj instanceof Number number ? number.longValue() : null;
+            return java.util.Optional.of(new JwtPayload(subject, sid, role, uid));
+        } catch (RuntimeException exception) {
+            return java.util.Optional.empty();
+        }
+    }
+
     private Claims parse(String token) {
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
     }
