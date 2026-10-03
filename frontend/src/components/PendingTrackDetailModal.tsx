@@ -13,7 +13,6 @@ import {
   HeadphonesIcon,
   PauseIcon,
   PlayIcon,
-  UserIcon,
   VolumeIcon,
 } from "../icons";
 
@@ -71,14 +70,17 @@ export function PendingTrackDetailModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Audio preview playback state
+  // Audio playback ref and play-promise tracker to prevent race conditions
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const playPromiseRef = useRef<Promise<void> | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.85);
 
-  // Quick Action Dialogs inside Detail Modal
+  // Action states inside modal
   const [actionType, setActionType] = useState<"APPROVE" | "REJECT" | null>(null);
   const [approveNote, setApproveNote] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
@@ -86,7 +88,7 @@ export function PendingTrackDetailModal({
   const [submittingAction, setSubmittingAction] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Rule 4.7: Scroll Lock when modal is open
+  // Rule 4.7: Scroll Lock with restoration
   useEffect(() => {
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -95,7 +97,7 @@ export function PendingTrackDetailModal({
     };
   }, []);
 
-  // Rule 4.7: Escape key listener to close modal
+  // Rule 4.7: Escape key listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -106,6 +108,15 @@ export function PendingTrackDetailModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  // Focus close button on mount for accessibility
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      closeBtnRef.current?.focus();
+    }, 50);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  // Fetch track submission detail safely
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
@@ -128,22 +139,56 @@ export function PendingTrackDetailModal({
 
     return () => {
       isMounted = false;
+      // Safely pause audio during unmount
       if (audioRef.current) {
-        audioRef.current.pause();
+        if (playPromiseRef.current) {
+          playPromiseRef.current
+            .then(() => {
+              audioRef.current?.pause();
+            })
+            .catch(() => {
+              // Ignore aborted play promise on cleanup
+            });
+        } else {
+          audioRef.current.pause();
+        }
       }
     };
   }, [submissionId]);
 
+  // Safe Play/Pause toggle
   const togglePlay = () => {
     if (!audioRef.current) return;
+
     if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
+      if (playPromiseRef.current) {
+        playPromiseRef.current
+          .then(() => {
+            audioRef.current?.pause();
+            setIsPlaying(false);
+          })
+          .catch(() => {
+            setIsPlaying(false);
+          });
+      } else {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      }
     } else {
-      audioRef.current
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch((e) => console.error("Audio playback error:", e));
+      const promise = audioRef.current.play();
+      if (promise !== undefined) {
+        playPromiseRef.current = promise;
+        promise
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch((err: Error) => {
+            if (err.name !== "AbortError") {
+              console.error("Audio playback error:", err);
+            }
+            setIsPlaying(false);
+          });
+      }
     }
   };
 
@@ -219,6 +264,8 @@ export function PendingTrackDetailModal({
     }
   };
 
+  const maxSeekTime = duration || (detail?.track.durationMs ? detail.track.durationMs / 1000 : 100);
+
   return (
     <div className="modal-overlay" role="presentation" onClick={onClose}>
       <div
@@ -252,6 +299,7 @@ export function PendingTrackDetailModal({
             </div>
           </div>
           <button
+            ref={closeBtnRef}
             type="button"
             className="icon-button"
             onClick={onClose}
@@ -263,12 +311,12 @@ export function PendingTrackDetailModal({
 
         {/* Loading / Error / Body */}
         {loading ? (
-          <div className="staff-inspector-loading">
+          <div className="staff-inspector-loading" aria-busy="true" aria-live="polite">
             <div className="staff-inspector-spinner" />
             <span>Loading lossless audio stream and metadata...</span>
           </div>
         ) : error ? (
-          <div className="staff-inspector-error">
+          <div className="staff-inspector-error" role="alert">
             <AlertIcon width={32} height={32} />
             <b>Failed to load submission details</b>
             <p>{error}</p>
@@ -386,7 +434,7 @@ export function PendingTrackDetailModal({
                       <span />
                     </div>
 
-                    {/* Timeline Seekbar */}
+                    {/* Timeline Seekbar with full accessibility attributes */}
                     <div className="staff-player-seek-wrap">
                       <div className="staff-player-times">
                         <span className="staff-time-current">{formatSeconds(currentTime)}</span>
@@ -399,11 +447,15 @@ export function PendingTrackDetailModal({
                       <input
                         type="range"
                         min={0}
-                        max={duration || (detail.track.durationMs ? detail.track.durationMs / 1000 : 100)}
+                        max={maxSeekTime}
                         value={currentTime}
                         onChange={handleSeek}
                         className="staff-player-slider-bar"
                         aria-label="Seek track position"
+                        aria-valuemin={0}
+                        aria-valuemax={maxSeekTime}
+                        aria-valuenow={currentTime}
+                        aria-valuetext={`${formatSeconds(currentTime)} of ${formatSeconds(maxSeekTime)}`}
                       />
                     </div>
 
@@ -420,6 +472,10 @@ export function PendingTrackDetailModal({
                         className="staff-vol-slider-bar"
                         title="Volume"
                         aria-label="Volume slider"
+                        aria-valuemin={0}
+                        aria-valuemax={1}
+                        aria-valuenow={volume}
+                        aria-valuetext={`${Math.round(volume * 100)}%`}
                       />
                     </div>
                   </div>
@@ -546,7 +602,7 @@ export function PendingTrackDetailModal({
                     </label>
 
                     {actionError ? (
-                      <p className="staff-action-error">
+                      <p className="staff-action-error" role="alert">
                         <AlertIcon width={13} height={13} />
                         <span>{actionError}</span>
                       </p>
@@ -610,8 +666,13 @@ export function PendingTrackDetailModal({
                         value={rejectionReason}
                         onChange={(e) => setRejectionReason(e.target.value)}
                         disabled={submittingAction}
+                        aria-invalid={
+                          rejectionReason.trim().length > 0 && rejectionReason.trim().length < 10
+                        }
+                        aria-describedby="modal-reject-counter"
                       />
                       <span
+                        id="modal-reject-counter"
                         className={
                           rejectionReason.trim().length >= 10
                             ? "staff-text-success font-medium"
@@ -636,7 +697,7 @@ export function PendingTrackDetailModal({
                     </label>
 
                     {actionError ? (
-                      <p className="staff-action-error">
+                      <p className="staff-action-error" role="alert">
                         <AlertIcon width={13} height={13} />
                         <span>{actionError}</span>
                       </p>

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 import {
   moderationApi,
   type PageResponse,
@@ -80,6 +80,10 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
+  // Request counter to cancel stale async network responses
+  const activeRequestIdRef = useRef<number>(0);
+  const toastTimerRef = useRef<number | null>(null);
+
   // Dedicated Pending Track Detail Modal State
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(
     initialSubmissionId ?? null
@@ -109,16 +113,16 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
   const [rejectNote, setRejectNote] = useState<string>("");
   const [isSubmittingReject, setIsSubmittingReject] = useState<boolean>(false);
 
-  // Rule 4.7: Scroll Lock when confirmation modals are open
+  // Rule 4.7: Scroll Lock when confirmation modals are open with proper cleanup
   useEffect(() => {
     const isDialogOpen = Boolean(approvingTarget || rejectingTarget);
-    if (isDialogOpen) {
-      const originalOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = originalOverflow;
-      };
-    }
+    if (!isDialogOpen) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
   }, [approvingTarget, rejectingTarget]);
 
   // Rule 4.7: Escape Key Listener for confirmation modals
@@ -133,10 +137,25 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [approvingTarget, rejectingTarget]);
 
+  // Safe toast notifier with timer cleanup
   const showToast = (message: string, type: "success" | "error" = "success") => {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
     setToast({ message, type });
-    window.setTimeout(() => setToast(null), 4000);
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, 4000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   const loadStats = async () => {
     try {
@@ -148,12 +167,15 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
   };
 
   const loadQueue = async (isManualRefresh = false) => {
+    const requestId = ++activeRequestIdRef.current;
+
     if (isManualRefresh) {
       setRefreshing(true);
     } else {
       setLoading(true);
     }
     setError(null);
+
     try {
       const data = await moderationApi.getQueue({
         status: statusFilter,
@@ -161,13 +183,21 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
         page,
         size: pageSize,
       });
-      setQueuePage(data);
+
+      // Avoid race conditions: only update if this is still the active request
+      if (requestId === activeRequestIdRef.current) {
+        setQueuePage(data);
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to load moderation queue.";
-      setError(msg);
+      if (requestId === activeRequestIdRef.current) {
+        const msg = err instanceof Error ? err.message : "Failed to load moderation queue.";
+        setError(msg);
+      }
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === activeRequestIdRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
@@ -179,6 +209,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
     void loadQueue();
   }, [statusFilter, searchQuery, page]);
 
+  // Debounced search input handler
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setSearchQuery(searchInput);
@@ -248,9 +279,13 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
 
   return (
     <div className="mod-track-view">
-      {/* Toast Notification */}
+      {/* Toast Notification with aria-live */}
       {toast ? (
-        <div className={`staff-floating-toast is-${toast.type}`} role="status">
+        <div
+          className={`staff-floating-toast is-${toast.type}`}
+          role="status"
+          aria-live="polite"
+        >
           {toast.type === "success" ? (
             <CheckIcon width={16} height={16} />
           ) : (
@@ -260,10 +295,11 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
         </div>
       ) : null}
 
-      {/* Top Interactive KPI Metric Cards */}
+      {/* Top Interactive KPI Metric Cards (Semantic Buttons) */}
       <section className="staff-kpi-grid" aria-label="Moderation throughput statistics">
         {/* 1. Pending (FIFO) */}
-        <article
+        <button
+          type="button"
           className={`staff-metric-card is-amber ${
             statusFilter === "PENDING" ? "is-selected-filter" : ""
           }`}
@@ -271,15 +307,8 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             setStatusFilter("PENDING");
             setPage(0);
           }}
+          aria-pressed={statusFilter === "PENDING"}
           title="Click to view pending submissions awaiting moderation"
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              setStatusFilter("PENDING");
-              setPage(0);
-            }
-          }}
         >
           <div className="staff-metric-header">
             <span className="staff-metric-icon is-amber">
@@ -295,10 +324,11 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             <strong className="staff-metric-title">Pending Review</strong>
             <span className="staff-metric-caption">Awaiting moderator audit in arrival order</span>
           </div>
-        </article>
+        </button>
 
         {/* 2. Approved */}
-        <article
+        <button
+          type="button"
           className={`staff-metric-card is-green ${
             statusFilter === "APPROVED" ? "is-selected-filter" : ""
           }`}
@@ -306,15 +336,8 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             setStatusFilter("APPROVED");
             setPage(0);
           }}
+          aria-pressed={statusFilter === "APPROVED"}
           title="Click to view approved music tracks"
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              setStatusFilter("APPROVED");
-              setPage(0);
-            }
-          }}
         >
           <div className="staff-metric-header">
             <span className="staff-metric-icon is-green">
@@ -327,10 +350,11 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             <strong className="staff-metric-title">Approved Tracks</strong>
             <span className="staff-metric-caption">Live and streaming in catalog</span>
           </div>
-        </article>
+        </button>
 
         {/* 3. Rejected */}
-        <article
+        <button
+          type="button"
           className={`staff-metric-card is-red ${
             statusFilter === "REJECTED" ? "is-selected-filter" : ""
           }`}
@@ -338,15 +362,8 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             setStatusFilter("REJECTED");
             setPage(0);
           }}
+          aria-pressed={statusFilter === "REJECTED"}
           title="Click to view rejected submissions"
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              setStatusFilter("REJECTED");
-              setPage(0);
-            }
-          }}
         >
           <div className="staff-metric-header">
             <span className="staff-metric-icon is-red">
@@ -359,10 +376,11 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             <strong className="staff-metric-title">Rejected Submissions</strong>
             <span className="staff-metric-caption">Feedback sent back to creators</span>
           </div>
-        </article>
+        </button>
 
         {/* 4. Total Archive */}
-        <article
+        <button
+          type="button"
           className={`staff-metric-card is-cyan ${
             statusFilter === "ALL" ? "is-selected-filter" : ""
           }`}
@@ -370,15 +388,8 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             setStatusFilter("ALL");
             setPage(0);
           }}
+          aria-pressed={statusFilter === "ALL"}
           title="Click to view all submission archives"
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              setStatusFilter("ALL");
-              setPage(0);
-            }
-          }}
         >
           <div className="staff-metric-header">
             <span className="staff-metric-icon is-cyan">
@@ -391,7 +402,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             <strong className="staff-metric-title">Total Processed</strong>
             <span className="staff-metric-caption">Cumulative queue throughput</span>
           </div>
-        </article>
+        </button>
       </section>
 
       {/* Main Review Workspace Panel */}
@@ -438,7 +449,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
 
         {/* Toolbar: Segmented Filter Tabs & Instant Search */}
         <div className="staff-filter-toolbar">
-          <div className="staff-segmented-tabs" role="tablist">
+          <div className="staff-segmented-tabs" role="tablist" aria-label="Submission status tabs">
             <button
               type="button"
               role="tab"
@@ -526,7 +537,11 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
 
         {/* Content: Loading Skeleton / Error / Empty State / Queue Cards */}
         {loading ? (
-          <div className="staff-skeletons-container">
+          <div
+            className="staff-skeletons-container"
+            aria-busy="true"
+            aria-label="Loading submissions from server"
+          >
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="staff-skeleton-card">
                 <div className="staff-skeleton-thumb" />
@@ -540,7 +555,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             ))}
           </div>
         ) : error ? (
-          <div className="staff-state-banner is-error">
+          <div className="staff-state-banner is-error" role="alert">
             <AlertIcon width={32} height={32} />
             <b>Failed to load moderation queue</b>
             <p>{error}</p>
@@ -553,7 +568,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             </button>
           </div>
         ) : !queuePage || queuePage.content.length === 0 ? (
-          <div className="staff-empty-box">
+          <div className="staff-empty-box" role="status" aria-live="polite">
             <div className="staff-empty-circle">
               <CheckIcon width={36} height={36} />
             </div>
@@ -619,21 +634,17 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                   </button>
                 </div>
 
-                {/* Core Track & Creator Metadata */}
-                <div
-                  className="staff-track-meta-section"
-                  onClick={() => setSelectedSubmissionId(item.id)}
-                  title="Click to view full inspection modal"
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      setSelectedSubmissionId(item.id);
-                    }
-                  }}
-                >
+                {/* Core Track & Creator Metadata with accessible button title */}
+                <div className="staff-track-meta-section">
                   <div className="staff-track-name-row">
-                    <strong className="staff-track-name">{item.trackTitle}</strong>
+                    <button
+                      type="button"
+                      className="staff-track-title-btn"
+                      onClick={() => setSelectedSubmissionId(item.id)}
+                      title={`Inspect ${item.trackTitle}`}
+                    >
+                      {item.trackTitle}
+                    </button>
 
                     {item.albumTitle ? (
                       <span className="staff-meta-pill is-album" title={`Album: ${item.albumTitle}`}>
@@ -743,7 +754,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
 
         {/* Pagination Controls */}
         {queuePage && queuePage.totalPages > 1 ? (
-          <div className="staff-pagination-bar">
+          <div className="staff-pagination-bar" aria-label="Queue pagination">
             <button
               type="button"
               disabled={queuePage.first}
