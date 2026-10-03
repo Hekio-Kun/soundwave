@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
   moderationApi,
@@ -261,7 +262,7 @@ export function PendingTrackDetailModal({
 
   const maxSeekTime = duration || (detail?.track.durationMs ? detail.track.durationMs / 1000 : 100);
 
-  return (
+  return createPortal(
     <div className="modal-overlay" role="presentation" onClick={onClose}>
       <div
         className="modal-card staff-inspector-dialog"
@@ -289,7 +290,7 @@ export function PendingTrackDetailModal({
                 Track Inspection Studio
               </h2>
               <p className="staff-inspector-subheading">
-                Submission #{submissionId} · FIFO Quality Audit
+                Submission #{submissionId}
               </p>
             </div>
           </div>
@@ -742,6 +743,7 @@ export function PendingTrackDetailModal({
           </div>
         ) : null}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -2624,15 +2624,27 @@ body.modal-open .ops-shell-main {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(16, 24, 40, 0.5);
-  backdrop-filter: blur(4px);
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  z-index: 1000;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  z-index: 99999;
   animation: fadeIn 0.16s ease-out;
+  overflow-y: auto;
   overscroll-behavior: contain !important;
+}
+
+.modal-overlay > *,
+.modal-backdrop > * {
+  margin: auto;
+  max-height: calc(100dvh - 48px);
 }
 
 @keyframes fadeIn {

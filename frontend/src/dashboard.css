@@ -52,6 +52,36 @@ body.modal-open .app-scroll-region {
   touch-action: none;
 }
 
+.modal-overlay,
+.modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px 16px !important;
+  box-sizing: border-box !important;
+  z-index: 99999 !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important;
+}
+
+.modal-overlay > *,
+.modal-backdrop > * {
+  margin: auto !important;
+  max-height: calc(100dvh - 48px);
+}
+
 /* --------------------------------------------------------------------------
    1. Dashboard Shell & Layout
    -------------------------------------------------------------------------- */
@@ -700,11 +730,11 @@ body.modal-open .app-scroll-region {
 
 .staff-metric-card {
   position: relative;
-  padding: 20px 22px;
-  border-radius: 18px;
+  padding: 16px 18px;
+  border-radius: 16px;
   background: #ffffff;
   border: 1px solid var(--ops-border);
-  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   outline: none;
@@ -712,12 +742,12 @@ body.modal-open .app-scroll-region {
 
 .staff-metric-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
 }
 
 .staff-metric-card.is-selected-filter {
   border-width: 2px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06);
 }
 
 .staff-metric-card.is-amber.is-selected-filter {
@@ -744,13 +774,13 @@ body.modal-open .app-scroll-region {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .staff-metric-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
 }
@@ -760,46 +790,24 @@ body.modal-open .app-scroll-region {
 .staff-metric-icon.is-red { background: var(--ops-red-light); color: var(--ops-red-dark); }
 .staff-metric-icon.is-cyan { background: var(--ops-brand-light); color: var(--ops-brand-hover); }
 
-.staff-metric-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.staff-metric-tag.is-amber { background: var(--ops-amber-light); color: var(--ops-amber-dark); }
-.staff-metric-tag.is-green { background: var(--ops-green-light); color: var(--ops-green-dark); }
-.staff-metric-tag.is-red { background: var(--ops-red-light); color: var(--ops-red-dark); }
-.staff-metric-tag.is-cyan { background: var(--ops-brand-light); color: var(--ops-brand-hover); }
-
 .staff-metric-body {
   display: flex;
   flex-direction: column;
 }
 
 .staff-metric-value {
-  font-size: 34px;
+  font-size: 28px;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -0.03em;
   color: var(--ops-text-main);
-  margin-bottom: 6px;
+  margin-bottom: 2px;
 }
 
 .staff-metric-title {
-  font-size: 14.5px;
-  font-weight: 700;
-  color: var(--ops-text-main);
-  margin-bottom: 4px;
-}
-
-.staff-metric-caption {
-  font-size: 12px;
-  color: var(--ops-text-muted);
-  line-height: 1.4;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ops-text-secondary);
 }
 
 /* --------------------------------------------------------------------------
@@ -1460,13 +1468,17 @@ body.modal-open .app-scroll-region {
    7. Confirmation Dialogs (Approve / Reject Quick Modals)
    -------------------------------------------------------------------------- */
 .staff-action-dialog {
-  max-width: 580px;
+  max-width: 520px;
   width: 92%;
-  max-height: 90vh;
+  margin: auto !important;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 24px 28px;
   border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
 }
 
 .staff-dialog-header-info {
@@ -1655,13 +1667,16 @@ body.modal-open .app-scroll-region {
 .staff-inspector-dialog {
   max-width: 820px;
   width: 94%;
-  max-height: 90vh;
+  margin: auto !important;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
   display: flex;
   flex-direction: column;
   padding: 0;
   border-radius: 24px;
   overflow: hidden;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  background: #ffffff;
 }
 
 .staff-inspector-header {

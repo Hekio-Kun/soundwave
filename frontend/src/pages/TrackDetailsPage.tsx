@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { TrackCard, SectionHeader } from "../components/MusicCards";
 import { tracks } from "../data";
@@ -158,7 +159,7 @@ export function TrackDetailsPage({
         </div>
       </section>
 
-      {playlistModalOpen ? (
+      {playlistModalOpen ? createPortal(
         <div className="modal-backdrop" role="presentation" onClick={() => setPlaylistModalOpen(false)}>
           <section className="track-dialog" role="dialog" aria-modal="true" aria-labelledby="playlist-dialog-title" onClick={(event) => event.stopPropagation()}>
             <div className="track-dialog-heading"><span><PlusIcon /></span><div><small>THƯ VIỆN CỦA BẠN</small><h2 id="playlist-dialog-title">Thêm vào playlist</h2></div></div>
@@ -168,10 +169,11 @@ export function TrackDetailsPage({
             </div>
             <button className="button button-secondary" onClick={() => setPlaylistModalOpen(false)}>Đóng</button>
           </section>
-        </div>
+        </div>,
+        document.body
       ) : null}
 
-      {reportModalOpen ? (
+      {reportModalOpen ? createPortal(
         <div className="modal-backdrop" role="presentation" onClick={() => setReportModalOpen(false)}>
           <section className="track-dialog" role="dialog" aria-modal="true" aria-labelledby="report-dialog-title" onClick={(event) => event.stopPropagation()}>
             {reportSubmitted ? <div className="track-dialog-success"><span><CheckIcon width={27} height={27} /></span><h2>Đã gửi báo cáo</h2><p>Đội ngũ kiểm duyệt sẽ xem xét nội dung này.</p></div> : <>
@@ -182,7 +184,8 @@ export function TrackDetailsPage({
               <div className="track-dialog-actions"><button className="button button-secondary" onClick={() => setReportModalOpen(false)}>Hủy</button><button className="button button-primary" disabled={reportDesc.trim().length < 10} onClick={handleReportSubmit}>Gửi báo cáo</button></div>
             </>}
           </section>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </div>
   );

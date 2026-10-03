@@ -81,26 +81,20 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
       <div className="ops-shell-workspace">
         <div className="ops-workspace-top">
           <span className="ops-workspace-eyebrow">
-            {isAdmin ? "ADMIN CONTROL" : "MODERATION SHIFT"}
+            {isAdmin ? "ADMIN" : "MODERATION"}
           </span>
           <span className="ops-workspace-live-dot" title="Active session">
             <i /> Live
           </span>
         </div>
         <strong className="ops-workspace-title">
-          {isAdmin ? "Platform Administration" : "Track Quality Control"}
+          {isAdmin ? "Platform Admin" : "Track Moderation"}
         </strong>
-        <div className="ops-workspace-role-pill">
-          <ShieldIcon width={13} height={13} />
-          <span>{roleLabel}</span>
-        </div>
       </div>
 
       {/* Navigation Menu */}
       <nav className="ops-shell-nav" aria-label="Operations Navigation">
-        <span className="ops-nav-heading">
-          {isStaff ? "WORKFLOW QUEUE" : "OPERATIONS"}
-        </span>
+        <span className="ops-nav-heading">MENU</span>
 
         {isStaff ? (
           <>
@@ -108,11 +102,10 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
               type="button"
               className={activeRoute.startsWith("/staff") ? "is-active" : ""}
               onClick={() => handleNavClick("/staff/dashboard")}
-              title="Moderate pending track submissions"
+              title="Pending track submissions"
             >
               <DashboardIcon width={17} height={17} />
-              <span>Moderate Pending Tracks</span>
-              <span className="ops-nav-badge-fifo">FIFO</span>
+              <span>Pending Tracks</span>
             </button>
           </>
         ) : (
@@ -229,10 +222,8 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
             <div className="ops-shell-breadcrumb">
               <span className="ops-breadcrumb-root">SoundWave</span>
               <span className="ops-breadcrumb-sep">/</span>
-              <span className="ops-breadcrumb-section">Operations</span>
-              <span className="ops-breadcrumb-sep">/</span>
               <strong className="ops-breadcrumb-current">
-                {isAdmin ? "System Dashboard" : "Staff Moderation Workspace"}
+                {isAdmin ? "Admin" : "Moderation"}
               </strong>
             </div>
           </div>
@@ -241,8 +232,7 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
             {/* Active Shift Indicator */}
             <div className="ops-topbar-shift-badge">
               <span className="ops-shift-pulse-ring" />
-              <ClockIcon width={13} height={13} />
-              <span>Shift Active · FIFO Queue</span>
+              <span>Live Queue</span>
             </div>
 
             <button

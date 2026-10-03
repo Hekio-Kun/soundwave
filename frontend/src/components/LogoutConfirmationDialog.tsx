@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { AlertIcon } from "../icons";
 
@@ -23,7 +24,7 @@ export function LogoutConfirmationDialog({ open, submitting, onCancel, onConfirm
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="modal-backdrop"
       role="presentation"
@@ -53,6 +54,7 @@ export function LogoutConfirmationDialog({ open, submitting, onCancel, onConfirm
           </button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

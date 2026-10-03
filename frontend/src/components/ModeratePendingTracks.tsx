@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
   moderationApi,
@@ -289,7 +290,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
 
       {/* Top Interactive KPI Metric Cards (Semantic Buttons) */}
       <section className="staff-kpi-grid" aria-label="Moderation throughput statistics">
-        {/* 1. Pending (FIFO) */}
+        {/* 1. Pending */}
         <button
           type="button"
           className={`staff-metric-card is-amber ${
@@ -300,21 +301,16 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             setPage(0);
           }}
           aria-pressed={statusFilter === "PENDING"}
-          title="Click to view pending submissions awaiting moderation"
+          title="Filter: Pending review"
         >
           <div className="staff-metric-header">
             <span className="staff-metric-icon is-amber">
               <ClockIcon width={18} height={18} />
             </span>
-            <span className="staff-metric-tag is-amber">
-              <TrendingUpIcon width={12} height={12} />
-              FIFO Queue
-            </span>
           </div>
           <div className="staff-metric-body">
             <span className="staff-metric-value">{stats ? stats.pendingCount : "--"}</span>
-            <strong className="staff-metric-title">Pending Review</strong>
-            <span className="staff-metric-caption">Awaiting moderator audit in arrival order</span>
+            <strong className="staff-metric-title">Pending</strong>
           </div>
         </button>
 
@@ -329,18 +325,16 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             setPage(0);
           }}
           aria-pressed={statusFilter === "APPROVED"}
-          title="Click to view approved music tracks"
+          title="Filter: Approved catalog"
         >
           <div className="staff-metric-header">
             <span className="staff-metric-icon is-green">
               <CheckIcon width={18} height={18} />
             </span>
-            <span className="staff-metric-tag is-green">Published</span>
           </div>
           <div className="staff-metric-body">
             <span className="staff-metric-value">{stats ? stats.approvedCount : "--"}</span>
-            <strong className="staff-metric-title">Approved Tracks</strong>
-            <span className="staff-metric-caption">Live and streaming in catalog</span>
+            <strong className="staff-metric-title">Approved</strong>
           </div>
         </button>
 
@@ -355,18 +349,16 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             setPage(0);
           }}
           aria-pressed={statusFilter === "REJECTED"}
-          title="Click to view rejected submissions"
+          title="Filter: Rejected"
         >
           <div className="staff-metric-header">
             <span className="staff-metric-icon is-red">
               <AlertIcon width={18} height={18} />
             </span>
-            <span className="staff-metric-tag is-red">Actioned</span>
           </div>
           <div className="staff-metric-body">
             <span className="staff-metric-value">{stats ? stats.rejectedCount : "--"}</span>
-            <strong className="staff-metric-title">Rejected Submissions</strong>
-            <span className="staff-metric-caption">Feedback sent back to creators</span>
+            <strong className="staff-metric-title">Rejected</strong>
           </div>
         </button>
 
@@ -381,18 +373,16 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
             setPage(0);
           }}
           aria-pressed={statusFilter === "ALL"}
-          title="Click to view all submission archives"
+          title="Filter: All records"
         >
           <div className="staff-metric-header">
             <span className="staff-metric-icon is-cyan">
               <DiscIcon width={18} height={18} />
             </span>
-            <span className="staff-metric-tag is-cyan">All Records</span>
           </div>
           <div className="staff-metric-body">
             <span className="staff-metric-value">{stats ? stats.totalCount : "--"}</span>
-            <strong className="staff-metric-title">Total Processed</strong>
-            <span className="staff-metric-caption">Cumulative queue throughput</span>
+            <strong className="staff-metric-title">Total Tracks</strong>
           </div>
         </button>
       </section>
@@ -402,30 +392,13 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
         {/* Panel Header & Live Controls */}
         <div className="staff-queue-panel-header">
           <div className="staff-queue-title-group">
-            <div className="staff-queue-title-row">
-              <h2 className="staff-queue-heading">Moderation Queue</h2>
-              <span className="staff-active-status-badge">
-                <i />
-                {statusFilter === "PENDING"
-                  ? "Pending Review (FIFO)"
-                  : statusFilter === "APPROVED"
-                  ? "Approved Catalog"
-                  : statusFilter === "REJECTED"
-                  ? "Rejected Archive"
-                  : "All Submissions"}
-              </span>
-            </div>
-            <p className="staff-queue-subtitle">
-              {statusFilter === "PENDING"
-                ? "Submissions awaiting moderator review, sorted strictly by submission time."
-                : `Viewing ${statusFilter.toLowerCase()} moderation records.`}
-            </p>
+            <h2 className="staff-queue-heading">Moderation Queue</h2>
+            <span className="staff-counter-badge">
+              {queuePage ? `${queuePage.totalElements} tracks` : "..."}
+            </span>
           </div>
 
           <div className="staff-queue-header-actions">
-            <span className="staff-counter-badge">
-              {queuePage ? `${queuePage.totalElements} submissions` : "Loading..."}
-            </span>
             <button
               type="button"
               className="staff-btn-refresh"
@@ -643,13 +616,11 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                         <DiscIcon width={12} height={12} />
                         <span>{item.albumTitle}</span>
                       </span>
-                    ) : (
-                      <span className="staff-meta-pill is-single">Single Release</span>
-                    )}
+                    ) : null}
 
-                    <span className="staff-meta-pill is-genre">
-                      {item.genreName || "Music"}
-                    </span>
+                    {item.genreName ? (
+                      <span className="staff-meta-pill is-genre">{item.genreName}</span>
+                    ) : null}
 
                     {item.durationMs ? (
                       <span className="staff-meta-pill is-duration">
@@ -664,13 +635,9 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                       <b>{item.submitterDisplayName || "Unknown Creator"}</b>
                     </span>
 
-                    {item.submitterEmail ? (
-                      <span className="staff-creator-email">({item.submitterEmail})</span>
-                    ) : null}
-
                     <span className="staff-queue-time-chip">
                       <ClockIcon width={12} height={12} />
-                      Wait: {formatRelativeTime(item.submittedAt)} · {formatDate(item.submittedAt)}
+                      <span>{formatRelativeTime(item.submittedAt)}</span>
                     </span>
                   </div>
                 </div>
@@ -692,7 +659,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                         ? "Approved"
                         : item.status === "REJECTED"
                         ? "Rejected"
-                        : "Pending Audit"}
+                        : "Pending"}
                     </span>
                   </span>
                 </div>
@@ -773,8 +740,12 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
       </section>
 
       {/* Approve Confirmation Modal */}
-      {approvingTarget ? (
-        <div className="modal-overlay" role="presentation" onClick={() => setApprovingTarget(null)}>
+      {approvingTarget ? createPortal(
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onClick={() => !isSubmittingApprove && setApprovingTarget(null)}
+        >
           <div
             className="modal-card staff-action-dialog"
             role="dialog"
@@ -789,9 +760,8 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                 </span>
                 <div>
                   <h2 id="approve-dialog-title" className="staff-dialog-title">
-                    Approve Track Publication
+                    Approve Track
                   </h2>
-                  <p className="staff-dialog-subtitle">Publishing to SoundWave Music Catalog</p>
                 </div>
               </div>
               <button
@@ -807,9 +777,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
 
             <div className="staff-dialog-body">
               <p className="staff-dialog-prompt">
-                You are about to approve <b>“{approvingTarget.trackTitle}”</b> uploaded by{" "}
-                <b>{approvingTarget.submitterDisplayName || "the creator"}</b>. This track will be marked as{" "}
-                <span className="staff-text-success font-semibold">PUBLISHED</span> and will immediately become playable and streamable across SoundWave.
+                Approve <b>“{approvingTarget.trackTitle}”</b> by <b>{approvingTarget.submitterDisplayName || "the creator"}</b> for public streaming?
               </p>
 
               <form
@@ -820,11 +788,11 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                 }}
               >
                 <label className="staff-input-group" htmlFor="approve-reviewer-note">
-                  <span className="staff-input-label">Internal Reviewer Note (Optional)</span>
+                  <span className="staff-input-label">Internal Note (Optional)</span>
                   <textarea
                     id="approve-reviewer-note"
-                    rows={3}
-                    placeholder="e.g. Master file validated, clear mix, complete metadata verified..."
+                    rows={2}
+                    placeholder="Staff notes for operations record..."
                     value={approveNote}
                     onChange={(e) => setApproveNote(e.target.value)}
                     disabled={isSubmittingApprove}
@@ -846,18 +814,23 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                     className="button staff-btn-confirm-approve"
                     disabled={isSubmittingApprove}
                   >
-                    {isSubmittingApprove ? "Publishing..." : "Confirm & Publish Track"}
+                    {isSubmittingApprove ? "Publishing..." : "Confirm & Publish"}
                   </button>
                 </div>
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
 
       {/* Reject Confirmation Modal */}
-      {rejectingTarget ? (
-        <div className="modal-overlay" role="presentation" onClick={() => setRejectingTarget(null)}>
+      {rejectingTarget ? createPortal(
+        <div
+          className="modal-overlay"
+          role="presentation"
+          onClick={() => !isSubmittingReject && setRejectingTarget(null)}
+        >
           <div
             className="modal-card staff-action-dialog"
             role="dialog"
@@ -872,9 +845,8 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                 </span>
                 <div>
                   <h2 id="reject-dialog-title" className="staff-dialog-title">
-                    Reject Track Submission
+                    Reject Submission
                   </h2>
-                  <p className="staff-dialog-subtitle">Actionable feedback will be emailed to creator</p>
                 </div>
               </div>
               <button
@@ -890,12 +862,12 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
 
             <div className="staff-dialog-body">
               <p className="staff-dialog-prompt">
-                You are rejecting <b>“{rejectingTarget.trackTitle}”</b>. Please provide specific, professional feedback so the creator knows what to fix before resubmitting.
+                Provide rejection reason for <b>“{rejectingTarget.trackTitle}”</b>:
               </p>
 
               {/* Quick Preset Buttons */}
               <div className="staff-preset-chips-section">
-                <span className="staff-preset-title">Quick presets:</span>
+                <span className="staff-preset-title">Presets:</span>
                 <div className="staff-preset-chips">
                   {REJECTION_PRESETS.map((preset, idx) => (
                     <button
@@ -920,13 +892,13 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
               >
                 <label className="staff-input-group" htmlFor="reject-reason-input">
                   <span className="staff-input-label">
-                    Rejection Reason <span className="staff-text-danger">*</span> (Minimum 10 characters)
+                    Reason <span className="staff-text-danger">*</span> (Min 10 characters)
                   </span>
                   <textarea
                     id="reject-reason-input"
-                    rows={3}
+                    rows={2}
                     autoFocus
-                    placeholder="Describe the defect (e.g. Clipping distortion, incomplete tags, sample copyright issue)..."
+                    placeholder="Specific defect or copyright violation..."
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
                     disabled={isSubmittingReject}
@@ -945,13 +917,13 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                           : "staff-text-muted"
                       }
                     >
-                      {rejectionReason.trim().length} / 10 characters minimum
+                      {rejectionReason.trim().length} / 10 characters min
                     </span>
                   </div>
                 </label>
 
                 <label className="staff-input-group" htmlFor="reject-internal-note">
-                  <span className="staff-input-label">Internal Moderator Note (Optional)</span>
+                  <span className="staff-input-label">Internal Note (Optional)</span>
                   <textarea
                     id="reject-internal-note"
                     rows={2}
@@ -983,7 +955,8 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
               </form>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       ) : null}
 
       {/* Full Track Inspector Modal */}

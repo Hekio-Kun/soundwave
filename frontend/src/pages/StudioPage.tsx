@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
   studioApi,
@@ -674,7 +675,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
       </div>
 
       {/* Edit Track Modal (UC-19.3) */}
-      {trackModalOpen && (
+      {trackModalOpen && createPortal(
         <div
           className="modal-backdrop"
           role="presentation"
@@ -1012,11 +1013,12 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete Confirmation Modal (UC-19.4) */}
-      {deleteConfirmTrack && (
+      {deleteConfirmTrack && createPortal(
         <div
           className="modal-backdrop"
           role="presentation"
@@ -1060,11 +1062,12 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Submit for Review Modal (UC-19.5) */}
-      {submittingNoteTrack && (
+      {submittingNoteTrack && createPortal(
         <div
           className="modal-backdrop"
           role="presentation"
@@ -1118,11 +1121,12 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Rejection Details Modal (UC-20) */}
-      {rejectionModalTrack && (
+      {rejectionModalTrack && createPortal(
         <div
           className="modal-backdrop"
           role="presentation"
@@ -1186,7 +1190,8 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

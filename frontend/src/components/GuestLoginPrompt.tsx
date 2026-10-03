@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { HeadphonesIcon } from "../icons";
 
@@ -22,7 +23,7 @@ export function GuestLoginPrompt({ open, onContinue, onLogin }: Props) {
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" role="presentation" onClick={onContinue}>
       <section
         className="guest-dialog"
@@ -41,6 +42,7 @@ export function GuestLoginPrompt({ open, onContinue, onLogin }: Props) {
           <button className="button button-secondary" onClick={onContinue} autoFocus>Continue listening</button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { covers } from "../data";
 import { CloseIcon } from "../icons";
@@ -101,7 +102,7 @@ export function PlaylistFormModal({ open, onClose, playlist, onSave }: Props) {
     handleClose();
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={handleClose} style={{ zIndex: 1100 }}>
       <div
         className="modal-card"
@@ -361,6 +362,7 @@ export function PlaylistFormModal({ open, onClose, playlist, onSave }: Props) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

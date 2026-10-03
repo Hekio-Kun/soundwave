@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { tracks } from "../data";
 import { CloseIcon, PlusIcon, SearchIcon, CheckIcon } from "../icons";
@@ -52,7 +53,7 @@ export function AddTrackToPlaylistModal({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
       <div
         className="modal-card"
@@ -232,6 +233,7 @@ export function AddTrackToPlaylistModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

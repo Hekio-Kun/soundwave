@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { AlertIcon, CloseIcon } from "../icons";
 
@@ -34,7 +35,7 @@ export function DeleteConfirmationModal({
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onCancel} style={{ zIndex: 1200 }}>
       <div
         className="modal-card"
@@ -102,6 +103,7 @@ export function DeleteConfirmationModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
