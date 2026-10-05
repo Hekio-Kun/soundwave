@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { albums, featuredCreators, genres as initialGenres, tracks } from "../data";
 import { catalogApi } from "../api/catalog";
 import { AlbumCard, CreatorCard, SectionHeader, TrackCard } from "../components/MusicCards";
-import { SortDropdown } from "../components/SortDropdown";
-import { ArrowIcon, FilterIcon, HeadphonesIcon, PauseIcon, PlayIcon } from "../icons";
+import { ArrowIcon, PauseIcon, PlayIcon } from "../icons";
 import type { Genre, LandingTrack } from "../types";
 
 type Props = {
@@ -11,8 +10,6 @@ type Props = {
   playing: boolean;
   onPlayTrack: (track: LandingTrack) => void;
   onNavigate: (route: string) => void;
-  initialGenre?: string;
-  initialSort?: "trending" | "newest" | "title";
 };
 
 const formatDuration = (ms: number) => {
@@ -21,9 +18,7 @@ const formatDuration = (ms: number) => {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 };
 
-export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, initialGenre, initialSort }: Props) {
-  const [selectedGenre, setSelectedGenre] = useState(initialGenre ?? "all");
-  const [sortBy, setSortBy] = useState<"trending" | "newest" | "title">(initialSort ?? "trending");
+export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate }: Props) {
   const [genresList, setGenresList] = useState<Genre[]>(initialGenres);
   const approvedTracks = tracks.filter((track) => track.publicationStatus === "APPROVED");
   const heroTrack = approvedTracks[0];
@@ -36,35 +31,6 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
       })
       .catch(() => {});
   }, []);
-
-  useEffect(() => setSelectedGenre(initialGenre ?? "all"), [initialGenre]);
-  useEffect(() => setSortBy(initialSort ?? "trending"), [initialSort]);
-
-  const updateFilters = (newGenre: string, newSort: "trending" | "newest" | "title") => {
-    setSelectedGenre(newGenre);
-    setSortBy(newSort);
-    const params = new URLSearchParams();
-    if (newGenre !== "all") params.set("genre", newGenre);
-    if (newSort !== "trending") params.set("sort", newSort);
-    const qs = params.toString();
-    onNavigate(qs ? `/explore?${qs}` : "/explore");
-  };
-
-  const handleClearFilters = () => {
-    updateFilters("all", "trending");
-  };
-
-  const filteredTracks = useMemo(() => {
-    const byGenre = selectedGenre === "all" ? approvedTracks : approvedTracks.filter((track) => track.genreSlug === selectedGenre);
-    return [...byGenre].sort((a, b) => {
-      if (sortBy === "trending") return b.playCount - a.playCount;
-      if (sortBy === "newest") return b.id - a.id;
-      if (sortBy === "title") return a.title.localeCompare(b.title);
-      return 0;
-    });
-  }, [selectedGenre, sortBy]);
-
-  const scrollToCatalog = () => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
 
   return (
     <div className="discover-page">
@@ -95,9 +61,11 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
       </section>
 
       <section className="sw-section" id="trending">
-        <SectionHeader title="Trending tracks" description="The most-played tracks in the SoundWave community this week" actionLabel="View all" onAction={scrollToCatalog} />
+        <SectionHeader title="Trending tracks" description="The most-played tracks in the SoundWave community this week" actionLabel="View all" onAction={() => onNavigate("/browse?sort=trending")} />
         <div className="sw-track-grid">
-          {approvedTracks.slice(0, 5).map((track, index) => <TrackCard key={track.id} track={track} rank={index + 1} active={currentTrack?.id === track.id} playing={currentTrack?.id === track.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />)}
+          {approvedTracks.slice(0, 5).map((track, index) => (
+            <TrackCard key={track.id} track={track} rank={index + 1} active={currentTrack?.id === track.id} playing={currentTrack?.id === track.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />
+          ))}
         </div>
       </section>
 
@@ -120,7 +88,7 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
           <SectionHeader title="Genres" description="Choose music that matches your mood" actionLabel="View all" onAction={() => onNavigate("/genres")} />
           <div className="sw-genre-grid">
             {genresList.slice(0, 6).map((genre) => (
-              <button key={genre.id} style={{ "--genre-color": genre.color, "--genre-accent": genre.accent } as CSSProperties} onClick={() => { setSelectedGenre(genre.slug); scrollToCatalog(); }}>
+              <button key={genre.id} style={{ "--genre-color": genre.color, "--genre-accent": genre.accent } as CSSProperties} onClick={() => onNavigate(`/browse?genre=${genre.slug}`)}>
                 <span>{genre.name}</span><small>{genre.description}</small><ArrowIcon width={16} height={16} />
               </button>
             ))}
@@ -136,82 +104,6 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
       <section className="sw-section">
         <SectionHeader title="Featured creators" description="Follow the creators shaping today's favorite sounds" />
         <div className="sw-creator-grid">{featuredCreators.map((creator) => <CreatorCard key={creator.userId} creator={creator} onNavigate={onNavigate} />)}</div>
-      </section>
-
-      <section className="sw-section sw-catalog" id="catalog">
-        <SectionHeader
-          title="SoundWave catalog"
-          description={
-            selectedGenre !== "all"
-              ? `Result count: ${filteredTracks.length} tracks • Filtered by: ${genresList.find(g => g.slug === selectedGenre)?.name ?? selectedGenre}`
-              : `Result count: ${filteredTracks.length} tracks (All genres)`
-          }
-        />
-        <div className="sw-catalog-toolbar">
-          <div className="sw-filter-scroll">
-            <button
-              className={selectedGenre === "all" ? "is-active" : ""}
-              onClick={() => updateFilters("all", sortBy)}
-            >
-              All
-            </button>
-            {genresList.map((genre) => (
-              <button
-                key={genre.id}
-                className={selectedGenre === genre.slug ? "is-active" : ""}
-                onClick={() => updateFilters(genre.slug, sortBy)}
-              >
-                {genre.name}
-              </button>
-            ))}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <SortDropdown
-              value={sortBy}
-              onChange={(newSort) => updateFilters(selectedGenre, newSort)}
-              showLabel={false}
-            />
-            {(selectedGenre !== "all" || sortBy !== "trending") && (
-              <button
-                className="button button-ghost"
-                onClick={handleClearFilters}
-                style={{
-                  height: "34px",
-                  padding: "0 12px",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  whiteSpace: "nowrap",
-                  borderRadius: "8px",
-                  border: "1px solid var(--sw-border)",
-                  cursor: "pointer",
-                }}
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
-        </div>
-        {filteredTracks.length ? (
-          <div className="sw-track-grid sw-track-grid--catalog">
-            {filteredTracks.map((track) => (
-              <TrackCard
-                key={track.id}
-                track={track}
-                active={currentTrack?.id === track.id}
-                playing={currentTrack?.id === track.id && playing}
-                onPlay={onPlayTrack}
-                onNavigate={onNavigate}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="sw-empty">
-            <HeadphonesIcon />
-            <strong>No tracks in this genre yet</strong>
-            <span>Try selecting another genre or clearing filters.</span>
-            <button onClick={handleClearFilters}>Clear filters</button>
-          </div>
-        )}
       </section>
     </div>
   );

@@ -79,7 +79,8 @@ export function FilteredCatalogPage({
     if (newGenre && newGenre !== "all") params.set("genre", newGenre);
     if (newSort && newSort !== "newest") params.set("sort", newSort);
     const qs = params.toString();
-    onNavigate(qs ? `/browse?${qs}` : "/browse");
+    const nextHash = qs ? `#/browse?${qs}` : "#/browse";
+    window.history.replaceState(null, "", nextHash);
   };
 
   const handleClearFilters = () => {
@@ -87,19 +88,20 @@ export function FilteredCatalogPage({
   };
 
   const filteredTracks = useMemo(() => {
-    if (serverTracks !== null) {
-      return serverTracks;
-    }
+    const list: LandingTrack[] =
+      serverTracks !== null
+        ? serverTracks
+        : (selectedGenre === "all"
+            ? approvedTracks
+            : approvedTracks.filter(
+                (track) => track.genreSlug?.toLowerCase() === selectedGenre.toLowerCase()
+              ));
 
-    let result =
-      selectedGenre === "all"
-        ? approvedTracks
-        : approvedTracks.filter(
-            (track) => track.genreSlug?.toLowerCase() === selectedGenre.toLowerCase()
-          );
-
-    return [...result].sort((a, b) => {
-      if (sortBy === "trending") return b.playCount - a.playCount;
+    return [...list].sort((a, b) => {
+      if (sortBy === "trending") {
+        if (b.playCount !== a.playCount) return b.playCount - a.playCount;
+        return b.id - a.id;
+      }
       if (sortBy === "newest") return b.id - a.id;
       if (sortBy === "title") return a.title.localeCompare(b.title);
       return 0;
@@ -112,9 +114,18 @@ export function FilteredCatalogPage({
       <div className="page-title-banner" style={{ marginBottom: "24px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-            <span className="eyebrow">PUBLIC CATALOG</span>
+            <span className="eyebrow">
+              {activeGenreObj ? `GENRE FILTER · ${activeGenreObj.name.toUpperCase()}` : "PUBLIC CATALOG"}
+            </span>
           </div>
-          <h1 className="page-heading">Browse Tracks</h1>
+          <h1 className="page-heading">
+            {activeGenreObj ? `${activeGenreObj.name} Music` : "Filter by Genre & Catalog"}
+          </h1>
+          <p className="page-subtext" style={{ color: "var(--sw-muted)", marginTop: "4px", fontSize: "14px" }}>
+            {activeGenreObj
+              ? activeGenreObj.description || `Discover trending and fresh ${activeGenreObj.name} tracks on SoundWave.`
+              : "Filter tracks by genre, sort by newest releases or trending plays, and stream songs."}
+          </p>
         </div>
       </div>
 
