@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
+import type { ProfileDetails } from "./api/profile";
 import { playlistApi } from "./api/playlists";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
@@ -12,6 +13,7 @@ import { AlbumDetailsPage } from "./pages/AlbumDetailsPage";
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from "./pages/AuthPages";
 import { CreatorProfilePage } from "./pages/CreatorProfilePage";
 import { ExplorePage } from "./pages/ExplorePage";
+import { FilteredCatalogPage } from "./pages/FilteredCatalogPage";
 import { GenresPage } from "./pages/GenresPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { PlaylistDetailsPage } from "./pages/PlaylistDetailsPage";
@@ -401,8 +403,6 @@ export default function App() {
   // 4. Routing State
   const [route, setRoute] = useState(() => window.location.hash || "#/");
 
-  useMotionReveal(route);
-
   useEffect(() => {
     const handleHashChange = () => {
       setRoute(window.location.hash || "#/");
@@ -420,6 +420,8 @@ export default function App() {
   const cleanRoute = route.startsWith("#") ? route.slice(1) : route;
   const [pathname, queryString] = cleanRoute.split("?");
   const queryParams = useMemo(() => new URLSearchParams(queryString || ""), [queryString]);
+
+  useMotionReveal(pathname);
 
   // Determine layout type
   const isAuthRoute =
@@ -492,11 +494,22 @@ export default function App() {
 
     // App Routes
     if (isExploreRoute) {
-      const initialGenre = queryParams.get("genre") || undefined;
-      const sort = queryParams.get("sort");
-      const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : undefined;
       return (
         <ExplorePage
+          currentTrack={currentTrack}
+          playing={playing}
+          onPlayTrack={playTrack}
+          onNavigate={navigate}
+        />
+      );
+    }
+
+    if (pathname === "/browse" || pathname === "/catalog" || pathname === "/filter") {
+      const initialGenre = queryParams.get("genre") || undefined;
+      const sort = queryParams.get("sort");
+      const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : sort === "title" ? "title" : undefined;
+      return (
+        <FilteredCatalogPage
           currentTrack={currentTrack}
           playing={playing}
           onPlayTrack={playTrack}
@@ -692,7 +705,7 @@ export default function App() {
   return (
     <div className={isMusicRoute ? "app-root app-root--has-player" : "app-root"}>
       {isAuthRoute ? (
-        <div key={route} className="app-route-stage app-route-stage--auth">
+        <div key={pathname} className="app-route-stage app-route-stage--auth">
           {renderContent()}
         </div>
       ) : isDashboardRoute ? (
@@ -702,7 +715,7 @@ export default function App() {
           onNavigate={navigate}
           onLogout={handleLogout}
         >
-          <div key={route} className="app-route-stage app-route-stage--dashboard">
+          <div key={pathname} className="app-route-stage app-route-stage--dashboard">
             {renderContent()}
           </div>
         </DashboardLayout>
@@ -725,7 +738,7 @@ export default function App() {
           hasPlayer
           showFooter={isExploreRoute}
         >
-          <div key={route} className="app-route-stage app-route-stage--music">
+          <div key={pathname} className="app-route-stage app-route-stage--music">
             {renderContent()}
           </div>
         </MusicAppShell>

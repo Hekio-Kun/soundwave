@@ -98,7 +98,7 @@ public class TrackCatalogService {
     private Sort resolveSort(String sortType) {
         if (sortType == null) return Sort.by(Sort.Direction.DESC, "createdAt");
         return switch (sortType.toLowerCase().trim()) {
-            case "trending", "plays" -> Sort.by(Sort.Direction.DESC, "playCount");
+            case "trending", "plays" -> Sort.by(Sort.Direction.DESC, "playCount").and(Sort.by(Sort.Direction.DESC, "id"));
             case "title", "name" -> Sort.by(Sort.Direction.ASC, "title");
             case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
             default -> Sort.by(Sort.Direction.DESC, "createdAt");
