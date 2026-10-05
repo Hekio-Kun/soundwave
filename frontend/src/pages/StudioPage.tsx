@@ -300,13 +300,18 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
   // Delete Track (UC-19.4)
   const handleDeleteTrack = async () => {
     if (!deleteConfirmTrack) return;
+    const targetId = deleteConfirmTrack.id;
     try {
       setIsSaving(true);
-      await studioApi.deleteTrack(deleteConfirmTrack.id);
+      await studioApi.deleteTrack(targetId);
       setDeleteConfirmTrack(null);
+      setTrackList((prev) => prev.filter((t) => t.id !== targetId));
+      setActionSuccess("Đã xóa bài hát thành công.");
       await loadStudioData();
     } catch (err: unknown) {
-      setActionError(err instanceof Error ? err.message : "Failed to delete track.");
+      const msg = err instanceof Error ? err.message : "Failed to delete track.";
+      setActionError(msg);
+      alert(msg);
     } finally {
       setIsSaving(false);
     }
@@ -653,16 +658,36 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                         )}
 
                         {t.status === "APPROVED" && (
-                          <button
-                            className="button button-ghost button-small"
-                            onClick={() => onNavigate(`/track/${t.id}`)}
-                          >
-                            View track
-                          </button>
+                          <>
+                            <button
+                              className="button button-ghost button-small"
+                              onClick={() => onNavigate(`/track/${t.id}`)}
+                            >
+                              View track
+                            </button>
+                            <button
+                              className="button button-ghost button-small text-danger"
+                              onClick={() => setDeleteConfirmTrack(t)}
+                              title="Delete track"
+                              aria-label="Delete published track"
+                            >
+                              <TrashIcon width={15} height={15} />
+                            </button>
+                          </>
                         )}
 
                         {t.status === "PENDING" && (
-                          <span className="text-muted small">Under review by staff...</span>
+                          <>
+                            <span className="text-muted small" style={{ marginRight: "4px" }}>Under review...</span>
+                            <button
+                              className="button button-ghost button-small text-danger"
+                              onClick={() => setDeleteConfirmTrack(t)}
+                              title="Delete track"
+                              aria-label="Delete pending track"
+                            >
+                              <TrashIcon width={15} height={15} />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -1031,7 +1056,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
-              <h3 style={{ color: "var(--sw-danger)" }}>Delete track</h3>
+              <h3 style={{ color: "var(--sw-danger, #dc2626)" }}>Delete track</h3>
               <button
                 className="icon-button"
                 onClick={() => setDeleteConfirmTrack(null)}
@@ -1040,7 +1065,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                 <CloseIcon width={18} height={18} />
               </button>
             </div>
-            <p style={{ margin: "16px 0", color: "var(--sw-text-secondary)" }}>
+            <p style={{ margin: "16px 0", color: "var(--sw-text-secondary, #475467)" }}>
               Are you sure you want to permanently delete track &quot;
               <b>{deleteConfirmTrack.title}</b>&quot;? This action cannot be undone.
             </p>
@@ -1053,8 +1078,14 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                 Cancel
               </button>
               <button
-                className="button button-primary"
-                style={{ background: "var(--sw-danger)", borderColor: "var(--sw-danger)" }}
+                className="button button-danger"
+                style={{
+                  background: "var(--sw-danger, #dc2626)",
+                  color: "#ffffff",
+                  borderColor: "var(--sw-danger, #dc2626)",
+                  fontWeight: 600,
+                  boxShadow: "0 4px 14px rgba(220, 38, 38, 0.28)"
+                }}
                 onClick={handleDeleteTrack}
                 disabled={isSaving}
               >

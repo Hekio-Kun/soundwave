@@ -24,7 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/studio")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('LISTENER')")
+@PreAuthorize("isAuthenticated()")
 public class StudioTrackController {
     private final StudioTrackService studioTrackService;
 

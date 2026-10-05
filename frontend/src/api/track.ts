@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api/v1";
+import { API_BASE_URL } from "./client";
 
 export type ApiTrack = {
   id: number;
@@ -127,6 +127,35 @@ async function studioRequest<T>(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      try {
+        const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+          method: "POST",
+          credentials: "include",
+        });
+        if (refreshRes.ok) {
+          const session = await refreshRes.json();
+          if (session?.accessToken) {
+            const storage = localStorage.getItem("soundwave_access_token") ? localStorage : sessionStorage;
+            storage.setItem("soundwave_access_token", session.accessToken);
+            headers["Authorization"] = `Bearer ${session.accessToken}`;
+            const retryRes = await fetch(`${API_BASE_URL}${path}`, {
+              method,
+              headers,
+              credentials: "include",
+              body: body === undefined ? undefined : isMultipart ? body : JSON.stringify(body),
+            });
+            if (retryRes.ok) {
+              if (retryRes.status === 204) return undefined as T;
+              return retryRes.json() as Promise<T>;
+            }
+          }
+        }
+      } catch {
+        // Fall through
+      }
+    }
+
     const errorPayload = await response.json().catch(() => ({})) as TrackApiErrorPayload;
     throw new TrackApiError(errorPayload, response.status);
   }

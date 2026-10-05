@@ -27,6 +27,7 @@ import org.example.soundwavebackend.track.exception.GenreNotFoundException;
 import org.example.soundwavebackend.track.exception.TrackNotFoundException;
 import org.example.soundwavebackend.track.exception.TrackOperationNotAllowedException;
 import org.example.soundwavebackend.track.mapper.TrackMapper;
+import jakarta.persistence.EntityManager;
 import org.example.soundwavebackend.catalog.repository.TrackRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +62,7 @@ public class StudioTrackService {
     private final TrackMapper trackMapper;
     private final OfficialLyricService officialLyricService;
     private final CloudMediaService cloudMediaService;
+    private final EntityManager entityManager;
 
     /**
      * Tạo bài hát mới ở trạng thái DRAFT cho người dùng hiện tại (UC-19.1).
@@ -231,24 +233,34 @@ public class StudioTrackService {
     }
 
     /**
-     * Xóa bài hát chưa duyệt (DRAFT hoặc REJECTED) thuộc quyền sở hữu (UC-19.4).
+     * Xóa bài hát thuộc quyền sở hữu trong Content Studio (UC-19.4).
+     * Cho phép xóa bài hát do người dùng tải lên và tự động dọn dẹp các bản ghi liên quan (playlist, favorites, v.v.).
      */
     @Transactional
     public void deleteTrack(Long trackId, String currentUserEmail) {
         AppUser user = getCurrentUser(currentUserEmail);
-        Track track = trackRepository.findByIdAndUploaderUserId(trackId, user.getId())
+        Track track = trackRepository.findById(trackId)
                 .orElseThrow(TrackNotFoundException::new);
 
-        if (!track.isDeletable()) {
-            throw new TrackOperationNotAllowedException("Only unapproved tracks (DRAFT or REJECTED) can be deleted.");
+        boolean isOwner = track.getUploaderUserId().equals(user.getId());
+        boolean isAdmin = user.getRole() != null && (
+                "ADMIN".equalsIgnoreCase(user.getRole().getCode()) ||
+                "ADMIN".equalsIgnoreCase(user.getRole().getName()) ||
+                "Administrator".equalsIgnoreCase(user.getRole().getName())
+        );
+        if (!isOwner && !isAdmin) {
+            throw new TrackOperationNotAllowedException("You can only delete tracks that you uploaded.");
         }
 
-        List<TrackSubmission> submissions = submissionRepository.findByTrackIdOrderBySubmittedAtDesc(track.getId());
-        if (!submissions.isEmpty()) {
-            submissionRepository.deleteAll(submissions);
-        }
+        // Dọn dẹp liên kết ở tất cả các bảng phụ thuộc trước khi xóa để tránh lỗi khóa ngoại
+        entityManager.createNativeQuery("DELETE FROM playlist_tracks WHERE track_id = :id").setParameter("id", trackId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM favorites WHERE track_id = :id").setParameter("id", trackId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM listening_history WHERE track_id = :id").setParameter("id", trackId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM content_reports WHERE track_id = :id").setParameter("id", trackId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM personal_lyrics WHERE track_id = :id").setParameter("id", trackId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM official_lyrics WHERE track_id = :id").setParameter("id", trackId).executeUpdate();
+        entityManager.createNativeQuery("DELETE FROM track_submissions WHERE track_id = :id").setParameter("id", trackId).executeUpdate();
 
-        officialLyricService.deleteByTrackId(track.getId());
         trackRepository.delete(track);
         registerDeletedMediaCleanup(track.getAudioPublicId(), track.getCoverPublicId());
         log.info("Deleted track ID: {} by user: {}", trackId, user.getEmail());

@@ -45,6 +45,7 @@ class StudioTrackServiceTest {
     @Mock private AppUserRepository userRepository;
     @Mock private org.example.soundwavebackend.lyrics.service.OfficialLyricService officialLyricService;
     @Mock private CloudMediaService cloudMediaService;
+    @Mock private jakarta.persistence.EntityManager entityManager;
 
     private StudioTrackService service;
     private AppUser testUser;
@@ -54,7 +55,7 @@ class StudioTrackServiceTest {
     void setUp() {
         TrackMapper mapper = new TrackMapper();
         service = new StudioTrackService(trackRepository, submissionRepository, genreRepository,
-                albumRepository, userRepository, mapper, officialLyricService, cloudMediaService);
+                albumRepository, userRepository, mapper, officialLyricService, cloudMediaService, entityManager);
 
         Role role = mock(Role.class);
         testUser = new AppUser(role, "creator@soundwave.com", "hash");
@@ -112,13 +113,12 @@ class StudioTrackServiceTest {
     }
 
     @Test
-    void deleteTrack_notAllowedWhenPublished() {
-        Track publishedTrack = new Track(101L, testGenre, "Song 1", "song-1", "pub_1", "/audio/demo.mp3", "mp3", 180000);
-        ReflectionTestUtils.setField(publishedTrack, "id", 501L);
-        ReflectionTestUtils.setField(publishedTrack, "publicationStatus", TrackPublicationStatus.PUBLISHED);
+    void deleteTrack_notAllowedWhenNotOwner() {
+        Track otherTrack = new Track(999L, testGenre, "Song 1", "song-1", "pub_1", "/audio/demo.mp3", "mp3", 180000);
+        ReflectionTestUtils.setField(otherTrack, "id", 501L);
 
         when(userRepository.findByEmailIgnoreCase("creator@soundwave.com")).thenReturn(Optional.of(testUser));
-        when(trackRepository.findByIdAndUploaderUserId(501L, 101L)).thenReturn(Optional.of(publishedTrack));
+        when(trackRepository.findById(501L)).thenReturn(Optional.of(otherTrack));
 
         assertThrows(TrackOperationNotAllowedException.class, () ->
                 service.deleteTrack(501L, "creator@soundwave.com"));

@@ -5,7 +5,7 @@ export type LandingTrack = {
   audioUrl: string;
   durationMs: number;
   playCount: number;
-  publicationStatus: "APPROVED";
+  publicationStatus?: "APPROVED" | "PUBLISHED" | string;
   genreSlug?: string;
   lyrics?: string;
   creator: {
@@ -59,6 +59,7 @@ export type Playlist = {
   creatorName?: string;
   createdAt?: string;
   trackIds: number[];
+  tracks?: LandingTrack[];
 };
 
 export type StudioTrack = {
