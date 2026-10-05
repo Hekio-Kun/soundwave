@@ -11,7 +11,7 @@ export type ApiTrack = {
   albumId?: number;
   albumTitle?: string;
   trackNumber?: number;
-  status: "DRAFT" | "PENDING" | "APPROVED" | "REJECTED" | "TAKEN_DOWN";
+  status: "DRAFT" | "PENDING" | "PUBLISHED" | "APPROVED" | "REJECTED" | "TAKEN_DOWN";
   audioUrl: string;
   audioFormat?: string;
   durationMs: number;
@@ -61,12 +61,7 @@ export type CreateTrackPayload = {
   albumId?: number;
   trackNumber?: number;
   description?: string;
-  audioUrl?: string;
-  audioPublicId?: string;
-  audioFormat?: string;
   durationMs?: number;
-  coverUrl?: string;
-  coverPublicId?: string;
   lyrics?: string;
 };
 
@@ -76,14 +71,29 @@ export type UpdateTrackPayload = {
   albumId?: number;
   trackNumber?: number;
   description?: string;
-  audioUrl?: string;
-  audioPublicId?: string;
-  audioFormat?: string;
   durationMs?: number;
-  coverUrl?: string;
-  coverPublicId?: string;
   lyrics?: string;
 };
+
+type TrackApiErrorPayload = {
+  code?: string;
+  message?: string;
+  fieldErrors?: Record<string, string>;
+};
+
+export class TrackApiError extends Error {
+  readonly code?: string;
+  readonly status: number;
+  readonly fieldErrors: Record<string, string>;
+
+  constructor(payload: TrackApiErrorPayload, status: number) {
+    super(payload.message || "The track could not be saved. Please try again.");
+    this.name = "TrackApiError";
+    this.code = payload.code;
+    this.status = status;
+    this.fieldErrors = payload.fieldErrors ?? {};
+  }
+}
 
 function getAuthToken(): string | null {
   return localStorage.getItem("soundwave_access_token") ?? sessionStorage.getItem("soundwave_access_token");
@@ -92,14 +102,20 @@ function getAuthToken(): string | null {
 async function studioRequest<T>(
   path: string,
   method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
-  body?: unknown
+  body?: unknown | FormData
 ): Promise<T> {
   const token = getAuthToken();
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  if (!token) {
+    throw new TrackApiError({
+      code: "AUTH_REQUIRED",
+      message: "Please log in before managing your tracks.",
+    }, 401);
   }
-  if (body !== undefined) {
+
+  const headers: Record<string, string> = {};
+  headers["Authorization"] = `Bearer ${token}`;
+  const isMultipart = body instanceof FormData;
+  if (body !== undefined && !isMultipart) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -107,13 +123,12 @@ async function studioRequest<T>(
     method,
     headers,
     credentials: "include",
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : isMultipart ? body : JSON.stringify(body),
   });
 
   if (!response.ok) {
-    const errorPayload = await response.json().catch(() => ({}));
-    const message = errorPayload.message || `Request failed with status ${response.status}`;
-    throw new Error(message);
+    const errorPayload = await response.json().catch(() => ({})) as TrackApiErrorPayload;
+    throw new TrackApiError(errorPayload, response.status);
   }
 
   if (response.status === 204) {
@@ -123,15 +138,29 @@ async function studioRequest<T>(
   return response.json() as Promise<T>;
 }
 
+function buildTrackFormData(
+  payload: CreateTrackPayload | UpdateTrackPayload,
+  audio?: File,
+  cover?: File,
+): FormData {
+  const formData = new FormData();
+  formData.append("track", new Blob([JSON.stringify(payload)], { type: "application/json" }));
+  if (audio) formData.append("audio", audio);
+  if (cover) formData.append("cover", cover);
+  return formData;
+}
+
 export const studioApi = {
-  getMyTracks: (status?: string) =>
-    studioRequest<ApiTrack[]>(`/studio/tracks${status && status !== "ALL" ? `?status=${status}` : ""}`),
+  getMyTracks: (status?: string) => {
+    const backendStatus = status === "APPROVED" ? "PUBLISHED" : status;
+    return studioRequest<ApiTrack[]>(`/studio/tracks${backendStatus && backendStatus !== "ALL" ? `?status=${backendStatus}` : ""}`);
+  },
   getTrackById: (id: number) =>
     studioRequest<ApiTrack>(`/studio/tracks/${id}`),
-  createDraft: (payload: CreateTrackPayload) =>
-    studioRequest<ApiTrack>("/studio/tracks", "POST", payload),
-  updateTrack: (id: number, payload: UpdateTrackPayload) =>
-    studioRequest<ApiTrack>(`/studio/tracks/${id}`, "PUT", payload),
+  createDraft: (payload: CreateTrackPayload, audio: File, cover?: File) =>
+    studioRequest<ApiTrack>("/studio/tracks", "POST", buildTrackFormData(payload, audio, cover)),
+  updateTrack: (id: number, payload: UpdateTrackPayload, audio?: File, cover?: File) =>
+    studioRequest<ApiTrack>(`/studio/tracks/${id}`, "PUT", buildTrackFormData(payload, audio, cover)),
   deleteTrack: (id: number) =>
     studioRequest<void>(`/studio/tracks/${id}`, "DELETE"),
   submitForReview: (id: number, submitterNote?: string) =>

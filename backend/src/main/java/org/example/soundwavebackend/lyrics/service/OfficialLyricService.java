@@ -2,7 +2,9 @@ package org.example.soundwavebackend.lyrics.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.soundwavebackend.lyrics.entity.LyricLanguage;
 import org.example.soundwavebackend.lyrics.entity.OfficialLyric;
+import org.example.soundwavebackend.lyrics.repository.LyricLanguageRepository;
 import org.example.soundwavebackend.lyrics.repository.OfficialLyricRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ public class OfficialLyricService {
     public static final String DEFAULT_LANGUAGE_CODE = "vi";
 
     private final OfficialLyricRepository officialLyricRepository;
+    private final LyricLanguageRepository lyricLanguageRepository;
 
     /**
      * Lưu hoặc cập nhật lời bài hát chính thức cho một bài hát.
@@ -37,7 +40,7 @@ public class OfficialLyricService {
         }
 
         Optional<OfficialLyric> existing = officialLyricRepository
-                .findByTrackIdAndLanguageCode(trackId, DEFAULT_LANGUAGE_CODE);
+                .findByTrackIdAndLanguage_Code(trackId, DEFAULT_LANGUAGE_CODE);
 
         if (existing.isPresent()) {
             OfficialLyric lyric = existing.get();
@@ -45,7 +48,9 @@ public class OfficialLyricService {
             officialLyricRepository.save(lyric);
             log.info("Cập nhật lyric cho bài hát ID: {}", trackId);
         } else {
-            OfficialLyric lyric = new OfficialLyric(trackId, DEFAULT_LANGUAGE_CODE, lyricContent.trim(), userId);
+            LyricLanguage defaultLanguage = lyricLanguageRepository.findByCode(DEFAULT_LANGUAGE_CODE)
+                    .orElseGet(() -> lyricLanguageRepository.save(new LyricLanguage(DEFAULT_LANGUAGE_CODE, "Vietnamese")));
+            OfficialLyric lyric = new OfficialLyric(trackId, defaultLanguage, lyricContent.trim(), userId);
             officialLyricRepository.save(lyric);
             log.info("Tạo lyric mới cho bài hát ID: {}", trackId);
         }

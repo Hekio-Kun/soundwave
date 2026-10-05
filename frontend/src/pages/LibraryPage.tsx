@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { tracks } from "../data";
-import { HeartIcon, PauseIcon, PlayIcon, PlusIcon, TrashIcon } from "../icons";
+import { covers, tracks } from "../data";
+import { EditIcon, HeadphonesIcon, HeartIcon, PauseIcon, PlayIcon, PlusIcon, TrashIcon } from "../icons";
 import type { LandingTrack, Playlist } from "../types";
 
 type Props = {
@@ -12,6 +12,7 @@ type Props = {
   onToggleFavorite: (trackId: number) => void;
   playlists: Playlist[];
   onCreatePlaylist: () => void;
+  onEditPlaylist?: (playlist: Playlist) => void;
   onDeletePlaylist: (playlistId: number) => void;
   initialTab?: "favorites" | "playlists";
 };
@@ -31,6 +32,7 @@ export function LibraryPage({
   onToggleFavorite,
   playlists,
   onCreatePlaylist,
+  onEditPlaylist,
   onDeletePlaylist,
   initialTab = "favorites",
 }: Props) {
@@ -142,30 +144,89 @@ export function LibraryPage({
             })}
           </div>
         )
+      ) : playlists.length === 0 ? (
+        <div className="state-empty-box">
+          <HeadphonesIcon width={48} height={48} />
+          <p className="empty-title">No playlists created yet</p>
+          <p className="empty-desc">Create custom playlists to group and listen to your favorite tracks.</p>
+          <button className="button button-primary button-small" onClick={onCreatePlaylist}>
+            <PlusIcon width={16} height={16} /> Create playlist
+          </button>
+        </div>
       ) : (
         <div className="playlists-grid">
           {playlists.map((pl) => (
             <div key={pl.id} className="playlist-card">
               <div className="playlist-art" onClick={() => onNavigate(`/playlist/${pl.id}`)}>
-                <img src={pl.coverUrl} alt={pl.title} />
+                <img
+                  src={pl.coverUrl}
+                  alt={pl.title}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = covers.dawn;
+                  }}
+                />
                 <span className="playlist-hover-play">
                   <PlayIcon width={20} height={20} />
                 </span>
               </div>
-              <div className="playlist-info">
-                <h3 className="playlist-title">{pl.title}</h3>
+              <div className="playlist-info" onClick={() => onNavigate(`/playlist/${pl.id}`)} style={{ cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
+                  <h3 className="playlist-title" style={{ margin: 0 }}>{pl.title}</h3>
+                  <span
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: 800,
+                      padding: "2px 6px",
+                      borderRadius: "6px",
+                      background: pl.isPrivate ? "#F3F4F6" : "#ECFEFF",
+                      color: pl.isPrivate ? "#6B7280" : "var(--sw-primary-dark)",
+                      border: pl.isPrivate ? "1px solid #E5E7EB" : "1px solid #BAE6FD",
+                    }}
+                  >
+                    {pl.isPrivate ? "Private" : "Public"}
+                  </span>
+                </div>
                 <p className="playlist-meta">
-                  {pl.trackCount} tracks · {pl.isPrivate ? "Private" : "Public"}
+                  {pl.trackIds ? pl.trackIds.length : pl.trackCount} tracks
                 </p>
                 {pl.description && <p className="playlist-desc">{pl.description}</p>}
               </div>
-              <button
-                className="playlist-delete-btn"
-                onClick={() => onDeletePlaylist(pl.id)}
-                title="Delete"
-              >
-                <TrashIcon width={14} height={14} />
-              </button>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                {onEditPlaylist && (
+                  <button
+                    className="icon-button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditPlaylist(pl);
+                    }}
+                    title="Edit details"
+                    style={{
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--sw-border)",
+                      background: "#fff",
+                      color: "var(--sw-text)",
+                      cursor: "pointer",
+                      display: "grid",
+                      placeItems: "center",
+                    }}
+                  >
+                    <EditIcon width={14} height={14} />
+                  </button>
+                )}
+                <button
+                  className="playlist-delete-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeletePlaylist(pl.id);
+                  }}
+                  title="Delete playlist"
+                >
+                  <TrashIcon width={14} height={14} />
+                </button>
+              </div>
             </div>
           ))}
         </div>

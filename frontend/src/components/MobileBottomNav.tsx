@@ -1,4 +1,4 @@
-import { CompassIcon, DashboardIcon, DiscIcon, LibraryIcon, SearchIcon, UploadIcon } from "../icons";
+import { CompassIcon, DashboardIcon, FilterIcon, LibraryIcon, SearchIcon, UploadIcon } from "../icons";
 import type { CurrentUser } from "../types";
 
 type Props = {
@@ -21,11 +21,11 @@ export function MobileBottomNav({ activeRoute, onNavigate, userRole }: Props) {
       </button>
 
       <button
-        className={`mobile-nav-item ${isCurrent("/genres") ? "mobile-nav-item--active" : ""}`}
-        onClick={() => onNavigate("/genres")}
+        className={`mobile-nav-item ${activeRoute.startsWith("/browse") || activeRoute.includes("genre") ? "mobile-nav-item--active" : ""}`}
+        onClick={() => onNavigate("/browse")}
       >
-        <DiscIcon width={20} height={20} />
-        <span>Genres</span>
+        <FilterIcon width={20} height={20} />
+        <span>Browse</span>
       </button>
 
       <button

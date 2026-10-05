@@ -11,6 +11,7 @@ import org.example.soundwavebackend.authentication.repository.UserProfileReposit
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,13 +25,13 @@ import java.util.Locale;
  */
 @Slf4j
 @Component
+@Order(1)
 @RequiredArgsConstructor
 public class AdminUserInitializer implements ApplicationRunner {
     private final RoleRepository roleRepository;
     private final AppUserRepository userRepository;
     private final UserProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
-    private final org.example.soundwavebackend.catalog.repository.GenreRepository genreRepository;
 
     @Value("${app.admin.auto-create:true}")
     private boolean adminAutoCreate;
@@ -53,13 +54,13 @@ public class AdminUserInitializer implements ApplicationRunner {
     @Value("${app.staff.email:staff@soundwave.com}")
     private String staffEmail;
 
-    @Value("${app.staff.password:Staff@123456}")
+    @Value("${app.staff.password:Admin@123456}")
     private String staffPassword;
 
     @Value("${app.staff.username:staff}")
     private String staffUsername;
 
-    @Value("${app.staff.display-name:Content Moderator}")
+    @Value("${app.staff.display-name:Moderation Staff}")
     private String staffDisplayName;
 
     @Override
@@ -78,24 +79,6 @@ public class AdminUserInitializer implements ApplicationRunner {
         createRoleIfAbsent("LISTENER", "Listener", "Standard SoundWave listener account");
         createRoleIfAbsent("STAFF", "Staff", "Content moderation account");
         createRoleIfAbsent("ADMIN", "Administrator", "System administration account");
-    }
-
-    private void initGenres() {
-        createGenreIfAbsent("Pop", "pop", "Popular mainstream music with catchy melodies.");
-        createGenreIfAbsent("Ballad", "ballad", "Emotional, melodic narrative songs.");
-        createGenreIfAbsent("Rap / Hip-hop", "rap-hip-hop", "Rhythmic and rhyming speech chant.");
-        createGenreIfAbsent("R&B", "rnb", "Soulful rhythm and blues.");
-        createGenreIfAbsent("Acoustic", "acoustic", "Pure, organic unplugged instruments.");
-        createGenreIfAbsent("EDM", "edm", "Electronic dance music for energy and clubs.");
-        createGenreIfAbsent("Indie", "indie", "Independent, experimental artistic sounds.");
-        createGenreIfAbsent("Lofi", "lofi", "Relaxing low-fidelity chill study beats.");
-    }
-
-    private void createGenreIfAbsent(String name, String slug, String description) {
-        if (genreRepository.findBySlug(slug).isEmpty()) {
-            genreRepository.save(new org.example.soundwavebackend.catalog.entity.Genre(name, slug, description, null));
-            log.info("Initialized default genre: {}", name);
-        }
     }
 
     private void createRoleIfAbsent(String code, String name, String description) {

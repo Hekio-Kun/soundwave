@@ -4,8 +4,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.example.soundwavebackend.authentication.exception.*;
 import org.example.soundwavebackend.media.exception.InvalidAvatarFileException;
 import org.example.soundwavebackend.media.exception.CloudStorageUnavailableException;
+import org.example.soundwavebackend.media.exception.InvalidTrackAudioException;
+import org.example.soundwavebackend.media.exception.InvalidTrackCoverException;
+import org.example.soundwavebackend.moderation.exception.InvalidSubmissionStateException;
+import org.example.soundwavebackend.moderation.exception.SubmissionNotFoundException;
+import org.example.soundwavebackend.track.exception.TrackException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -51,16 +57,24 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
-    @ExceptionHandler({InvalidAvatarFileException.class, MaxUploadSizeExceededException.class})
-    public ResponseEntity<ApiErrorResponse> handleInvalidAvatar(Exception exception, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "INVALID_AVATAR_FILE",
-                "Avatar must be in JPG/PNG format and under 5MB.", request, Map.of("avatar", "Choose a JPG or PNG image under 5MB."));
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotFound(ResourceNotFoundException exception, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
-    @ExceptionHandler(CloudStorageUnavailableException.class)
-    public ResponseEntity<ApiErrorResponse> handleCloudStorage(CloudStorageUnavailableException exception,
-                                                                HttpServletRequest request) {
-        return build(HttpStatus.SERVICE_UNAVAILABLE, exception.getCode(), exception.getMessage(), request, Map.of());
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<ApiErrorResponse> handleForbiddenOperation(ForbiddenOperationException exception, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(ConflictOperationException.class)
+    public ResponseEntity<ApiErrorResponse> handleConflictOperation(ConflictOperationException exception, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(BadRequestOperationException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadRequestOperation(BadRequestOperationException exception, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String code, String message,

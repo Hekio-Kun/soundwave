@@ -17,12 +17,15 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import lombok.extern.slf4j.Slf4j;
 import java.util.Base64;
 import java.util.Locale;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
+    public static final long REFRESH_GRACE_PERIOD_SECONDS = 15;
     private static final String DEFAULT_ROLE = "LISTENER";
     private static final String RECOVERY_MESSAGE = "If the account exists, an OTP has been sent to the registered email.";
 
@@ -38,6 +41,7 @@ public class AuthenticationService {
     private final AuthenticationMailService mailService;
     private final JwtService jwtService;
     private final AuthenticationMapper mapper;
+    private final AuthRateLimiterService authRateLimiterService;
 
     @Value("${app.auth.otp-expiration-minutes}")
     private long otpExpirationMinutes;
@@ -79,13 +83,20 @@ public class AuthenticationService {
         if (user.getEmailVerifiedAt() != null) {
             return new MessageResponse("Email is already verified.");
         }
+        if (authRateLimiterService.isOtpBlocked(user.getEmail())) {
+            log.warn("Blocked OTP verification attempt for email {}: maximum failed attempts reached", user.getEmail());
+            throw new InvalidOtpException("Too many failed attempts. This OTP code has been deactivated. Please request a new code.");
+        }
         EmailVerificationToken token = verificationTokenRepository
                 .findFirstByUserIdAndUsedAtIsNullOrderByCreatedAtDesc(user.getId())
                 .orElseThrow(() -> new InvalidOtpException("No active verification code was found."));
-        validateOtp(request.otp(), token.getTokenHash(), token.isUsed(), token.isExpired(nowUtc()));
+        validateOtpWithAttempts(request.otp(), token.getTokenHash(), token.isUsed(), token.isExpired(nowUtc()),
+                user.getEmail(), () -> token.markUsed(nowUtc()));
         LocalDateTime now = nowUtc();
         token.markUsed(now);
         user.verifyEmail(now);
+        authRateLimiterService.resetOtpAttempts(user.getEmail());
+        log.info("Email verified successfully for user ID: {} ({})", user.getId(), user.getEmail());
         return new MessageResponse("Email verified successfully. You can now log in.");
     }
 
@@ -108,9 +119,11 @@ public class AuthenticationService {
                 .findFirstByUserIdAndUsedAtIsNullOrderByCreatedAtDesc(user.getId()).orElse(null);
         ensureResendAllowed(current == null ? null : current.getCreatedAt());
         if (current != null) current.markUsed(nowUtc());
+        authRateLimiterService.resetOtpAttempts(user.getEmail());
         String displayName = profileRepository.findByUserId(user.getId())
                 .map(UserProfile::getDisplayName).orElse("SoundWave user");
         createAndSendVerificationOtp(user, displayName);
+        log.info("Resent verification OTP for user ID: {} ({})", user.getId(), user.getEmail());
         return new MessageResponse("A new verification OTP has been sent.");
     }
 
@@ -119,13 +132,22 @@ public class AuthenticationService {
      */
     @Transactional
     public LoginResult login(LoginRequest request) {
-        AppUser user = userRepository.findByEmailIgnoreCase(normalizeEmail(request.email()))
-                .orElseThrow(InvalidCredentialsException::new);
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        String email = normalizeEmail(request.email());
+        if (authRateLimiterService.isLoginBlocked(email)) {
+            log.warn("Blocked login attempt: email {} is temporarily locked out due to multiple failed attempts", email);
+            throw new AccountUnavailableException("LOGIN_LOCKED", "Too many failed login attempts. Please wait 10 minutes before trying again.");
+        }
+        AppUser user = userRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (user == null || !passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            int failed = authRateLimiterService.recordFailedLogin(email);
+            int remaining = authRateLimiterService.getRemainingLoginAttempts(email);
+            log.warn("Failed login attempt #{} for email: {}. Remaining attempts before lockout: {}", failed, email, remaining);
             throw new InvalidCredentialsException();
         }
         ensureAccountCanLogin(user);
+        authRateLimiterService.resetLoginAttempts(email);
         user.recordLogin(nowUtc());
+        log.info("User {} logged in successfully with role {}", user.getEmail(), user.getRole().getCode());
         return createLoginResult(user, request.rememberMe());
     }
 
@@ -143,7 +165,9 @@ public class AuthenticationService {
                 String otp = otpGenerator.generate();
                 resetTokenRepository.save(new PasswordResetToken(
                         user, passwordEncoder.encode(otp), nowUtc().plusMinutes(otpExpirationMinutes)));
+                authRateLimiterService.resetOtpAttempts(user.getEmail());
                 mailService.sendPasswordResetOtp(user.getEmail(), otp, otpExpirationMinutes);
+                log.info("Sent password reset OTP for user ID: {} ({})", user.getId(), user.getEmail());
             }
         });
         return new MessageResponse(RECOVERY_MESSAGE);
@@ -158,14 +182,21 @@ public class AuthenticationService {
             throw new AccountUnavailableException("PASSWORD_MISMATCH", "Password confirmation does not match.");
         }
         AppUser user = findUser(request.email());
+        if (authRateLimiterService.isOtpBlocked(user.getEmail())) {
+            log.warn("Blocked password reset attempt for email {}: maximum failed attempts reached", user.getEmail());
+            throw new InvalidOtpException("Too many failed attempts. This OTP code has been deactivated. Please request a new code.");
+        }
         PasswordResetToken token = resetTokenRepository
                 .findFirstByUserIdAndUsedAtIsNullOrderByCreatedAtDesc(user.getId())
                 .orElseThrow(() -> new InvalidOtpException("No active password reset code was found."));
-        validateOtp(request.otp(), token.getTokenHash(), token.isUsed(), token.isExpired(nowUtc()));
+        validateOtpWithAttempts(request.otp(), token.getTokenHash(), token.isUsed(), token.isExpired(nowUtc()),
+                user.getEmail(), () -> token.markUsed(nowUtc()));
         LocalDateTime now = nowUtc();
         token.markUsed(now);
         user.changePassword(passwordEncoder.encode(request.newPassword()), now);
         refreshTokenRepository.revokeAllActiveByUserId(user.getId(), now);
+        authRateLimiterService.resetOtpAttempts(user.getEmail());
+        log.info("Password reset successfully for user ID: {} ({}). All active sessions revoked.", user.getId(), user.getEmail());
         return new MessageResponse("Password updated successfully. Please log in again.");
     }
 
@@ -176,9 +207,45 @@ public class AuthenticationService {
     public LoginResult refresh(String rawRefreshToken) {
         RefreshToken stored = refreshTokenRepository.findByTokenHash(tokenHashService.hash(rawRefreshToken))
                 .orElseThrow(InvalidRefreshTokenException::new);
-        if (!stored.isUsable(nowUtc())) throw new InvalidRefreshTokenException();
+        LocalDateTime now = nowUtc();
+
+        if (stored.getRevokedAt() != null) {
+            long secondsSinceRevocation = ChronoUnit.SECONDS.between(stored.getRevokedAt(), now);
+
+            // SEC-05: Grace Period cho trường hợp nhiều request đồng thời trong React SPA (15s)
+            if (secondsSinceRevocation >= 0 && secondsSinceRevocation <= REFRESH_GRACE_PERIOD_SECONDS) {
+                log.info("Concurrent refresh request within grace period ({}s) for user ID: {}. Returning active session.",
+                        secondsSinceRevocation, stored.getUser().getId());
+                RefreshToken activeSession = refreshTokenRepository
+                        .findFirstByUserIdAndRevokedAtIsNullAndExpiresAtAfterOrderByCreatedAtDesc(stored.getUser().getId(), now)
+                        .orElse(null);
+                if (activeSession != null) {
+                    ensureAccountCanLogin(stored.getUser());
+                    UserProfile profile = profileRepository.findByUserId(stored.getUser().getId()).orElse(null);
+                    String displayName = profile == null ? stored.getUser().getEmail() : profile.getDisplayName();
+                    String avatarUrl = profile == null ? null : profile.getAvatarUrl();
+                    AuthResponse response = new AuthResponse(
+                            jwtService.createAccessToken(stored.getUser(), activeSession.getId()),
+                            "Bearer", jwtService.getAccessTokenSeconds(),
+                            mapper.toUserResponse(stored.getUser(), displayName, avatarUrl));
+                    return new LoginResult(response, rawRefreshToken, refreshTokenDays * 24 * 60 * 60);
+                }
+            }
+
+            // SEC-04: Token Reuse Detection (OAuth 2.0 Family Revocation)
+            log.warn("SECURITY ALERT: Refresh token reuse detected for user ID: {} (Email: {}). Revoked {}s ago. Inactivating all active sessions!",
+                    stored.getUser().getId(), stored.getUser().getEmail(), secondsSinceRevocation);
+            refreshTokenRepository.revokeAllActiveByUserId(stored.getUser().getId(), now);
+            throw new InvalidRefreshTokenException();
+        }
+
+        if (stored.getExpiresAt().isBefore(now)) {
+            log.warn("Refresh token expired for user ID: {}", stored.getUser().getId());
+            throw new InvalidRefreshTokenException();
+        }
+
         ensureAccountCanLogin(stored.getUser());
-        stored.revoke(nowUtc());
+        stored.revoke(now);
         return createLoginResult(stored.getUser(), false);
     }
 
@@ -190,7 +257,11 @@ public class AuthenticationService {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) return;
         refreshTokenRepository.findByTokenHash(tokenHashService.hash(rawRefreshToken))
                 .filter(token -> token.getRevokedAt() == null)
-                .ifPresent(token -> token.revoke(nowUtc()));
+                .ifPresent(token -> {
+                    token.revoke(nowUtc());
+                    Long userId = token.getUser() == null ? null : token.getUser().getId();
+                    log.info("Session revoked for user ID: {}", userId);
+                });
     }
 
     private LoginResult createLoginResult(AppUser user, boolean rememberMe) {
@@ -214,10 +285,24 @@ public class AuthenticationService {
         mailService.sendVerificationOtp(user.getEmail(), displayName, otp, otpExpirationMinutes);
     }
 
-    private void validateOtp(String otp, String hash, boolean used, boolean expired) {
+    private void validateOtpWithAttempts(String otp, String hash, boolean used, boolean expired, String email, Runnable onExceeded) {
         if (used) throw new InvalidOtpException("This OTP has already been used.");
         if (expired) throw new InvalidOtpException("This OTP has expired. Request a new code.");
-        if (!passwordEncoder.matches(otp, hash)) throw new InvalidOtpException("The OTP is incorrect.");
+        if (!passwordEncoder.matches(otp, hash)) {
+            int failed = authRateLimiterService.recordFailedOtpAttempt(email);
+            int remaining = authRateLimiterService.getRemainingOtpAttempts(email);
+            log.warn("Incorrect OTP entered for email: {}. Failed attempts: {}/{}", email, failed, AuthRateLimiterService.MAX_FAILED_OTP_ATTEMPTS);
+            if (failed >= AuthRateLimiterService.MAX_FAILED_OTP_ATTEMPTS) {
+                onExceeded.run();
+                log.warn("Deactivated OTP for email: {} due to exceeding max attempts ({})", email, failed);
+                throw new InvalidOtpException("Too many failed attempts. This OTP code has been deactivated. Please request a new code.");
+            }
+            throw new InvalidOtpException("The OTP is incorrect. You have " + remaining + " attempt(s) remaining.");
+        }
+    }
+
+    private void validateOtp(String otp, String hash, boolean used, boolean expired) {
+        validateOtpWithAttempts(otp, hash, used, expired, "", () -> {});
     }
 
     private void ensureResendAllowed(LocalDateTime createdAt) {

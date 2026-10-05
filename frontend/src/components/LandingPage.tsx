@@ -76,7 +76,7 @@ export function LandingPage({ currentTrack, playing, onPlay, isAuthenticated }: 
   }
 
   if (status === "empty") {
-    return <main className="state-page"><div className="state-icon"><HeadphonesIcon /></div><h1>SoundWave is getting ready</h1><p>The first tracks will appear here soon.</p><button className="button button-primary" onClick={() => go(isAuthenticated ? "/studio" : "/login")}>Upload the first track</button></main>;
+    return <main className="state-page"><div className="state-icon"><HeadphonesIcon /></div><h1>SoundWave is getting ready</h1><p>The first tracks will appear here soon.</p><button className="button button-primary" onClick={() => go(isAuthenticated ? "/studio/upload" : "/login")}>Upload the first track</button></main>;
   }
 
   const approvedTracks = tracks.filter((track) => track.publicationStatus === "APPROVED");
@@ -90,7 +90,7 @@ export function LandingPage({ currentTrack, playing, onPlay, isAuthenticated }: 
           <p>Discover, listen to, and share new music with the SoundWave community.</p>
           <div className="hero-actions">
             <button className="button button-primary button-large" onClick={() => document.getElementById("trending")?.scrollIntoView({ behavior: "smooth" })}><PlayIcon /> Listen now</button>
-            <button className="button button-secondary button-large" onClick={() => go(isAuthenticated ? "/studio" : "/login")}><UploadIcon /> Upload track</button>
+            <button className="button button-secondary button-large" onClick={() => go(isAuthenticated ? "/studio/upload" : "/login")}><UploadIcon /> Upload track</button>
           </div>
           <div className="hero-proof">
             <div className="avatar-stack">{featuredCreators.slice(0, 3).map((creator) => <img src={creator.avatarUrl} alt="" key={creator.userId}/>)}</div>
@@ -187,7 +187,7 @@ export function LandingPage({ currentTrack, playing, onPlay, isAuthenticated }: 
           <p>Every SoundWave member can upload music and find an audience.</p>
           <div className="cta-steps"><span><CheckIcon/> Upload</span><i/><span><CheckIcon/> Submit for review</span><i/><span><CheckIcon/> Publish</span></div>
         </div>
-        <button className="button button-white button-large" onClick={() => go(isAuthenticated ? "/studio" : "/login")}><UploadIcon/> Upload track</button>
+        <button className="button button-white button-large" onClick={() => go(isAuthenticated ? "/studio/upload" : "/login")}><UploadIcon/> Upload track</button>
       </section>
     </main>
   );

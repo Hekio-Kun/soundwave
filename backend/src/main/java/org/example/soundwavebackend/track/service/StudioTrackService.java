@@ -15,6 +15,9 @@ import org.example.soundwavebackend.moderation.entity.SubmissionStatus;
 import org.example.soundwavebackend.moderation.entity.TrackSubmission;
 import org.example.soundwavebackend.moderation.repository.TrackSubmissionRepository;
 import org.example.soundwavebackend.lyrics.service.OfficialLyricService;
+import org.example.soundwavebackend.media.dto.response.StoredAudioResponse;
+import org.example.soundwavebackend.media.dto.response.StoredMediaResponse;
+import org.example.soundwavebackend.media.service.CloudMediaService;
 import org.example.soundwavebackend.track.dto.request.CreateTrackRequest;
 import org.example.soundwavebackend.track.dto.request.SubmitTrackForReviewRequest;
 import org.example.soundwavebackend.track.dto.request.UpdateTrackRequest;
@@ -24,9 +27,12 @@ import org.example.soundwavebackend.track.exception.GenreNotFoundException;
 import org.example.soundwavebackend.track.exception.TrackNotFoundException;
 import org.example.soundwavebackend.track.exception.TrackOperationNotAllowedException;
 import org.example.soundwavebackend.track.mapper.TrackMapper;
-import org.example.soundwavebackend.track.repository.TrackRepository;
+import org.example.soundwavebackend.catalog.repository.TrackRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.text.Normalizer;
 import java.time.LocalDateTime;
@@ -54,12 +60,14 @@ public class StudioTrackService {
     private final AppUserRepository userRepository;
     private final TrackMapper trackMapper;
     private final OfficialLyricService officialLyricService;
+    private final CloudMediaService cloudMediaService;
 
     /**
      * Tạo bài hát mới ở trạng thái DRAFT cho người dùng hiện tại (UC-19.1).
      */
     @Transactional
-    public StudioTrackResponse createTrackDraft(CreateTrackRequest request, String currentUserEmail) {
+    public StudioTrackResponse createTrackDraft(CreateTrackRequest request, MultipartFile audio,
+                                                MultipartFile cover, String currentUserEmail) {
         AppUser user = getCurrentUser(currentUserEmail);
         Genre genre = genreRepository.findById(request.genreId())
                 .filter(Genre::isActive)
@@ -71,19 +79,17 @@ public class StudioTrackService {
                     .orElseThrow(AlbumNotFoundException::new);
         }
 
+        StoredAudioResponse uploadedAudio = cloudMediaService.uploadTrackAudio(audio, user.getId());
+        registerNewAudioRollbackCleanup(uploadedAudio.publicId());
+
+        StoredMediaResponse uploadedCover = null;
+        if (cover != null && !cover.isEmpty()) {
+            uploadedCover = cloudMediaService.uploadTrackCover(cover, user.getId());
+            registerNewImageRollbackCleanup(uploadedCover.publicId());
+        }
+
         String slug = generateUniqueSlug(request.title());
-        String audioUrl = request.audioUrl() != null && !request.audioUrl().isBlank()
-                ? request.audioUrl().trim()
-                : "/audio/soundwave-demo.wav";
-        String audioPublicId = request.audioPublicId() != null && !request.audioPublicId().isBlank()
-                ? request.audioPublicId().trim()
-                : "audio_" + UUID.randomUUID();
-        String audioFormat = request.audioFormat() != null && !request.audioFormat().isBlank()
-                ? request.audioFormat().trim().toLowerCase(Locale.ROOT)
-                : "mp3";
-        Integer durationMs = request.durationMs() != null && request.durationMs() > 0
-                ? request.durationMs()
-                : 240000;
+        Integer durationMs = resolveDurationMs(uploadedAudio.durationMs(), request.durationMs());
 
         Track track = new Track(
                 user.getId(),
@@ -93,15 +99,15 @@ public class StudioTrackService {
                 slug,
                 request.description() != null ? request.description().trim() : null,
                 request.trackNumber(),
-                audioPublicId,
-                audioUrl,
-                audioFormat,
+                uploadedAudio.publicId(),
+                uploadedAudio.secureUrl(),
+                uploadedAudio.format(),
                 durationMs,
-                request.coverPublicId(),
-                request.coverUrl()
+                uploadedCover != null ? uploadedCover.publicId() : null,
+                uploadedCover != null ? uploadedCover.secureUrl() : null
         );
 
-        Track savedTrack = trackRepository.save(track);
+        Track savedTrack = trackRepository.saveAndFlush(track);
         if (request.lyrics() != null && !request.lyrics().isBlank()) {
             officialLyricService.saveOrUpdateTrackLyric(savedTrack.getId(), request.lyrics(), user.getId());
         }
@@ -158,7 +164,8 @@ public class StudioTrackService {
      * Cập nhật thông tin bài hát đang ở trạng thái DRAFT hoặc REJECTED (UC-19.3).
      */
     @Transactional
-    public StudioTrackResponse updateTrack(Long trackId, UpdateTrackRequest request, String currentUserEmail) {
+    public StudioTrackResponse updateTrack(Long trackId, UpdateTrackRequest request, MultipartFile audio,
+                                           MultipartFile cover, String currentUserEmail) {
         AppUser user = getCurrentUser(currentUserEmail);
         Track track = trackRepository.findByIdAndUploaderUserId(trackId, user.getId())
                 .orElseThrow(TrackNotFoundException::new);
@@ -181,6 +188,18 @@ public class StudioTrackService {
                 ? track.getSlug()
                 : generateUniqueSlug(request.title().trim());
 
+        StoredAudioResponse uploadedAudio = null;
+        if (audio != null && !audio.isEmpty()) {
+            uploadedAudio = cloudMediaService.uploadTrackAudio(audio, user.getId());
+            registerAudioReplacementCleanup(track.getAudioPublicId(), uploadedAudio.publicId());
+        }
+
+        StoredMediaResponse uploadedCover = null;
+        if (cover != null && !cover.isEmpty()) {
+            uploadedCover = cloudMediaService.uploadTrackCover(cover, user.getId());
+            registerImageReplacementCleanup(track.getCoverPublicId(), uploadedCover.publicId());
+        }
+
         track.updateDraftDetails(
                 request.title().trim(),
                 slug,
@@ -188,16 +207,18 @@ public class StudioTrackService {
                 album,
                 request.description() != null ? request.description().trim() : null,
                 request.trackNumber(),
-                request.audioPublicId(),
-                request.audioUrl(),
-                request.audioFormat(),
-                request.durationMs(),
-                request.coverPublicId(),
-                request.coverUrl(),
+                uploadedAudio != null ? uploadedAudio.publicId() : null,
+                uploadedAudio != null ? uploadedAudio.secureUrl() : null,
+                uploadedAudio != null ? uploadedAudio.format() : null,
+                uploadedAudio != null
+                        ? resolveDurationMs(uploadedAudio.durationMs(), request.durationMs())
+                        : null,
+                uploadedCover != null ? uploadedCover.publicId() : null,
+                uploadedCover != null ? uploadedCover.secureUrl() : null,
                 nowUtc()
         );
 
-        Track updatedTrack = trackRepository.save(track);
+        Track updatedTrack = trackRepository.saveAndFlush(track);
         if (request.lyrics() != null) {
             officialLyricService.saveOrUpdateTrackLyric(updatedTrack.getId(), request.lyrics(), user.getId());
         }
@@ -229,6 +250,7 @@ public class StudioTrackService {
 
         officialLyricService.deleteByTrackId(track.getId());
         trackRepository.delete(track);
+        registerDeletedMediaCleanup(track.getAudioPublicId(), track.getCoverPublicId());
         log.info("Deleted track ID: {} by user: {}", trackId, user.getEmail());
     }
 
@@ -324,7 +346,7 @@ public class StudioTrackService {
      */
     @Transactional(readOnly = true)
     public List<GenreOptionResponse> getActiveGenres() {
-        return genreRepository.findByActiveTrueOrderByNameAsc().stream()
+        return genreRepository.findAllByActiveTrueOrderByNameAsc().stream()
                 .map(g -> new GenreOptionResponse(g.getId(), g.getName(), g.getSlug(), g.getDescription()))
                 .toList();
     }
@@ -367,5 +389,75 @@ public class StudioTrackService {
 
     private LocalDateTime nowUtc() {
         return LocalDateTime.now(ZoneOffset.UTC);
+    }
+
+    private Integer resolveDurationMs(Integer cloudDurationMs, Integer requestedDurationMs) {
+        if (cloudDurationMs != null && cloudDurationMs > 0) return cloudDurationMs;
+        return requestedDurationMs != null && requestedDurationMs > 0 ? requestedDurationMs : 1;
+    }
+
+    /** Chỉ xóa audio mới khi transaction tạo bài hát bị rollback. */
+    private void registerNewAudioRollbackCleanup(String newPublicId) {
+        registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) cloudMediaService.deleteTrackAudioQuietly(newPublicId);
+            }
+        });
+    }
+
+    /** Chỉ xóa ảnh mới khi transaction tạo bài hát bị rollback. */
+    private void registerNewImageRollbackCleanup(String newPublicId) {
+        registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) cloudMediaService.deleteImageQuietly(newPublicId);
+            }
+        });
+    }
+
+    /** Sau commit xóa audio cũ; khi rollback xóa audio mới thay thế. */
+    private void registerAudioReplacementCleanup(String oldPublicId, String newPublicId) {
+        registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_COMMITTED) {
+                    cloudMediaService.deleteTrackAudioQuietly(oldPublicId);
+                } else {
+                    cloudMediaService.deleteTrackAudioQuietly(newPublicId);
+                }
+            }
+        });
+    }
+
+    /** Sau commit xóa ảnh cũ; khi rollback xóa ảnh mới thay thế. */
+    private void registerImageReplacementCleanup(String oldPublicId, String newPublicId) {
+        registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_COMMITTED) {
+                    cloudMediaService.deleteImageQuietly(oldPublicId);
+                } else {
+                    cloudMediaService.deleteImageQuietly(newPublicId);
+                }
+            }
+        });
+    }
+
+    /** Chỉ xóa media của bài hát sau khi transaction xóa database đã commit. */
+    private void registerDeletedMediaCleanup(String audioPublicId, String coverPublicId) {
+        registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                cloudMediaService.deleteTrackAudioQuietly(audioPublicId);
+                cloudMediaService.deleteImageQuietly(coverPublicId);
+            }
+        });
+    }
+
+    private void registerSynchronization(TransactionSynchronization synchronization) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(synchronization);
+        }
     }
 }

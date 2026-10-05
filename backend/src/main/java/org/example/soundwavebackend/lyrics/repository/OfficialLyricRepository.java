@@ -8,7 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface OfficialLyricRepository extends JpaRepository<OfficialLyric, Long> {
-    Optional<OfficialLyric> findByTrackIdAndLanguageCode(Long trackId, String languageCode);
+    Optional<OfficialLyric> findByTrackIdAndLanguage_Code(Long trackId, String languageCode);
 
     Optional<OfficialLyric> findFirstByTrackIdOrderByCreatedAtDesc(Long trackId);
 

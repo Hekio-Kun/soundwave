@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { AlertIcon } from "../icons";
 
 type Props = {
@@ -9,6 +11,8 @@ type Props = {
 };
 
 export function LogoutConfirmationDialog({ open, submitting, onCancel, onConfirm }: Props) {
+  useModalScrollLock(open);
+
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -20,7 +24,7 @@ export function LogoutConfirmationDialog({ open, submitting, onCancel, onConfirm
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       className="modal-backdrop"
       role="presentation"
@@ -50,6 +54,7 @@ export function LogoutConfirmationDialog({ open, submitting, onCancel, onConfirm
           </button>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -14,8 +14,8 @@ import java.time.ZoneOffset;
 @Table(
         name = "personal_lyrics",
         uniqueConstraints = @UniqueConstraint(
-                name = "UQ_personal_lyrics_user_track_language",
-                columnNames = {"user_id", "track_id", "language_code"}
+                name = "UQ_personal_lyrics_user_track_lang_type",
+                columnNames = {"user_id", "track_id", "language_id", "lyric_type"}
         )
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -30,8 +30,13 @@ public class PersonalLyric {
     @Column(name = "track_id", nullable = false)
     private Long trackId;
 
-    @Column(name = "language_code", nullable = false, length = 10)
-    private String languageCode;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "language_id", nullable = false)
+    private LyricLanguage language;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lyric_type", nullable = false, length = 20)
+    private LyricType lyricType;
 
     @Lob
     @Nationalized
@@ -44,11 +49,16 @@ public class PersonalLyric {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public PersonalLyric(Long userId, Long trackId, String languageCode, String lyricContent) {
+    public PersonalLyric(Long userId, Long trackId, LyricLanguage language, LyricType lyricType, String lyricContent) {
         this.userId = userId;
         this.trackId = trackId;
-        this.languageCode = languageCode;
+        this.language = language;
+        this.lyricType = lyricType != null ? lyricType : LyricType.CUSTOM;
         this.lyricContent = lyricContent;
+    }
+
+    public String getLanguageCode() {
+        return language != null ? language.getCode() : null;
     }
 
     public void updateContent(String lyricContent, LocalDateTime updatedAt) {
@@ -59,7 +69,12 @@ public class PersonalLyric {
     @PrePersist
     void initializeTimestamps() {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
-        createdAt = now;
+        if (createdAt == null) {
+            createdAt = now;
+        }
         updatedAt = now;
+        if (lyricType == null) {
+            lyricType = LyricType.CUSTOM;
+        }
     }
 }

@@ -26,5 +26,14 @@ class JwtServiceTest {
         assertTrue(jwtService.isValid(token));
         assertEquals("user@example.com", jwtService.extractSubject(token));
         assertEquals(12L, jwtService.extractSessionId(token));
+
+        var payloadOpt = jwtService.validateAndExtract(token);
+        assertTrue(payloadOpt.isPresent());
+        var payload = payloadOpt.get();
+        assertEquals("user@example.com", payload.subject());
+        assertEquals(12L, payload.sessionId());
+        assertEquals("LISTENER", payload.role());
+        assertEquals(7L, payload.userId());
     }
 }
+

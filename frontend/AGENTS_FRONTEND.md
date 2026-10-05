@@ -193,6 +193,9 @@ Bấm tên bài mở Track Details. Bấm creator mở User/Creator Profile. Kh�
 - Nút đóng hoặc Cancel phải rõ ràng.
 - Focus phải đi vào modal khi mở và trở về vị trí cũ khi đóng.
 - Mobile xếp button theo chiều dọc nếu không đủ chỗ.
+- **Đóng khi bấm ra ngoài (Click outside / Backdrop click):** Khi modal hiện lên, nhấp vào vùng overlay/backdrop bên ngoài nội dung modal phải tự động đóng/thoát modal.
+- **Khóa cuộn trang nền (Scroll lock):** Khi modal đang mở, bắt buộc khóa cuộn trang nền bên dưới (ngăn không cho cuộn trang chính bên ngoài, ví dụ thêm `overflow: hidden` vào `document.body`); khi modal đóng phải khôi phục lại trạng thái cuộn bình thường của trang.
+- Hỗ trợ phím `Escape` (`Esc`) để đóng modal bằng bàn phím.
 
 ### 4.8 Player
 
@@ -367,6 +370,7 @@ Một màn hình chỉ được xem là hoàn thành khi:
 [ ] Có loading / empty / error state
 [ ] Responsive 375 / 768 / 1024 / 1440
 [ ] Keyboard và aria-label hoạt động
+[ ] Modal đóng khi click ra ngoài (backdrop click), đóng bằng phím Esc và khóa cuộn trang nền
 [ ] Form không dùng thông báo validation mặc định của trình duyệt
 [ ] Animation mượt, có mục đích và hỗ trợ prefers-reduced-motion
 [ ] Không có horizontal overflow ngoài vùng cho phép

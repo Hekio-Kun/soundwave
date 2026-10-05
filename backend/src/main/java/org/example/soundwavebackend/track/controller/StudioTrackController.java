@@ -8,8 +8,11 @@ import org.example.soundwavebackend.track.dto.request.UpdateTrackRequest;
 import org.example.soundwavebackend.track.dto.response.*;
 import org.example.soundwavebackend.track.service.StudioTrackService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.List;
@@ -21,17 +24,21 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/studio")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('LISTENER')")
 public class StudioTrackController {
     private final StudioTrackService studioTrackService;
 
     /**
      * Tạo bản nháp bài hát mới kèm metadata (UC-19.1).
      */
-    @PostMapping("/tracks")
-    public ResponseEntity<StudioTrackResponse> createTrackDraft(@Valid @RequestBody CreateTrackRequest request,
-                                                                 Principal principal) {
+    @PostMapping(value = "/tracks", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<StudioTrackResponse> createTrackDraft(
+            @Valid @RequestPart("track") CreateTrackRequest request,
+            @RequestPart("audio") MultipartFile audio,
+            @RequestPart(value = "cover", required = false) MultipartFile cover,
+            Principal principal) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(studioTrackService.createTrackDraft(request, principal.getName()));
+                .body(studioTrackService.createTrackDraft(request, audio, cover, principal.getName()));
     }
 
     /**
@@ -54,11 +61,14 @@ public class StudioTrackController {
     /**
      * Cập nhật thông tin bài hát ở trạng thái DRAFT hoặc REJECTED (UC-19.3).
      */
-    @PutMapping("/tracks/{id}")
-    public ResponseEntity<StudioTrackResponse> updateTrack(@PathVariable Long id,
-                                                           @Valid @RequestBody UpdateTrackRequest request,
-                                                           Principal principal) {
-        return ResponseEntity.ok(studioTrackService.updateTrack(id, request, principal.getName()));
+    @PutMapping(value = "/tracks/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<StudioTrackResponse> updateTrack(
+            @PathVariable Long id,
+            @Valid @RequestPart("track") UpdateTrackRequest request,
+            @RequestPart(value = "audio", required = false) MultipartFile audio,
+            @RequestPart(value = "cover", required = false) MultipartFile cover,
+            Principal principal) {
+        return ResponseEntity.ok(studioTrackService.updateTrack(id, request, audio, cover, principal.getName()));
     }
 
     /**

@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -55,8 +58,10 @@ public class AuthenticationController {
      * Đăng nhập và trả access token theo vai trò backend xác định.
      */
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        return withRefreshCookie(authenticationService.login(request));
+    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        log.info("Processing login request for email: {}", request.email());
+        LoginResult result = authenticationService.login(request);
+        return withRefreshCookie(result, httpRequest);
     }
 
     /**
@@ -80,7 +85,8 @@ public class AuthenticationController {
      */
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(HttpServletRequest request) {
-        return withRefreshCookie(authenticationService.refresh(readRefreshCookie(request)));
+        LoginResult result = authenticationService.refresh(readRefreshCookie(request));
+        return withRefreshCookie(result, request);
     }
 
     /**
@@ -90,21 +96,22 @@ public class AuthenticationController {
     public ResponseEntity<Void> logout(HttpServletRequest request) {
         authenticationService.logout(readOptionalRefreshCookie(request));
         return ResponseEntity.noContent()
-                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie("", 0).toString())
+                .header(HttpHeaders.SET_COOKIE, buildRefreshCookie("", 0, request).toString())
                 .build();
     }
 
-    private ResponseEntity<AuthResponse> withRefreshCookie(LoginResult result) {
+    private ResponseEntity<AuthResponse> withRefreshCookie(LoginResult result, HttpServletRequest request) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE,
-                        buildRefreshCookie(result.refreshToken(), result.refreshTokenMaxAgeSeconds()).toString())
+                        buildRefreshCookie(result.refreshToken(), result.refreshTokenMaxAgeSeconds(), request).toString())
                 .body(result.response());
     }
 
-    private ResponseCookie buildRefreshCookie(String value, long maxAge) {
+    private ResponseCookie buildRefreshCookie(String value, long maxAge, HttpServletRequest request) {
+        boolean isHttps = request != null && (request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto")));
         return ResponseCookie.from(REFRESH_COOKIE, value)
                 .httpOnly(true)
-                .secure(secureCookie)
+                .secure(secureCookie || isHttps)
                 .sameSite("Lax")
                 .path("/api/v1/auth")
                 .maxAge(maxAge)

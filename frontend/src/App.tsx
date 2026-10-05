@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
-import type { ProfileDetails } from "./api/profile";
-import { demoPlaylists, initialStudioTracks, tracks } from "./data";
+import { playlistApi } from "./api/playlists";
+import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
 import { LogoutConfirmationDialog } from "./components/LogoutConfirmationDialog";
 import { MusicPlayer } from "./components/MusicPlayer";
@@ -14,13 +14,18 @@ import { CreatorProfilePage } from "./pages/CreatorProfilePage";
 import { ExplorePage } from "./pages/ExplorePage";
 import { GenresPage } from "./pages/GenresPage";
 import { LibraryPage } from "./pages/LibraryPage";
+import { PlaylistDetailsPage } from "./pages/PlaylistDetailsPage";
+import { PlaylistFormModal } from "./components/PlaylistFormModal";
+import { AddTrackToPlaylistModal } from "./components/AddTrackToPlaylistModal";
+import { DeleteConfirmationModal } from "./components/DeleteConfirmationModal";
 import { AdminDashboardPage, DashboardAccessDenied, StaffDashboardPage } from "./pages/OperationsDashboardPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SearchPage } from "./pages/SearchPage";
 import { StudioPage } from "./pages/StudioPage";
 import { TrackDetailsPage } from "./pages/TrackDetailsPage";
+import { UploadTrackPage } from "./pages/UploadTrackPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
-import type { CurrentUser, LandingTrack, Playlist, StudioTrack } from "./types";
+import type { CurrentUser, LandingTrack, Playlist } from "./types";
 
 export default function App() {
   // 1. Authentication State
@@ -85,7 +90,6 @@ export default function App() {
       return updatedUser;
     });
   }, []);
-
   const handleLogout = () => setLogoutDialogOpen(true);
 
   const confirmLogout = async () => {
@@ -176,11 +180,60 @@ export default function App() {
   };
 
   // 3. Library & Favorites & Playlists State
-  const [favoriteIds, setFavoriteIds] = useState<number[]>([1, 2]);
-  const [playlists, setPlaylists] = useState<Playlist[]>(demoPlaylists);
-  const [isNewPlaylistModalOpen, setIsNewPlaylistModalOpen] = useState(false);
-  const [newPlaylistTitle, setNewPlaylistTitle] = useState("");
-  const [newPlaylistDesc, setNewPlaylistDesc] = useState("");
+  const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
+    const saved = localStorage.getItem("soundwave_favorite_ids");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+    return [1, 2];
+  });
+
+  const [playlists, setPlaylists] = useState<Playlist[]>(() => {
+    const saved = localStorage.getItem("soundwave_playlists");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+    return demoPlaylists;
+  });
+
+  // Fetch playlists from backend on mount and auth state change
+  useEffect(() => {
+    const loadPlaylists = async () => {
+      try {
+        if (isAuthenticated) {
+          const myPlaylists = await playlistApi.getMyPlaylists();
+          if (myPlaylists) {
+            setPlaylists(myPlaylists);
+          }
+        } else {
+          const publicPlaylists = await playlistApi.getPublicPlaylists();
+          if (publicPlaylists && publicPlaylists.length > 0) {
+            setPlaylists(publicPlaylists);
+          }
+        }
+      } catch {
+        // Fallback to local storage or demo playlists
+      }
+    };
+    loadPlaylists();
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    localStorage.setItem("soundwave_playlists", JSON.stringify(playlists));
+  }, [playlists]);
+
+  useEffect(() => {
+    localStorage.setItem("soundwave_favorite_ids", JSON.stringify(favoriteIds));
+  }, [favoriteIds]);
+
+  const [playlistFormOpen, setPlaylistFormOpen] = useState(false);
+  const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
+  const [addTrackPlaylistId, setAddTrackPlaylistId] = useState<number | null>(null);
+  const [deletePlaylistId, setDeletePlaylistId] = useState<number | null>(null);
 
   const toggleFavorite = (trackId: number) => {
     setFavoriteIds((prev) =>
@@ -188,57 +241,164 @@ export default function App() {
     );
   };
 
-  const handleCreatePlaylist = (title: string, description?: string) => {
-    const newPl: Playlist = {
-      id: Date.now(),
-      title,
-      description: description || "Custom playlist",
-      coverUrl: "/pics/album.png",
-      trackCount: 0,
-      isPrivate: false,
-      ownerId: user?.id ?? 1,
-      ownerName: user?.displayName || "You",
-      creatorName: user?.displayName || "You",
-      createdAt: "Just now",
-      trackIds: [],
-    };
-    setPlaylists((prev) => [newPl, ...prev]);
+  const handleOpenCreatePlaylist = () => {
+    setEditingPlaylist(null);
+    setPlaylistFormOpen(true);
   };
 
-  const handleAddToPlaylist = (playlistId: number, trackId: number) => {
-    setPlaylists((prev) =>
-      prev.map((pl) => {
-        if (pl.id === playlistId && !pl.trackIds.includes(trackId)) {
-          return { ...pl, trackIds: [...pl.trackIds, trackId] };
-        }
-        return pl;
-      })
-    );
+  const handleOpenEditPlaylist = (pl: Playlist) => {
+    setEditingPlaylist(pl);
+    setPlaylistFormOpen(true);
   };
 
-  const handleDeletePlaylist = (playlistId: number) => {
-    setPlaylists((prev) => prev.filter((pl) => pl.id !== playlistId));
+  const handleSavePlaylist = async (data: {
+    title: string;
+    description: string;
+    isPrivate: boolean;
+    coverUrl: string;
+  }) => {
+    if (editingPlaylist) {
+      try {
+        const updated = await playlistApi.updatePlaylist(editingPlaylist.id, data);
+        setPlaylists((prev) =>
+          prev.map((p) => (p.id === editingPlaylist.id ? updated : p))
+        );
+      } catch {
+        // Fallback local
+        setPlaylists((prev) =>
+          prev.map((p) =>
+            p.id === editingPlaylist.id
+              ? {
+                  ...p,
+                  title: data.title,
+                  description: data.description,
+                  isPrivate: data.isPrivate,
+                  coverUrl: data.coverUrl,
+                }
+              : p
+          )
+        );
+      }
+      setEditingPlaylist(null);
+    } else {
+      try {
+        const created = await playlistApi.createPlaylist(data);
+        setPlaylists((prev) => [created, ...prev]);
+      } catch {
+        // Fallback local
+        const newPl: Playlist = {
+          id: Date.now(),
+          title: data.title,
+          description: data.description,
+          isPrivate: data.isPrivate,
+          coverUrl: data.coverUrl,
+          trackCount: 0,
+          ownerId: user?.id ?? 1,
+          ownerName: user?.displayName || "You",
+          creatorName: user?.displayName || "You",
+          createdAt: "Just now",
+          trackIds: [],
+        };
+        setPlaylists((prev) => [newPl, ...prev]);
+      }
+    }
   };
 
-  // 4. Studio Tracks State
-  const [studioTracks, setStudioTracks] = useState<StudioTrack[]>(initialStudioTracks);
-
-  const handleUploadTrack = (newTrackData: Omit<StudioTrack, "id" | "createdAt">) => {
-    const newTrack: StudioTrack = {
-      ...newTrackData,
-      id: Date.now(),
-      createdAt: "Today",
-    };
-    setStudioTracks((prev) => [newTrack, ...prev]);
+  const handleConfirmDeletePlaylist = async () => {
+    if (!deletePlaylistId) return;
+    const targetId = deletePlaylistId;
+    try {
+      await playlistApi.deletePlaylist(targetId);
+    } catch {
+      // Local fallback
+    }
+    setPlaylists((prev) => prev.filter((pl) => pl.id !== targetId));
+    setDeletePlaylistId(null);
+    if (window.location.hash.includes(`/playlist/${targetId}`)) {
+      window.location.hash = "#/playlists";
+    }
   };
 
-  const handleSubmitForReview = (trackId: number) => {
-    setStudioTracks((prev) =>
-      prev.map((t) => (t.id === trackId ? { ...t, status: "PENDING" as const } : t))
-    );
+  const handleAddToPlaylist = async (playlistId: number, trackId: number) => {
+    try {
+      const updated = await playlistApi.addTrackToPlaylist(playlistId, trackId);
+      setPlaylists((prev) =>
+        prev.map((pl) => (pl.id === playlistId ? updated : pl))
+      );
+    } catch {
+      // Fallback local
+      setPlaylists((prev) =>
+        prev.map((pl) => {
+          if (pl.id === playlistId && !pl.trackIds.includes(trackId)) {
+            const nextTracks = [...pl.trackIds, trackId];
+            return { ...pl, trackIds: nextTracks, trackCount: nextTracks.length };
+          }
+          return pl;
+        })
+      );
+    }
   };
 
-  // 5. Routing State
+  const handleRemoveTrackFromPlaylist = async (playlistId: number, trackId: number) => {
+    try {
+      const updated = await playlistApi.removeTrackFromPlaylist(playlistId, trackId);
+      setPlaylists((prev) =>
+        prev.map((pl) => (pl.id === playlistId ? updated : pl))
+      );
+    } catch {
+      // Fallback local
+      setPlaylists((prev) =>
+        prev.map((pl) => {
+          if (pl.id === playlistId) {
+            const nextTracks = pl.trackIds.filter((id) => id !== trackId);
+            return { ...pl, trackIds: nextTracks, trackCount: nextTracks.length };
+          }
+          return pl;
+        })
+      );
+    }
+  };
+
+  const handleReorderPlaylistTracks = async (
+    playlistId: number,
+    trackId: number,
+    direction: "up" | "down"
+  ) => {
+    try {
+      const updated = await playlistApi.reorderPlaylistTracks(playlistId, {
+        trackId,
+        direction,
+      });
+      setPlaylists((prev) =>
+        prev.map((pl) => (pl.id === playlistId ? updated : pl))
+      );
+    } catch {
+      // Fallback local
+      setPlaylists((prev) =>
+        prev.map((pl) => {
+          if (pl.id === playlistId) {
+            const idx = pl.trackIds.indexOf(trackId);
+            if (idx === -1) return pl;
+            const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+            if (targetIdx < 0 || targetIdx >= pl.trackIds.length) return pl;
+            const copy = [...pl.trackIds];
+            const [moved] = copy.splice(idx, 1);
+            copy.splice(targetIdx, 0, moved);
+            return { ...pl, trackIds: copy };
+          }
+          return pl;
+        })
+      );
+    }
+  };
+
+  const handlePlayAllTracks = (tracksToPlay: LandingTrack[]) => {
+    if (!tracksToPlay.length) return;
+    setQueue(tracksToPlay);
+    playTrack(tracksToPlay[0], true);
+  };
+
+  // 4. Routing State
   const [route, setRoute] = useState(() => window.location.hash || "#/");
 
   useMotionReveal(route);
@@ -270,6 +430,12 @@ export default function App() {
     pathname === "/reset-password";
   const isDashboardRoute = pathname.startsWith("/admin") || pathname.startsWith("/staff");
   const isMusicRoute = !isAuthRoute && !isDashboardRoute;
+  const isExploreRoute =
+    pathname === "/" ||
+    pathname === "" ||
+    pathname === "/home" ||
+    pathname === "/explore" ||
+    pathname === "/landing";
 
   useEffect(() => {
     if (isDashboardRoute) {
@@ -277,6 +443,28 @@ export default function App() {
       setPlaying(false);
     }
   }, [audio, isDashboardRoute]);
+
+  useEffect(() => {
+    if (user?.role === "STAFF") {
+      if (
+        pathname === "/login" ||
+        pathname === "/register" ||
+        pathname === "/" ||
+        pathname === "" ||
+        pathname.startsWith("/admin")
+      ) {
+        window.location.hash = "#/staff/dashboard";
+      }
+    } else if (user?.role === "ADMIN") {
+      if (
+        pathname === "/login" ||
+        pathname === "/register" ||
+        pathname.startsWith("/staff")
+      ) {
+        window.location.hash = "#/admin/dashboard";
+      }
+    }
+  }, [user, pathname]);
 
   // Render Page Content
   const renderContent = () => {
@@ -303,7 +491,7 @@ export default function App() {
     }
 
     // App Routes
-    if (pathname === "/" || pathname === "" || pathname === "/home" || pathname === "/explore" || pathname === "/landing") {
+    if (isExploreRoute) {
       const initialGenre = queryParams.get("genre") || undefined;
       const sort = queryParams.get("sort");
       const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : undefined;
@@ -392,6 +580,27 @@ export default function App() {
         );
     }
 
+    if (pathname.startsWith("/playlist/")) {
+      const playlistId = Number(pathname.split("/")[2]) || 1;
+      return (
+        <PlaylistDetailsPage
+          playlistId={playlistId}
+          playlists={playlists}
+          currentTrack={currentTrack}
+          playing={playing}
+          onPlayTrack={playTrack}
+          onPlayAll={handlePlayAllTracks}
+          onNavigate={navigate}
+          onEditPlaylist={handleOpenEditPlaylist}
+          onDeletePlaylist={(id) => setDeletePlaylistId(id)}
+          onRemoveTrack={handleRemoveTrackFromPlaylist}
+          onReorderTracks={handleReorderPlaylistTracks}
+          onOpenAddTrackModal={() => setAddTrackPlaylistId(playlistId)}
+          currentUser={user}
+        />
+      );
+    }
+
     if (pathname === "/library" || pathname === "/favorites") {
       return (
         <LibraryPage
@@ -402,8 +611,9 @@ export default function App() {
           favoriteIds={favoriteIds}
           onToggleFavorite={toggleFavorite}
           playlists={playlists}
-          onCreatePlaylist={() => setIsNewPlaylistModalOpen(true)}
-          onDeletePlaylist={handleDeletePlaylist}
+          onCreatePlaylist={handleOpenCreatePlaylist}
+          onEditPlaylist={handleOpenEditPlaylist}
+          onDeletePlaylist={(id) => setDeletePlaylistId(id)}
           initialTab="favorites"
         />
       );
@@ -419,9 +629,20 @@ export default function App() {
           favoriteIds={favoriteIds}
           onToggleFavorite={toggleFavorite}
           playlists={playlists}
-          onCreatePlaylist={() => setIsNewPlaylistModalOpen(true)}
-          onDeletePlaylist={handleDeletePlaylist}
+          onCreatePlaylist={handleOpenCreatePlaylist}
+          onEditPlaylist={handleOpenEditPlaylist}
+          onDeletePlaylist={(id) => setDeletePlaylistId(id)}
           initialTab="playlists"
+        />
+      );
+    }
+
+    if (pathname === "/studio/upload") {
+      return (
+        <UploadTrackPage
+          isAuthenticated={isAuthenticated}
+          canUpload={user?.role === "LISTENER"}
+          onNavigate={navigate}
         />
       );
     }
@@ -429,9 +650,7 @@ export default function App() {
     if (pathname === "/studio") {
       return (
         <StudioPage
-          tracks={studioTracks}
-          onUploadTrack={handleUploadTrack}
-          onSubmitForReview={handleSubmitForReview}
+          tracks={initialStudioTracks}
           onNavigate={navigate}
         />
       );
@@ -440,13 +659,23 @@ export default function App() {
     if (pathname === "/admin" || pathname === "/admin/dashboard") {
       return user?.role === "ADMIN"
         ? <AdminDashboardPage onNavigate={navigate} />
-        : <DashboardAccessDenied onNavigate={navigate} />;
+        : <DashboardAccessDenied onNavigate={navigate} requiredRole="Administrator" />;
     }
 
-    if (pathname === "/staff" || pathname === "/staff/dashboard") {
+    if (
+      pathname === "/staff" ||
+      pathname === "/staff/dashboard" ||
+      pathname.startsWith("/staff/submissions/") ||
+      pathname.startsWith("/staff/moderation/")
+    ) {
+      const parts = pathname.split("/");
+      const submissionId =
+        pathname.startsWith("/staff/submissions/") || pathname.startsWith("/staff/moderation/")
+          ? Number(parts[3]) || null
+          : null;
       return user?.role === "STAFF" || user?.role === "ADMIN"
-        ? <StaffDashboardPage onNavigate={navigate} />
-        : <DashboardAccessDenied onNavigate={navigate} />;
+        ? <StaffDashboardPage onNavigate={navigate} initialSubmissionId={submissionId} />
+        : <DashboardAccessDenied onNavigate={navigate} requiredRole="Moderation Staff" />;
     }
 
     // Default fallback to Explore
@@ -484,7 +713,7 @@ export default function App() {
           user={user}
           isAuthenticated={isAuthenticated}
           onLogout={handleLogout}
-          onCreatePlaylist={() => setIsNewPlaylistModalOpen(true)}
+          onCreatePlaylist={handleOpenCreatePlaylist}
           queueOpen={queueOpen}
           onCloseQueue={() => setQueueOpen(false)}
           currentTrack={currentTrack}
@@ -494,6 +723,7 @@ export default function App() {
           onRemoveFromQueue={handleRemoveFromQueue}
           onClearQueue={handleClearQueue}
           hasPlayer
+          showFooter={isExploreRoute}
         >
           <div key={route} className="app-route-stage app-route-stage--music">
             {renderContent()}
@@ -536,68 +766,39 @@ export default function App() {
 
       {logoutNotice ? <div className="app-toast" role="status">{logoutNotice}</div> : null}
 
-      {/* Global Create Playlist Modal */}
-      {isNewPlaylistModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsNewPlaylistModalOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Create playlist</h2>
-              <button
-                className="icon-button"
-                onClick={() => setIsNewPlaylistModalOpen(false)}
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!newPlaylistTitle.trim()) return;
-                handleCreatePlaylist(newPlaylistTitle.trim(), newPlaylistDesc.trim());
-                setNewPlaylistTitle("");
-                setNewPlaylistDesc("");
-                setIsNewPlaylistModalOpen(false);
-              }}
-              className="modal-form"
-            >
-              <div className="form-group">
-                <label htmlFor="playlist-title">Name</label>
-                <input
-                  id="playlist-title"
-                  type="text"
-                  required
-                  placeholder="For example: Weekend relaxation"
-                  value={newPlaylistTitle}
-                  onChange={(e) => setNewPlaylistTitle(e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label htmlFor="playlist-desc">Description (optional)</label>
-                <input
-                  id="playlist-desc"
-                  type="text"
-                  placeholder="Add a description for your playlist"
-                  value={newPlaylistDesc}
-                  onChange={(e) => setNewPlaylistDesc(e.target.value)}
-                />
-              </div>
-              <div className="modal-actions">
-                <button
-                  type="button"
-                  className="button button-ghost"
-                  onClick={() => setIsNewPlaylistModalOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="button button-primary">
-                  Create playlist
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Playlist Create / Edit Modal (UC-15.1, UC-15.3) */}
+      <PlaylistFormModal
+        open={playlistFormOpen}
+        onClose={() => {
+          setPlaylistFormOpen(false);
+          setEditingPlaylist(null);
+        }}
+        playlist={editingPlaylist}
+        onSave={handleSavePlaylist}
+      />
+
+      {/* Add Track to Playlist Modal */}
+      <AddTrackToPlaylistModal
+        open={Boolean(addTrackPlaylistId)}
+        onClose={() => setAddTrackPlaylistId(null)}
+        playlistTitle={playlists.find((p) => p.id === addTrackPlaylistId)?.title ?? "Playlist"}
+        currentTrackIds={playlists.find((p) => p.id === addTrackPlaylistId)?.trackIds ?? []}
+        onAddTrack={(trackId) => {
+          if (addTrackPlaylistId) {
+            handleAddToPlaylist(addTrackPlaylistId, trackId);
+          }
+        }}
+      />
+
+      {/* Delete Playlist Confirmation Modal (UC-15.4) */}
+      <DeleteConfirmationModal
+        open={Boolean(deletePlaylistId)}
+        title="Delete Playlist"
+        message="Are you sure you want to delete this playlist? This will remove the playlist permanently, but tracks will remain in the catalog."
+        confirmLabel="Delete Playlist"
+        onConfirm={handleConfirmDeletePlaylist}
+        onCancel={() => setDeletePlaylistId(null)}
+      />
     </div>
   );
 }

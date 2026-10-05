@@ -17,7 +17,7 @@ const cover = (from: string, to: string, accent: string, label: string, variant 
 const avatar = (background: string, foreground: string, initials: string) =>
   svgData(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="100" fill="${background}"/><circle cx="100" cy="75" r="38" fill="${foreground}" opacity=".92"/><path d="M36 190c4-46 27-72 64-72s60 26 64 72" fill="${foreground}" opacity=".92"/><text x="100" y="108" text-anchor="middle" fill="white" font-family="Arial" font-weight="800" font-size="24">${initials}</text></svg>`);
 
-const covers = {
+export const covers = {
   dawn: cover("#0e7490", "#7c3aed", "#67e8f9", "SỚM MAI", 1),
   city: cover("#111827", "#be185d", "#f9a8d4", "THÀNH PHỐ", 2),
   blue: cover("#0369a1", "#312e81", "#bae6fd", "BIỂN XANH", 3),

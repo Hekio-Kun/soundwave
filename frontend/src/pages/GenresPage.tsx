@@ -1,11 +1,24 @@
-import { genres } from "../data";
+import { useEffect, useState } from "react";
+import { genres as initialGenres } from "../data";
+import { catalogApi } from "../api/catalog";
 import { ArrowIcon } from "../icons";
+import type { Genre } from "../types";
 
 type Props = {
   onNavigate: (route: string) => void;
 };
 
 export function GenresPage({ onNavigate }: Props) {
+  const [genresList, setGenresList] = useState<Genre[]>(initialGenres);
+
+  useEffect(() => {
+    catalogApi.getGenres()
+      .then((data) => {
+        if (data && data.length > 0) setGenresList(data);
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="genres-page">
       <div className="page-title-banner">
@@ -17,12 +30,12 @@ export function GenresPage({ onNavigate }: Props) {
       </div>
 
       <div className="genres-full-grid">
-        {genres.map((genre, idx) => (
+        {genresList.map((genre, idx) => (
           <div
             key={genre.id}
             className="genre-big-card"
             style={{ backgroundColor: genre.color, color: genre.accent }}
-            onClick={() => onNavigate(`/explore?genre=${genre.slug}`)}
+            onClick={() => onNavigate(`/browse?genre=${genre.slug}`)}
           >
             <div className="genre-big-header">
               <span className="genre-big-num">{String(idx + 1).padStart(2, "0")}</span>

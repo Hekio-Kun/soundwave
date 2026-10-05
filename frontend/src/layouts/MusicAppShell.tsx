@@ -24,6 +24,7 @@ type Props = {
   onRemoveFromQueue: (trackId: number) => void;
   onClearQueue: () => void;
   hasPlayer: boolean;
+  showFooter: boolean;
 };
 
 export function MusicAppShell({
@@ -43,6 +44,7 @@ export function MusicAppShell({
   onRemoveFromQueue,
   onClearQueue,
   hasPlayer,
+  showFooter,
 }: Props) {
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -73,9 +75,11 @@ export function MusicAppShell({
           <main className="app-content-body" id="app-content-body">
             {children}
           </main>
-          <div className="app-shell-footer">
-            <SoundWaveFooter hasPlayer={false} />
-          </div>
+          {showFooter && (
+            <div className="app-shell-footer">
+              <SoundWaveFooter hasPlayer={false} />
+            </div>
+          )}
         </div>
       </div>
 
