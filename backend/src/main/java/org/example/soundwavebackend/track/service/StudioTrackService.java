@@ -346,7 +346,7 @@ public class StudioTrackService {
      */
     @Transactional(readOnly = true)
     public List<GenreOptionResponse> getActiveGenres() {
-        return genreRepository.findByActiveTrueOrderByNameAsc().stream()
+        return genreRepository.findAllByActiveTrueOrderByNameAsc().stream()
                 .map(g -> new GenreOptionResponse(g.getId(), g.getName(), g.getSlug(), g.getDescription()))
                 .toList();
     }

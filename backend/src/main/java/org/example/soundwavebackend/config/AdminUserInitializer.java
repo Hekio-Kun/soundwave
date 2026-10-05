@@ -95,7 +95,7 @@ public class AdminUserInitializer implements ApplicationRunner {
     }
 
     private void createGenreIfAbsent(String name, String slug, String description) {
-        if (genreRepository.findBySlug(slug).isEmpty()) {
+        if (genreRepository.findBySlugIgnoreCase(slug).isEmpty()) {
             genreRepository.save(new Genre(name, slug, description, null));
             log.info("Initialized default genre: {}", name);
         }
