@@ -122,7 +122,7 @@ class StudioTrackServiceTest {
 
         assertThrows(TrackOperationNotAllowedException.class, () ->
                 service.deleteTrack(501L, "creator@soundwave.com"));
-        verify(trackRepository, never()).delete(any());
+        verify(trackRepository, never()).delete(any(Track.class));
     }
 
     @Test

@@ -8,6 +8,7 @@ import org.example.soundwavebackend.catalog.entity.Track;
 import org.example.soundwavebackend.catalog.entity.TrackPublicationStatus;
 import org.example.soundwavebackend.catalog.repository.GenreRepository;
 import org.example.soundwavebackend.catalog.repository.TrackRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
@@ -31,18 +32,31 @@ public class CatalogDataInitializer implements ApplicationRunner {
     private final TrackRepository trackRepository;
     private final UserAccountPublicService userAccountPublicService;
 
+    @Value("${app.seed.demo-enabled:true}")
+    private boolean demoSeedEnabled;
+
+    @Value("${app.admin.email:admin@soundwave.com}")
+    private String adminEmail;
+
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         initDefaultGenres();
-        initDefaultTracks();
-    }
 
-    private void initDefaultGenres() {
-        if (genreRepository.count() > 0) {
+        if (!demoSeedEnabled) {
+            log.info("Demo track initialization is disabled.");
             return;
         }
 
+        var adminId = userAccountPublicService.findUserIdByEmail(adminEmail);
+        if (adminId.isEmpty()) {
+            log.warn("Skipped demo track initialization because admin account {} does not exist.", adminEmail);
+            return;
+        }
+        initDefaultTracks(adminId.get());
+    }
+
+    private void initDefaultGenres() {
         String[][] defaultGenres = {
                 {"Pop", "pop", "Bright, catchy, and popular melodies."},
                 {"Ballad", "ballad", "Gentle, heartfelt songs rich in emotion."},
@@ -54,24 +68,23 @@ public class CatalogDataInitializer implements ApplicationRunner {
                 {"Lofi", "lofi", "Relaxing sounds for studying and working."}
         };
 
+        int createdGenreCount = 0;
         for (String[] g : defaultGenres) {
-            Genre genre = new Genre(g[0], g[1], g[2], 1L);
-            genreRepository.save(genre);
+            if (genreRepository.findBySlugIgnoreCase(g[1]).isEmpty()) {
+                genreRepository.save(new Genre(g[0], g[1], g[2], null));
+                createdGenreCount++;
+            }
         }
-        log.info("Successfully initialized {} default genres.", defaultGenres.length);
+        if (createdGenreCount > 0) {
+            log.info("Successfully initialized {} default genres.", createdGenreCount);
+        }
     }
 
-    private void initDefaultTracks() {
+    private void initDefaultTracks(Long adminId) {
         if (trackRepository.count() > 0) {
             return;
         }
 
-        Long adminId = 1L;
-        try {
-            adminId = userAccountPublicService.getUserIdByEmail("admin@soundwave.com");
-        } catch (Exception e) {
-            log.warn("Could not find admin user for demo track seeder, defaulting to 1L: {}", e.getMessage());
-        }
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
 
         Map<String, Genre> genreMap = new HashMap<>();

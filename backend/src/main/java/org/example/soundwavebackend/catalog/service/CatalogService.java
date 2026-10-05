@@ -26,7 +26,7 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public Optional<Track> findTrackById(Long id) {
-        return trackRepository.findWithDetailsById(id);
+        return trackRepository.findById(id);
     }
 
     @Transactional(readOnly = true)
@@ -34,7 +34,7 @@ public class CatalogService {
         if (ids == null || ids.isEmpty()) {
             return Map.of();
         }
-        return trackRepository.findAllWithDetailsByIdIn(ids).stream()
+        return trackRepository.findByIdIn(ids).stream()
                 .collect(Collectors.toMap(Track::getId, Function.identity()));
     }
 
