@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
-import type { ProfileDetails } from "./api/profile";
-import { demoPlaylists, initialStudioTracks, tracks } from "./data";
+import { playlistApi } from "./api/playlists";
+import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
 import { LogoutConfirmationDialog } from "./components/LogoutConfirmationDialog";
 import { MusicPlayer } from "./components/MusicPlayer";
@@ -200,6 +200,28 @@ export default function App() {
     return demoPlaylists;
   });
 
+  // Fetch playlists from backend on mount and auth state change
+  useEffect(() => {
+    const loadPlaylists = async () => {
+      try {
+        if (isAuthenticated) {
+          const myPlaylists = await playlistApi.getMyPlaylists();
+          if (myPlaylists) {
+            setPlaylists(myPlaylists);
+          }
+        } else {
+          const publicPlaylists = await playlistApi.getPublicPlaylists();
+          if (publicPlaylists && publicPlaylists.length > 0) {
+            setPlaylists(publicPlaylists);
+          }
+        }
+      } catch {
+        // Fallback to local storage or demo playlists
+      }
+    };
+    loadPlaylists();
+  }, [isAuthenticated]);
+
   useEffect(() => {
     localStorage.setItem("soundwave_playlists", JSON.stringify(playlists));
   }, [playlists]);
@@ -229,48 +251,67 @@ export default function App() {
     setPlaylistFormOpen(true);
   };
 
-  const handleSavePlaylist = (data: {
+  const handleSavePlaylist = async (data: {
     title: string;
     description: string;
     isPrivate: boolean;
     coverUrl: string;
   }) => {
     if (editingPlaylist) {
-      setPlaylists((prev) =>
-        prev.map((p) =>
-          p.id === editingPlaylist.id
-            ? {
-                ...p,
-                title: data.title,
-                description: data.description,
-                isPrivate: data.isPrivate,
-                coverUrl: data.coverUrl,
-              }
-            : p
-        )
-      );
+      try {
+        const updated = await playlistApi.updatePlaylist(editingPlaylist.id, data);
+        setPlaylists((prev) =>
+          prev.map((p) => (p.id === editingPlaylist.id ? updated : p))
+        );
+      } catch {
+        // Fallback local
+        setPlaylists((prev) =>
+          prev.map((p) =>
+            p.id === editingPlaylist.id
+              ? {
+                  ...p,
+                  title: data.title,
+                  description: data.description,
+                  isPrivate: data.isPrivate,
+                  coverUrl: data.coverUrl,
+                }
+              : p
+          )
+        );
+      }
       setEditingPlaylist(null);
     } else {
-      const newPl: Playlist = {
-        id: Date.now(),
-        title: data.title,
-        description: data.description,
-        isPrivate: data.isPrivate,
-        coverUrl: data.coverUrl,
-        trackCount: 0,
-        ownerId: user?.id ?? 1,
-        ownerName: user?.displayName || "You",
-        creatorName: user?.displayName || "You",
-        createdAt: "Just now",
-        trackIds: [],
-      };
-      setPlaylists((prev) => [newPl, ...prev]);
+      try {
+        const created = await playlistApi.createPlaylist(data);
+        setPlaylists((prev) => [created, ...prev]);
+      } catch {
+        // Fallback local
+        const newPl: Playlist = {
+          id: Date.now(),
+          title: data.title,
+          description: data.description,
+          isPrivate: data.isPrivate,
+          coverUrl: data.coverUrl,
+          trackCount: 0,
+          ownerId: user?.id ?? 1,
+          ownerName: user?.displayName || "You",
+          creatorName: user?.displayName || "You",
+          createdAt: "Just now",
+          trackIds: [],
+        };
+        setPlaylists((prev) => [newPl, ...prev]);
+      }
     }
   };
 
-  const handleConfirmDeletePlaylist = () => {
+  const handleConfirmDeletePlaylist = async () => {
     if (!deletePlaylistId) return;
     const targetId = deletePlaylistId;
+    try {
+      await playlistApi.deletePlaylist(targetId);
+    } catch {
+      // Local fallback
+    }
     setPlaylists((prev) => prev.filter((pl) => pl.id !== targetId));
     setDeletePlaylistId(null);
     if (window.location.hash.includes(`/playlist/${targetId}`)) {
@@ -278,50 +319,77 @@ export default function App() {
     }
   };
 
-  const handleAddToPlaylist = (playlistId: number, trackId: number) => {
-    setPlaylists((prev) =>
-      prev.map((pl) => {
-        if (pl.id === playlistId && !pl.trackIds.includes(trackId)) {
-          const nextTracks = [...pl.trackIds, trackId];
-          return { ...pl, trackIds: nextTracks, trackCount: nextTracks.length };
-        }
-        return pl;
-      })
-    );
+  const handleAddToPlaylist = async (playlistId: number, trackId: number) => {
+    try {
+      const updated = await playlistApi.addTrackToPlaylist(playlistId, trackId);
+      setPlaylists((prev) =>
+        prev.map((pl) => (pl.id === playlistId ? updated : pl))
+      );
+    } catch {
+      // Fallback local
+      setPlaylists((prev) =>
+        prev.map((pl) => {
+          if (pl.id === playlistId && !pl.trackIds.includes(trackId)) {
+            const nextTracks = [...pl.trackIds, trackId];
+            return { ...pl, trackIds: nextTracks, trackCount: nextTracks.length };
+          }
+          return pl;
+        })
+      );
+    }
   };
 
-  const handleRemoveTrackFromPlaylist = (playlistId: number, trackId: number) => {
-    setPlaylists((prev) =>
-      prev.map((pl) => {
-        if (pl.id === playlistId) {
-          const nextTracks = pl.trackIds.filter((id) => id !== trackId);
-          return { ...pl, trackIds: nextTracks, trackCount: nextTracks.length };
-        }
-        return pl;
-      })
-    );
+  const handleRemoveTrackFromPlaylist = async (playlistId: number, trackId: number) => {
+    try {
+      const updated = await playlistApi.removeTrackFromPlaylist(playlistId, trackId);
+      setPlaylists((prev) =>
+        prev.map((pl) => (pl.id === playlistId ? updated : pl))
+      );
+    } catch {
+      // Fallback local
+      setPlaylists((prev) =>
+        prev.map((pl) => {
+          if (pl.id === playlistId) {
+            const nextTracks = pl.trackIds.filter((id) => id !== trackId);
+            return { ...pl, trackIds: nextTracks, trackCount: nextTracks.length };
+          }
+          return pl;
+        })
+      );
+    }
   };
 
-  const handleReorderPlaylistTracks = (
+  const handleReorderPlaylistTracks = async (
     playlistId: number,
     trackId: number,
     direction: "up" | "down"
   ) => {
-    setPlaylists((prev) =>
-      prev.map((pl) => {
-        if (pl.id === playlistId) {
-          const idx = pl.trackIds.indexOf(trackId);
-          if (idx === -1) return pl;
-          const targetIdx = direction === "up" ? idx - 1 : idx + 1;
-          if (targetIdx < 0 || targetIdx >= pl.trackIds.length) return pl;
-          const copy = [...pl.trackIds];
-          const [moved] = copy.splice(idx, 1);
-          copy.splice(targetIdx, 0, moved);
-          return { ...pl, trackIds: copy };
-        }
-        return pl;
-      })
-    );
+    try {
+      const updated = await playlistApi.reorderPlaylistTracks(playlistId, {
+        trackId,
+        direction,
+      });
+      setPlaylists((prev) =>
+        prev.map((pl) => (pl.id === playlistId ? updated : pl))
+      );
+    } catch {
+      // Fallback local
+      setPlaylists((prev) =>
+        prev.map((pl) => {
+          if (pl.id === playlistId) {
+            const idx = pl.trackIds.indexOf(trackId);
+            if (idx === -1) return pl;
+            const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+            if (targetIdx < 0 || targetIdx >= pl.trackIds.length) return pl;
+            const copy = [...pl.trackIds];
+            const [moved] = copy.splice(idx, 1);
+            copy.splice(targetIdx, 0, moved);
+            return { ...pl, trackIds: copy };
+          }
+          return pl;
+        })
+      );
+    }
   };
 
   const handlePlayAllTracks = (tracksToPlay: LandingTrack[]) => {

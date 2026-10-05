@@ -3929,3 +3929,15 @@ body.modal-open .ops-shell-main {
     grid-column: 1 / -1;
   }
 }
+
+@keyframes swSortFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
