@@ -57,60 +57,24 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
-    @ExceptionHandler(InvalidAvatarFileException.class)
-    public ResponseEntity<ApiErrorResponse> handleInvalidAvatar(InvalidAvatarFileException exception,
-                                                                 HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "INVALID_AVATAR_FILE",
-                "Avatar must be in JPG/PNG format and under 5MB.", request, Map.of("avatar", "Choose a JPG or PNG image under 5MB."));
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotFound(ResourceNotFoundException exception, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
-    @ExceptionHandler(InvalidTrackAudioException.class)
-    public ResponseEntity<ApiErrorResponse> handleInvalidTrackAudio(InvalidTrackAudioException exception,
-                                                                     HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request,
-                Map.of("audio", "Choose a valid MP3, WAV or FLAC file under 30MB."));
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<ApiErrorResponse> handleForbiddenOperation(ForbiddenOperationException exception, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
-    @ExceptionHandler(InvalidTrackCoverException.class)
-    public ResponseEntity<ApiErrorResponse> handleInvalidTrackCover(InvalidTrackCoverException exception,
-                                                                     HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request,
-                Map.of("cover", "Choose a valid JPG or PNG image under 5MB."));
+    @ExceptionHandler(ConflictOperationException.class)
+    public ResponseEntity<ApiErrorResponse> handleConflictOperation(ConflictOperationException exception, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
-    @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<ApiErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException exception,
-                                                                  HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "UPLOAD_TOO_LARGE",
-                "The selected files exceed the upload limit.", request,
-                Map.of("media", "Audio must be under 30MB and cover artwork under 5MB."));
-    }
-
-    @ExceptionHandler(TrackException.class)
-    public ResponseEntity<ApiErrorResponse> handleTrackException(TrackException exception,
-                                                                  HttpServletRequest request) {
-        return build(exception.getStatus(), exception.getCode(), exception.getMessage(), request, Map.of());
-    }
-
-    @ExceptionHandler(CloudStorageUnavailableException.class)
-    public ResponseEntity<ApiErrorResponse> handleCloudStorage(CloudStorageUnavailableException exception,
-                                                                HttpServletRequest request) {
-        return build(HttpStatus.SERVICE_UNAVAILABLE, exception.getCode(), exception.getMessage(), request, Map.of());
-    }
-
-    @ExceptionHandler(SubmissionNotFoundException.class)
-    public ResponseEntity<ApiErrorResponse> handleSubmissionNotFound(SubmissionNotFoundException exception, HttpServletRequest request) {
-        return build(HttpStatus.NOT_FOUND, "SUBMISSION_NOT_FOUND", exception.getMessage(), request, Map.of());
-    }
-
-    @ExceptionHandler(InvalidSubmissionStateException.class)
-    public ResponseEntity<ApiErrorResponse> handleInvalidSubmissionState(InvalidSubmissionStateException exception, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, "INVALID_SUBMISSION_STATE", exception.getMessage(), request, Map.of());
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException exception, HttpServletRequest request) {
-        return build(HttpStatus.FORBIDDEN, "FORBIDDEN", "Access is denied.", request, Map.of());
+    @ExceptionHandler(BadRequestOperationException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadRequestOperation(BadRequestOperationException exception, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String code, String message,

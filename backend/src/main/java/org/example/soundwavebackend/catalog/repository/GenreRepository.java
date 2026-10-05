@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface GenreRepository extends JpaRepository<Genre, Long> {
-    Optional<Genre> findBySlug(String slug);
-    List<Genre> findByActiveTrueOrderByNameAsc();
-    boolean existsByNameIgnoreCase(String name);
+    List<Genre> findAllByActiveTrueOrderByNameAsc();
+    Optional<Genre> findBySlugIgnoreCase(String slug);
+    Optional<Genre> findByNameIgnoreCase(String name);
     boolean existsBySlugIgnoreCase(String slug);
 }

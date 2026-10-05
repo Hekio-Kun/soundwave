@@ -54,6 +54,9 @@ public class UserProfile {
         this.user = user;
         this.username = username;
         this.displayName = displayName;
+        if (user != null && user.getId() != null) {
+            this.userId = user.getId();
+        }
     }
 
     public void update(String username, String displayName, String bio, LocalDate dateOfBirth, String countryCode,
