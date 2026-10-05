@@ -27,9 +27,16 @@ public class UserAccountPublicService {
      */
     @Transactional(readOnly = true)
     public Long getUserIdByEmail(String email) {
-        return userRepository.findByEmailIgnoreCase(email)
-                .map(AppUser::getId)
+        return findUserIdByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User was not found with email: " + email));
+    }
+
+    /**
+     * Tìm ID người dùng theo email mà không phát sinh ngoại lệ khi tài khoản chưa tồn tại.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Long> findUserIdByEmail(String email) {
+        return userRepository.findByEmailIgnoreCase(email).map(AppUser::getId);
     }
 
     /**

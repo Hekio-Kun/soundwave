@@ -58,6 +58,15 @@ class UserAccountPublicServiceTest {
     }
 
     @Test
+    void findUserIdByEmail_WhenNotFound_ShouldReturnEmptyOptional() {
+        when(userRepository.findByEmailIgnoreCase("unknown@soundwave.com")).thenReturn(Optional.empty());
+
+        Optional<Long> userId = userAccountPublicService.findUserIdByEmail("unknown@soundwave.com");
+
+        assertTrue(userId.isEmpty());
+    }
+
+    @Test
     void getUserSummaryById_ShouldReturnProfileInfo() {
         Role role = new Role("LISTENER", "Listener", "Standard listener");
         AppUser user = new AppUser(role, "artist@soundwave.com", "hash");
