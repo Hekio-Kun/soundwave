@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { API_BASE_URL, apiFetch } from "./client";
 import type { Genre, LandingTrack } from "../types";
 
 export type PageResponse<T> = {
@@ -7,6 +7,12 @@ export type PageResponse<T> = {
   totalPages: number;
   size: number;
   number: number;
+};
+
+export type RecordPlayResponse = {
+  trackId: number;
+  playCount: number;
+  recordedHistory: boolean;
 };
 
 export const catalogApi = {
@@ -34,5 +40,20 @@ export const catalogApi = {
 
   getTrackById: async (idOrSlug: string | number): Promise<LandingTrack> => {
     return apiFetch<LandingTrack>(`/tracks/${idOrSlug}`);
+  },
+
+  recordPlay: async (
+    trackId: number,
+    listenedDurationMs: number,
+    completed: boolean = false
+  ): Promise<RecordPlayResponse> => {
+    return apiFetch<RecordPlayResponse>(`/tracks/${trackId}/play`, {
+      method: "POST",
+      body: JSON.stringify({ listenedDurationMs, completed }),
+    });
+  },
+
+  getStreamUrl: (trackId: number | string): string => {
+    return `${API_BASE_URL}/tracks/${trackId}/stream`;
   },
 };

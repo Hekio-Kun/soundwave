@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
+import { catalogApi } from "./api/catalog";
 import { playlistApi } from "./api/playlists";
+import type { ProfileDetails } from "./api/profile";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
 import { LogoutConfirmationDialog } from "./components/LogoutConfirmationDialog";
@@ -125,6 +127,21 @@ export default function App() {
 
   useEffect(() => () => audio.pause(), [audio]);
 
+  useEffect(() => {
+    catalogApi.getTracks({ size: 100 })
+      .then((res) => {
+        if (res?.content && res.content.length > 0) {
+          const isPublic = (t: LandingTrack) =>
+            t.publicationStatus === "APPROVED" || t.publicationStatus === "PUBLISHED";
+          const serverIds = new Set(res.content.map((t) => t.id));
+          const fallbackMocks = tracks.filter((t) => !serverIds.has(t.id));
+          const merged = [...res.content, ...fallbackMocks].filter(isPublic);
+          setQueue(merged);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const setAudioPlaying = (shouldPlay: boolean) => {
     if (shouldPlay) {
       void audio
@@ -178,6 +195,18 @@ export default function App() {
       setQueue([]);
     }
   };
+
+  const handleRecordPlay = useCallback(async (trackId: number, durationMs: number, completed: boolean) => {
+    try {
+      const res = await catalogApi.recordPlay(trackId, durationMs, completed);
+      setCurrentTrack((prev) => (prev && prev.id === trackId ? { ...prev, playCount: res.playCount } : prev));
+      setQueue((prev) =>
+        prev.map((item) => (item.id === trackId ? { ...item, playCount: res.playCount } : item))
+      );
+    } catch {
+      // Ignore background reporting errors silently
+    }
+  }, []);
 
   // 3. Library & Favorites & Playlists State
   const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
@@ -744,6 +773,7 @@ export default function App() {
           isAuthenticated={isAuthenticated}
           onToggleQueue={() => setQueueOpen((prev) => !prev)}
           isQueueOpen={queueOpen}
+          onRecordPlay={handleRecordPlay}
         />
       )}
 

@@ -41,7 +41,7 @@ export const tracks: LandingTrack[] = [
     title: "Sớm Mai Dịu Dàng",
     coverUrl: covers.dawn,
     audioUrl: "/audio/soundwave-demo.wav",
-    durationMs: 368000,
+    durationMs: 60000,
     playCount: 284521,
     publicationStatus: "APPROVED",
     genreSlug: "acoustic",

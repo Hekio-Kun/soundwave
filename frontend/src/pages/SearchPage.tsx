@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlbumCard, CreatorCard, TrackCard } from "../components/MusicCards";
 import { albums, featuredCreators, tracks } from "../data";
+import { catalogApi } from "../api/catalog";
 import { CloseIcon, CompassIcon, SearchIcon, TrendingUpIcon } from "../icons";
 import type { LandingTrack } from "../types";
 
@@ -15,6 +16,23 @@ type Props = {
 export function SearchPage({ currentTrack, playing, onPlayTrack, onNavigate, initialQuery = "" }: Props) {
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [activeFilter, setActiveFilter] = useState<"all" | "tracks" | "albums" | "creators">("all");
+  const [serverTracks, setServerTracks] = useState<LandingTrack[]>([]);
+
+  useEffect(() => {
+    catalogApi.getTracks({ size: 100 })
+      .then((res) => {
+        if (res?.content) setServerTracks(res.content);
+      })
+      .catch(() => {});
+  }, []);
+
+  const allSearchableTracks = useMemo(() => {
+    const isPublic = (t: LandingTrack) =>
+      t.publicationStatus === "APPROVED" || t.publicationStatus === "PUBLISHED";
+    const serverIds = new Set(serverTracks.map((t) => t.id));
+    const fallbackMocks = tracks.filter((t) => !serverIds.has(t.id));
+    return [...serverTracks, ...fallbackMocks].filter(isPublic);
+  }, [serverTracks]);
 
   const query = searchTerm.trim().toLowerCase();
 
@@ -22,15 +40,15 @@ export function SearchPage({ currentTrack, playing, onPlayTrack, onNavigate, ini
 
   const matchedTracks = useMemo(() => {
     if (!query) return [];
-    return tracks.filter(
+    return allSearchableTracks.filter(
       (t) =>
-        t.publicationStatus === "APPROVED" &&
-        (t.title.toLowerCase().includes(query) ||
-          t.creator.displayName.toLowerCase().includes(query) ||
-          (t.genreSlug?.toLowerCase().includes(query) ?? false) ||
-          (t.album?.title.toLowerCase().includes(query) ?? false))
+        t.title.toLowerCase().includes(query) ||
+        (t.slug && t.slug.toLowerCase().includes(query)) ||
+        t.creator.displayName.toLowerCase().includes(query) ||
+        (t.genreSlug?.toLowerCase().includes(query) ?? false) ||
+        (t.album?.title?.toLowerCase().includes(query) ?? false)
     );
-  }, [query]);
+  }, [allSearchableTracks, query]);
 
   const matchedAlbums = useMemo(() => {
     if (!query) return [];

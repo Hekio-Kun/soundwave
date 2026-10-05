@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { NextIcon, PauseIcon, PlayIcon, PreviousIcon, QueueIcon, RepeatIcon, ShuffleIcon, VolumeIcon } from "../icons";
 import type { LandingTrack } from "../types";
 
@@ -13,6 +13,7 @@ type Props = {
   isAuthenticated: boolean;
   onToggleQueue?: () => void;
   isQueueOpen?: boolean;
+  onRecordPlay?: (trackId: number, listenedDurationMs: number, completed: boolean) => void;
 };
 
 const formatTime = (seconds: number) => {
@@ -32,6 +33,7 @@ export function MusicPlayer({
   isAuthenticated,
   onToggleQueue,
   isQueueOpen,
+  onRecordPlay,
 }: Props) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(track.durationMs / 1000);
@@ -40,6 +42,9 @@ export function MusicPlayer({
   const [repeat, setRepeat] = useState(false);
   const [localQueueOpen, setLocalQueueOpen] = useState(false);
   const [audioError, setAudioError] = useState(false);
+
+  const recordedRef = useRef(false);
+  const lastTimeRef = useRef<number | null>(null);
 
   const isQueueActive = isQueueOpen !== undefined ? isQueueOpen : localQueueOpen;
   const handleQueueClick = () => {
@@ -64,8 +69,13 @@ export function MusicPlayer({
   }, [audio, volume]);
 
   const handleEnded = () => {
+    if (!recordedRef.current) {
+      recordedRef.current = true;
+      onRecordPlay?.(track.id, Math.round(audio.currentTime * 1000), true);
+    }
     if (repeat) {
       audio.currentTime = 0;
+      recordedRef.current = false;
       void audio.play();
       return;
     }
@@ -92,10 +102,26 @@ export function MusicPlayer({
     setCurrentTime(0);
     setDuration(track.durationMs / 1000);
     setAudioError(false);
+    recordedRef.current = false;
+    lastTimeRef.current = null;
   }, [track.id, track.durationMs]);
 
   useEffect(() => {
-    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateTime = () => {
+      const cur = audio.currentTime;
+      setCurrentTime(cur);
+
+      // BR-08: Listening event is counted when valid-play condition is met (>= 30s or >= 50% duration)
+      if (!recordedRef.current && playing && cur > 0) {
+        const dur = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : track.durationMs / 1000;
+        const threshold = Math.min(30, dur * 0.5);
+        if (cur >= threshold) {
+          recordedRef.current = true;
+          onRecordPlay?.(track.id, Math.round(cur * 1000), false);
+        }
+      }
+    };
+
     const updateDuration = () => setDuration(Number.isFinite(audio.duration) ? audio.duration : track.durationMs / 1000);
     const reportError = () => setAudioError(true);
     audio.addEventListener("timeupdate", updateTime);

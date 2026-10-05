@@ -5,8 +5,10 @@ export type LandingTrack = {
   audioUrl: string;
   durationMs: number;
   playCount: number;
-  publicationStatus: "APPROVED";
+  publicationStatus: "APPROVED" | "PUBLISHED";
+  slug?: string;
   genreSlug?: string;
+  genreName?: string;
   lyrics?: string;
   creator: {
     userId: number;

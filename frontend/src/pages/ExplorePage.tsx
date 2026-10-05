@@ -25,9 +25,7 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
   const [selectedGenre, setSelectedGenre] = useState(initialGenre ?? "all");
   const [sortBy, setSortBy] = useState<"trending" | "newest" | "title">(initialSort ?? "trending");
   const [genresList, setGenresList] = useState<Genre[]>(initialGenres);
-  const approvedTracks = tracks.filter((track) => track.publicationStatus === "APPROVED");
-  const heroTrack = approvedTracks[0];
-  const heroPlaying = currentTrack?.id === heroTrack.id && playing;
+  const [serverTracks, setServerTracks] = useState<LandingTrack[]>([]);
 
   useEffect(() => {
     catalogApi.getGenres()
@@ -35,7 +33,28 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
         if (data && data.length > 0) setGenresList(data);
       })
       .catch(() => {});
+
+    catalogApi.getTracks({ size: 100 })
+      .then((res) => {
+        if (res && res.content) {
+          setServerTracks(res.content);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load tracks from catalog API:", err);
+      });
   }, []);
+
+  const approvedTracks = useMemo(() => {
+    const isPublic = (t: LandingTrack) =>
+      t.publicationStatus === "APPROVED" || t.publicationStatus === "PUBLISHED";
+    const serverIds = new Set(serverTracks.map((t) => t.id));
+    const fallbackMocks = tracks.filter((t) => !serverIds.has(t.id));
+    return [...serverTracks, ...fallbackMocks].filter(isPublic);
+  }, [serverTracks]);
+
+  const heroTrack = approvedTracks[0] ?? tracks[0];
+  const heroPlaying = currentTrack?.id === heroTrack.id && playing;
 
   useEffect(() => setSelectedGenre(initialGenre ?? "all"), [initialGenre]);
   useEffect(() => setSortBy(initialSort ?? "trending"), [initialSort]);
@@ -55,14 +74,20 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
   };
 
   const filteredTracks = useMemo(() => {
-    const byGenre = selectedGenre === "all" ? approvedTracks : approvedTracks.filter((track) => track.genreSlug === selectedGenre);
+    const byGenre =
+      selectedGenre === "all"
+        ? approvedTracks
+        : approvedTracks.filter(
+            (track) => track.genreSlug?.toLowerCase() === selectedGenre.toLowerCase()
+          );
+
     return [...byGenre].sort((a, b) => {
       if (sortBy === "trending") return b.playCount - a.playCount;
       if (sortBy === "newest") return b.id - a.id;
       if (sortBy === "title") return a.title.localeCompare(b.title);
       return 0;
     });
-  }, [selectedGenre, sortBy]);
+  }, [approvedTracks, selectedGenre, sortBy]);
 
   const scrollToCatalog = () => document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth" });
 
@@ -89,7 +114,7 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
         </div>
         <button className="discover-feature" onClick={() => onPlayTrack(heroTrack)} aria-label={`${heroPlaying ? "Pause" : "Play"} ${heroTrack.title}`}>
           <span className="discover-feature-art"><img src={heroTrack.coverUrl ?? undefined} alt="" /></span>
-          <span className="discover-feature-info"><small>RECOMMENDED SONGS</small><strong>{heroTrack.title}</strong><em>{heroTrack.creator.displayName} · {heroTrack.album?.title}</em></span>
+          <span className="discover-feature-info"><small>RECOMMENDED SONGS</small><strong>{heroTrack.title}</strong><em>{heroTrack.creator.displayName} · {heroTrack.album?.title ?? "Single"}</em></span>
           <span className="discover-feature-play">{heroPlaying ? <PauseIcon /> : <PlayIcon />}</span>
         </button>
       </section>

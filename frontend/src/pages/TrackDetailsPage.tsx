@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { TrackCard, SectionHeader } from "../components/MusicCards";
 import { tracks } from "../data";
+import { catalogApi } from "../api/catalog";
 import { CheckIcon, FileTextIcon, HeadphonesIcon, HeartFillIcon, HeartIcon, PauseIcon, PlayIcon, PlusIcon, UserIcon } from "../icons";
 import type { LandingTrack, Playlist } from "../types";
 
@@ -38,7 +39,21 @@ export function TrackDetailsPage({
   playlists,
   onAddToPlaylist,
 }: Props) {
-  const track = tracks.find((item) => item.id === trackId) ?? tracks[0];
+  const staticTrack = tracks.find((item) => item.id === trackId);
+  const [track, setTrack] = useState<LandingTrack>(staticTrack ?? tracks[0]);
+
+  useEffect(() => {
+    if (staticTrack) {
+      setTrack(staticTrack);
+    }
+    catalogApi.getTrackById(trackId)
+      .then((data) => {
+        if (data) setTrack(data);
+      })
+      .catch((err) => {
+        console.warn("Could not fetch track by id:", err);
+      });
+  }, [trackId, staticTrack]);
   const isPlayingThis = currentTrack?.id === track.id && playing;
   const [playlistModalOpen, setPlaylistModalOpen] = useState(false);
   const [reportModalOpen, setReportModalOpen] = useState(false);
