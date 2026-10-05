@@ -2575,3 +2575,15 @@
   font-size: 13.5px;
   line-height: 1.5;
 }
+
+@keyframes swSortFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+

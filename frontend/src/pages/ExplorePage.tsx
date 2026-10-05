@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { albums, featuredCreators, genres, tracks } from "../data";
+import { albums, featuredCreators, genres as initialGenres, tracks } from "../data";
+import { catalogApi } from "../api/catalog";
 import { AlbumCard, CreatorCard, SectionHeader, TrackCard } from "../components/MusicCards";
+import { SortDropdown } from "../components/SortDropdown";
 import { ArrowIcon, FilterIcon, HeadphonesIcon, PauseIcon, PlayIcon } from "../icons";
-import type { LandingTrack } from "../types";
+import type { Genre, LandingTrack } from "../types";
 
 type Props = {
   currentTrack: LandingTrack | null;
@@ -22,9 +24,18 @@ const formatDuration = (ms: number) => {
 export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, initialGenre, initialSort }: Props) {
   const [selectedGenre, setSelectedGenre] = useState(initialGenre ?? "all");
   const [sortBy, setSortBy] = useState<"trending" | "newest" | "title">(initialSort ?? "trending");
+  const [genresList, setGenresList] = useState<Genre[]>(initialGenres);
   const approvedTracks = tracks.filter((track) => track.publicationStatus === "APPROVED");
   const heroTrack = approvedTracks[0];
   const heroPlaying = currentTrack?.id === heroTrack.id && playing;
+
+  useEffect(() => {
+    catalogApi.getGenres()
+      .then((data) => {
+        if (data && data.length > 0) setGenresList(data);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => setSelectedGenre(initialGenre ?? "all"), [initialGenre]);
   useEffect(() => setSortBy(initialSort ?? "trending"), [initialSort]);
@@ -108,7 +119,7 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
         <div className="sw-genre-panel">
           <SectionHeader title="Genres" description="Choose music that matches your mood" actionLabel="View all" onAction={() => onNavigate("/genres")} />
           <div className="sw-genre-grid">
-            {genres.slice(0, 6).map((genre) => (
+            {genresList.slice(0, 6).map((genre) => (
               <button key={genre.id} style={{ "--genre-color": genre.color, "--genre-accent": genre.accent } as CSSProperties} onClick={() => { setSelectedGenre(genre.slug); scrollToCatalog(); }}>
                 <span>{genre.name}</span><small>{genre.description}</small><ArrowIcon width={16} height={16} />
               </button>
@@ -132,7 +143,7 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
           title="SoundWave catalog"
           description={
             selectedGenre !== "all"
-              ? `Result count: ${filteredTracks.length} tracks • Filtered by: ${genres.find(g => g.slug === selectedGenre)?.name ?? selectedGenre}`
+              ? `Result count: ${filteredTracks.length} tracks • Filtered by: ${genresList.find(g => g.slug === selectedGenre)?.name ?? selectedGenre}`
               : `Result count: ${filteredTracks.length} tracks (All genres)`
           }
         />
@@ -144,7 +155,7 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
             >
               All
             </button>
-            {genres.map((genre) => (
+            {genresList.map((genre) => (
               <button
                 key={genre.id}
                 className={selectedGenre === genre.slug ? "is-active" : ""}
@@ -155,20 +166,11 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
             ))}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <label className="sw-sort">
-              <FilterIcon width={15} height={15} />
-              <span className="sr-only">Sort by</span>
-              <select
-                value={sortBy}
-                onChange={(event) =>
-                  updateFilters(selectedGenre, event.target.value as "trending" | "newest" | "title")
-                }
-              >
-                <option value="trending">Most played</option>
-                <option value="newest">Newest</option>
-                <option value="title">Title (A-Z)</option>
-              </select>
-            </label>
+            <SortDropdown
+              value={sortBy}
+              onChange={(newSort) => updateFilters(selectedGenre, newSort)}
+              showLabel={false}
+            />
             {(selectedGenre !== "all" || sortBy !== "trending") && (
               <button
                 className="button button-ghost"

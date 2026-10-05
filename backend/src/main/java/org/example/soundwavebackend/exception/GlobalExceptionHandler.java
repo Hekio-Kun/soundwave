@@ -43,6 +43,26 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotFound(ResourceNotFoundException exception, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(ForbiddenOperationException.class)
+    public ResponseEntity<ApiErrorResponse> handleForbiddenOperation(ForbiddenOperationException exception, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(ConflictOperationException.class)
+    public ResponseEntity<ApiErrorResponse> handleConflictOperation(ConflictOperationException exception, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(BadRequestOperationException.class)
+    public ResponseEntity<ApiErrorResponse> handleBadRequestOperation(BadRequestOperationException exception, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String code, String message,
                                                     HttpServletRequest request, Map<String, String> fieldErrors) {
         ApiErrorResponse body = new ApiErrorResponse(

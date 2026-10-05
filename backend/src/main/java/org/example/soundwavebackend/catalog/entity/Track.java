@@ -104,6 +104,14 @@ public class Track {
         updatedAt = changedAt;
     }
 
+    public void updateMetadata(String title, String description, String coverPublicId, String coverUrl, LocalDateTime updatedAt) {
+        this.title = title;
+        this.description = description;
+        this.coverPublicId = coverPublicId;
+        this.coverUrl = coverUrl;
+        this.updatedAt = updatedAt;
+    }
+
     public void incrementPlayCount() {
         playCount++;
     }
