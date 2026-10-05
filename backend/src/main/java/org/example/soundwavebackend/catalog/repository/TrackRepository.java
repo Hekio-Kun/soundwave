@@ -8,6 +8,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
@@ -32,6 +34,30 @@ public interface TrackRepository extends JpaRepository<Track, Long>, JpaSpecific
 
     @EntityGraph(attributePaths = {"genre", "album"})
     List<Track> findByIdIn(Collection<Long> ids);
+
+    @Query("SELECT track.id FROM Track track WHERE LOWER(track.title) LIKE LOWER(CONCAT('%', :search, '%'))")
+    List<Long> findTrackIdsByTitleContainingIgnoreCase(@Param("search") String search);
+
+    @EntityGraph(attributePaths = {"genre", "album"})
+    List<Track> findByUploaderUserIdOrderByCreatedAtDesc(Long uploaderUserId);
+
+    @EntityGraph(attributePaths = {"genre", "album"})
+    List<Track> findByUploaderUserIdAndPublicationStatusOrderByCreatedAtDesc(
+            Long uploaderUserId,
+            TrackPublicationStatus publicationStatus
+    );
+
+    @EntityGraph(attributePaths = {"genre", "album"})
+    Optional<Track> findByIdAndUploaderUserId(Long id, Long uploaderUserId);
+
+    boolean existsBySlug(String slug);
+
+    long countByUploaderUserId(Long uploaderUserId);
+
+    long countByUploaderUserIdAndPublicationStatus(
+            Long uploaderUserId,
+            TrackPublicationStatus publicationStatus
+    );
 
     long countByPublicationStatus(TrackPublicationStatus status);
 }
