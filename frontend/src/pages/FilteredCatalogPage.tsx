@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { genres, tracks } from "../data";
+import { genres as staticGenres, tracks as staticTracks } from "../data";
+import { catalogApi } from "../api/catalog";
 import { SectionHeader, TrackCard } from "../components/MusicCards";
+import { SortDropdown } from "../components/SortDropdown";
 import { ArrowIcon, FilterIcon, HeadphonesIcon } from "../icons";
-import type { LandingTrack } from "../types";
+import type { Genre, LandingTrack } from "../types";
 
 type Props = {
   currentTrack: LandingTrack | null;
@@ -23,6 +25,8 @@ export function FilteredCatalogPage({
 }: Props) {
   const [selectedGenre, setSelectedGenre] = useState<string>(initialGenre ?? "all");
   const [sortBy, setSortBy] = useState<"newest" | "trending" | "title">(initialSort ?? "newest");
+  const [genresList, setGenresList] = useState<Genre[]>(staticGenres);
+  const [serverTracks, setServerTracks] = useState<LandingTrack[] | null>(null);
 
   // Keep state in sync with URL query params
   useEffect(() => {
@@ -33,14 +37,39 @@ export function FilteredCatalogPage({
     setSortBy(initialSort ?? "newest");
   }, [initialSort]);
 
+  // Load genres from backend
+  useEffect(() => {
+    catalogApi.getGenres()
+      .then((data) => {
+        if (data && data.length > 0) setGenresList(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Load filtered tracks from backend
+  useEffect(() => {
+    catalogApi.getTracks({
+      genre: selectedGenre !== "all" ? selectedGenre : undefined,
+      sort: sortBy,
+    })
+      .then((res) => {
+        if (res && res.content) {
+          setServerTracks(res.content);
+        }
+      })
+      .catch(() => {
+        setServerTracks(null);
+      });
+  }, [selectedGenre, sortBy]);
+
   const approvedTracks = useMemo(
-    () => tracks.filter((track) => track.publicationStatus === "APPROVED"),
+    () => staticTracks.filter((track) => track.publicationStatus === "APPROVED"),
     []
   );
 
   const activeGenreObj = useMemo(
-    () => genres.find((g) => g.slug.toLowerCase() === selectedGenre.toLowerCase()),
-    [selectedGenre]
+    () => genresList.find((g) => g.slug.toLowerCase() === selectedGenre.toLowerCase()),
+    [genresList, selectedGenre]
   );
 
   const updateFilters = (newGenre: string, newSort: "newest" | "trending" | "title") => {
@@ -58,6 +87,10 @@ export function FilteredCatalogPage({
   };
 
   const filteredTracks = useMemo(() => {
+    if (serverTracks !== null) {
+      return serverTracks;
+    }
+
     let result =
       selectedGenre === "all"
         ? approvedTracks
@@ -71,7 +104,7 @@ export function FilteredCatalogPage({
       if (sortBy === "title") return a.title.localeCompare(b.title);
       return 0;
     });
-  }, [approvedTracks, selectedGenre, sortBy]);
+  }, [approvedTracks, serverTracks, selectedGenre, sortBy]);
 
   return (
     <div className="catalog-browse-page" style={{ padding: "0 0 60px 0" }}>
@@ -103,38 +136,12 @@ export function FilteredCatalogPage({
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-          {/* Sort By Dropdown */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <label
-              htmlFor="sort-select"
-              style={{ fontSize: "12px", fontWeight: 700, color: "var(--sw-text)" }}
-            >
-              Sort by:
-            </label>
-            <select
-              id="sort-select"
-              value={sortBy}
-              onChange={(e) =>
-                updateFilters(selectedGenre, e.target.value as "newest" | "trending" | "title")
-              }
-              style={{
-                height: "38px",
-                padding: "0 12px",
-                borderRadius: "10px",
-                border: "1px solid var(--sw-border)",
-                background: "#F8FAFC",
-                color: "var(--sw-text)",
-                fontSize: "12.5px",
-                fontWeight: 600,
-                cursor: "pointer",
-                outline: "none",
-              }}
-            >
-              <option value="newest">Newest</option>
-              <option value="trending">Most played</option>
-              <option value="title">Title (A-Z)</option>
-            </select>
-          </div>
+          {/* Custom Modern Sort Dropdown */}
+          <SortDropdown
+            value={sortBy}
+            onChange={(newSort) => updateFilters(selectedGenre, newSort)}
+            showLabel={true}
+          />
 
           {/* Clear filters Button */}
           {(selectedGenre !== "all" || sortBy !== "newest") && (
@@ -218,7 +225,7 @@ export function FilteredCatalogPage({
         >
           All Genres
         </button>
-        {genres.map((g) => {
+        {genresList.map((g) => {
           const isSelected = selectedGenre.toLowerCase() === g.slug.toLowerCase();
           return (
             <button
