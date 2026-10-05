@@ -59,6 +59,16 @@ public class UserProfile {
         }
     }
 
+    public void update(String username, String displayName, String bio, LocalDate dateOfBirth, String countryCode,
+                       LocalDateTime updatedAt) {
+        this.username = username;
+        this.displayName = displayName;
+        this.bio = bio;
+        this.dateOfBirth = dateOfBirth;
+        this.countryCode = countryCode;
+        this.updatedAt = updatedAt;
+    }
+
     public void update(String displayName, String bio, LocalDate dateOfBirth, String countryCode,
                        LocalDateTime updatedAt) {
         this.displayName = displayName;

@@ -2,11 +2,20 @@ package org.example.soundwavebackend.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.example.soundwavebackend.authentication.exception.*;
+import org.example.soundwavebackend.media.exception.InvalidAvatarFileException;
+import org.example.soundwavebackend.media.exception.CloudStorageUnavailableException;
+import org.example.soundwavebackend.media.exception.InvalidTrackAudioException;
+import org.example.soundwavebackend.media.exception.InvalidTrackCoverException;
+import org.example.soundwavebackend.moderation.exception.InvalidSubmissionStateException;
+import org.example.soundwavebackend.moderation.exception.SubmissionNotFoundException;
+import org.example.soundwavebackend.track.exception.TrackException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -23,7 +32,7 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Please review the submitted fields.", request, errors);
     }
 
-    @ExceptionHandler(EmailAlreadyExistsException.class)
+    @ExceptionHandler({EmailAlreadyExistsException.class, UsernameAlreadyExistsException.class})
     public ResponseEntity<ApiErrorResponse> handleConflict(AuthenticationException exception, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, exception.getCode(), exception.getMessage(), request, Map.of());
     }
@@ -36,6 +45,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({AccountBannedException.class, EmailNotVerifiedException.class})
     public ResponseEntity<ApiErrorResponse> handleForbidden(AuthenticationException exception, HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(ProfileNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNotFound(AuthenticationException exception, HttpServletRequest request) {
+        return build(HttpStatus.NOT_FOUND, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
     @ExceptionHandler({InvalidOtpException.class, AccountUnavailableException.class})

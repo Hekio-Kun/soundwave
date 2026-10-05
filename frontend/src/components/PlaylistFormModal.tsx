@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { covers } from "../data";
 import { CloseIcon } from "../icons";
 import type { Playlist } from "../types";
@@ -58,8 +60,6 @@ export function PlaylistFormModal({ open, onClose, playlist, onSave }: Props) {
     }
   }, [open, playlist]);
 
-  if (!open) return null;
-
   const handleClose = () => {
     setTitle("");
     setDescription("");
@@ -69,6 +69,21 @@ export function PlaylistFormModal({ open, onClose, playlist, onSave }: Props) {
     setError("");
     onClose();
   };
+
+  // Rule 4.7: Modal background scroll lock
+  useModalScrollLock(open);
+
+  // Rule 4.7: Escape key handler
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
+  if (!open) return null;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -87,7 +102,7 @@ export function PlaylistFormModal({ open, onClose, playlist, onSave }: Props) {
     handleClose();
   };
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={handleClose} style={{ zIndex: 1100 }}>
       <div
         className="modal-card"
@@ -347,6 +362,7 @@ export function PlaylistFormModal({ open, onClose, playlist, onSave }: Props) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

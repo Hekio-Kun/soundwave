@@ -16,9 +16,11 @@ import {
   UserIcon,
   UsersIcon,
 } from "../icons";
+import { ModeratePendingTracks } from "../components/ModeratePendingTracks";
 
 type DashboardProps = {
   onNavigate: (route: string) => void;
+  initialSubmissionId?: number | null;
 };
 
 type MetricProps = {
@@ -263,160 +265,22 @@ export function AdminDashboardPage({ onNavigate }: DashboardProps) {
   );
 }
 
-export function StaffDashboardPage({ onNavigate }: DashboardProps) {
-  const [submissions, setSubmissions] = useState<ReviewSubmission[]>(initialSubmissions);
-  const [filter, setFilter] = useState<"ALL" | "HIGH" | "REVIEWING">("ALL");
-  const [rejectionTarget, setRejectionTarget] = useState<ReviewSubmission | null>(null);
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [toast, setToast] = useState("");
-  const [resolvedReports, setResolvedReports] = useState<number[]>([]);
+export { StaffDashboardPage } from "./StaffDashboardPage";
 
-  const pendingSubmissions = useMemo(
-    () => submissions.filter((item) => item.status === "PENDING" || item.status === "REVIEWING"),
-    [submissions],
-  );
-
-  const visibleSubmissions = pendingSubmissions.filter((item) => {
-    if (filter === "HIGH") return item.priority === "HIGH";
-    if (filter === "REVIEWING") return item.status === "REVIEWING";
-    return true;
-  });
-
-  const notify = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 2800);
-  };
-
-  const updateSubmission = (submission: ReviewSubmission, status: ReviewStatus) => {
-    setSubmissions((current) => current.map((item) => item.id === submission.id ? { ...item, status } : item));
-    notify(status === "APPROVED" ? `Approved “${submission.title}”.` : `Rejected “${submission.title}”.`);
-  };
-
-  const reports = [
-    { id: 701, category: "Copyright", title: "Thành Phố Sau Mưa", reporter: "Ngọc Anh", age: "18 minutes", priority: "High" },
-    { id: 702, category: "Inappropriate content", title: "Đêm Trôi Rất Khẽ", reporter: "Minh Tú", age: "52 minutes", priority: "Normal" },
-    { id: 703, category: "Incorrect information", title: "Gọi Nắng Về", reporter: "Thu Trang", age: "1 hour", priority: "Normal" },
-  ].filter((report) => !resolvedReports.includes(report.id));
-
-  return (
-    <div className="ops-dashboard ops-dashboard--staff">
-      <DashboardHeading
-        eyebrow="CONTENT MODERATION"
-        title="Good morning, Staff"
-        description="Prioritize older submissions, assess reports accurately, and keep SoundWave safe."
-        icon={<DashboardIcon width={15} height={15} />}
-      >
-        <span className="ops-shift-chip"><ClockIcon width={15} height={15} /> Morning shift · 08:00–16:00</span>
-        <button className="button button-primary button-small" onClick={() => document.getElementById("review-queue")?.scrollIntoView({ behavior: "smooth" })}>
-          Start review
-        </button>
-      </DashboardHeading>
-
-      <section className="ops-metric-grid" aria-label="Moderation statistics">
-        <DashboardMetric icon={<ClockIcon />} label="Pending reviews" value={String(pendingSubmissions.length + 14)} change="4 new" note="Oldest waiting time: 2 hours 18 minutes" tone="amber" />
-        <DashboardMetric icon={<CheckIcon />} label="Approved today" value="24" change="16.7%" note="Average: 6 minutes per submission" tone="green" />
-        <DashboardMetric icon={<FlagIcon />} label="Pending reports" value={String(reports.length + 9)} change="3 priority" note="Resolution target: under 4 hours" tone="red" />
-        <DashboardMetric icon={<ChartIcon />} label="Weekly SLA" value="92%" change="3.4%" note="Team target: 90%" tone="violet" />
-      </section>
-
-      <section className="ops-dashboard-grid ops-dashboard-grid--staff-main">
-        <article className="ops-panel ops-review-panel" id="review-queue">
-          <PanelHeading
-            title="Pending Track List"
-            description="Sorted by priority and waiting time"
-            action={<span className="ops-queue-count">{pendingSubmissions.length} pending submissions</span>}
-          />
-          <div className="ops-filter-row" role="group" aria-label="Filter submissions">
-            <button className={filter === "ALL" ? "is-active" : ""} onClick={() => setFilter("ALL")}>All</button>
-            <button className={filter === "HIGH" ? "is-active" : ""} onClick={() => setFilter("HIGH")}>High priority</button>
-            <button className={filter === "REVIEWING" ? "is-active" : ""} onClick={() => setFilter("REVIEWING")}>Reviewing</button>
-          </div>
-          <div className="ops-review-list">
-            {visibleSubmissions.length ? visibleSubmissions.map((submission) => (
-              <article className={`ops-review-row ${submission.priority === "HIGH" ? "is-priority" : ""}`} key={submission.id}>
-                <img src={submission.coverUrl ?? "/soundwave-logo.png"} alt="" />
-                <div className="ops-review-copy">
-                  <div className="ops-review-title-line">
-                    <strong>{submission.title}</strong>
-                    {submission.priority === "HIGH" ? <span className="ops-priority-tag"><AlertIcon width={12} height={12} />Priority</span> : null}
-                  </div>
-                  <p>{submission.artist} <i /> {submission.genre}</p>
-                  <small><ClockIcon width={12} height={12} /> Submitted at {submission.submittedAt} · waiting {submission.ageMinutes} minutes</small>
-                </div>
-                <div className="ops-review-state">
-                  <span className={`ops-status ${submission.status === "REVIEWING" ? "is-info" : "is-warning"}`}><i />{submission.status === "REVIEWING" ? "Reviewing" : "Pending"}</span>
-                </div>
-                <div className="ops-review-actions">
-                  <button className="ops-icon-action" aria-label={`Open review for ${submission.title}`} onClick={() => onNavigate(`/track/${Math.min(submission.id - 400, 8)}`)}><EyeIcon width={17} height={17} /></button>
-                  <button className="ops-decision ops-decision--approve" onClick={() => updateSubmission(submission, "APPROVED")}><CheckIcon width={15} height={15} />Approve</button>
-                  <button className="ops-decision ops-decision--reject" onClick={() => { setRejectionTarget(submission); setRejectionReason(""); }}><CloseIcon width={15} height={15} />Reject</button>
-                </div>
-              </article>
-            )) : <div className="ops-empty-state"><CheckIcon width={28} height={28} /><b>No matching submissions</b><span>Try another filter.</span></div>}
-          </div>
-        </article>
-
-        <aside className="ops-panel ops-shift-panel">
-          <PanelHeading title="Shift progress" description="Updated from your activity" />
-          <div className="ops-shift-ring"><span><b>24</b><small>/ 30 target</small></span></div>
-          <div className="ops-shift-progress"><i style={{ width: "80%" }} /></div>
-          <div className="ops-shift-stats">
-            <div><span>Approved</span><b>19</b></div>
-            <div><span>Rejected</span><b>5</b></div>
-            <div><span>Average time</span><b>6 minutes</b></div>
-          </div>
-          <div className="ops-guideline-note"><ShieldIcon width={18} height={18} /><p><b>Quick reminder</b><span>Check audio quality, metadata, and usage rights before making a decision.</span></p></div>
-        </aside>
-      </section>
-
-      <section className="ops-dashboard-grid ops-dashboard-grid--lower">
-        <article className="ops-panel ops-report-panel">
-          <PanelHeading title="Content Report List" description="Prioritized by community impact" action={<button className="ops-text-button">Open report center <span>→</span></button>} />
-          <div className="ops-report-list">
-            {reports.map((report) => (
-              <div className="ops-report-row" key={report.id}>
-                <span className={report.priority === "High" ? "is-high" : ""}><FlagIcon width={17} height={17} /></span>
-                <div><strong>{report.category}</strong><p>{report.title} · Reported by {report.reporter}</p></div>
-                <small>{report.age}</small>
-                <button onClick={() => { setResolvedReports((current) => [...current, report.id]); notify(`Report #${report.id} was marked complete.`); }}>Resolve</button>
-              </div>
-            ))}
-            {!reports.length ? <div className="ops-empty-inline"><CheckIcon width={17} height={17} /> All reports in this list are resolved.</div> : null}
-          </div>
-        </article>
-
-        <aside className="ops-panel ops-weekly-panel">
-          <PanelHeading title="7-day performance" description="Resolved content" />
-          <div className="ops-mini-chart">
-            {[48, 66, 54, 83, 72, 91, 80].map((height, index) => <div key={index}><i style={{ height: `${height}%` }} /><span>{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index]}</span></div>)}
-          </div>
-          <div className="ops-weekly-total"><span>This week</span><b>164 items</b><small><TrendingUpIcon width={13} height={13} /> 11% higher than last week</small></div>
-        </aside>
-      </section>
-
-      {rejectionTarget ? (
-        <div className="modal-overlay" role="presentation" onClick={() => setRejectionTarget(null)}>
-          <div className="modal-card ops-reject-dialog" role="dialog" aria-modal="true" aria-labelledby="reject-title" onClick={(event) => event.stopPropagation()}>
-            <div className="modal-header"><div><span className="ops-dialog-icon"><AlertIcon /></span><h2 id="reject-title">Reject Track</h2></div><button className="icon-button" onClick={() => setRejectionTarget(null)} aria-label="Close"><CloseIcon width={18} height={18} /></button></div>
-            <p>You are rejecting <b>“{rejectionTarget.title}”</b> by {rejectionTarget.artist}. The Rejection reason will be sent to the uploader.</p>
-            <label className="ops-reason-field"><span>Rejection reason</span><textarea autoFocus value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)} placeholder="Briefly describe what needs to be corrected..." /></label>
-            <div className="modal-actions"><button className="button button-ghost" onClick={() => setRejectionTarget(null)}>Cancel</button><button className="button ops-danger-button" disabled={rejectionReason.trim().length < 10} onClick={() => { updateSubmission(rejectionTarget, "REJECTED"); setRejectionTarget(null); }}>Confirm</button></div>
-          </div>
-        </div>
-      ) : null}
-
-      {toast ? <div className="ops-toast" role="status"><CheckIcon width={17} height={17} />{toast}</div> : null}
-    </div>
-  );
-}
-
-export function DashboardAccessDenied({ onNavigate }: DashboardProps) {
+export function DashboardAccessDenied({
+  onNavigate,
+  requiredRole = "authorized",
+}: {
+  onNavigate: (route: string) => void;
+  initialSubmissionId?: number | null;
+  requiredRole?: string;
+}) {
   return (
     <div className="ops-access-denied">
       <span><ShieldIcon width={32} height={32} /></span>
       <small>403 · RESTRICTED AREA</small>
       <h1>Access denied</h1>
-      <p>This dashboard is available only to accounts with the required role. Log in with a Staff or Admin account.</p>
+      <p>This workspace is available only to accounts with the {requiredRole} role. Please log in with an authorized account.</p>
       <div><button className="button button-primary" onClick={() => onNavigate("/login")}>Login with another account</button><button className="button button-secondary" onClick={() => onNavigate("/")}>Back to Explore</button></div>
     </div>
   );

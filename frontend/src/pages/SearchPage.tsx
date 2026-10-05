@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AlbumCard, CreatorCard, TrackCard } from "../components/MusicCards";
 import { albums, featuredCreators, tracks } from "../data";
-import { HeadphonesIcon, PauseIcon, PlayIcon, SearchIcon } from "../icons";
+import { CloseIcon, CompassIcon, SearchIcon, TrendingUpIcon } from "../icons";
 import type { LandingTrack } from "../types";
 
 type Props = {
@@ -11,14 +12,13 @@ type Props = {
   initialQuery?: string;
 };
 
-const formatPlays = (value: number) =>
-  new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
-
 export function SearchPage({ currentTrack, playing, onPlayTrack, onNavigate, initialQuery = "" }: Props) {
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [activeFilter, setActiveFilter] = useState<"all" | "tracks" | "albums" | "creators">("all");
 
   const query = searchTerm.trim().toLowerCase();
+
+  useEffect(() => setActiveFilter("all"), [query]);
 
   const matchedTracks = useMemo(() => {
     if (!query) return [];
@@ -27,6 +27,7 @@ export function SearchPage({ currentTrack, playing, onPlayTrack, onNavigate, ini
         t.publicationStatus === "APPROVED" &&
         (t.title.toLowerCase().includes(query) ||
           t.creator.displayName.toLowerCase().includes(query) ||
+          (t.genreSlug?.toLowerCase().includes(query) ?? false) ||
           (t.album?.title.toLowerCase().includes(query) ?? false))
     );
   }, [query]);
@@ -46,163 +47,117 @@ export function SearchPage({ currentTrack, playing, onPlayTrack, onNavigate, ini
   }, [query]);
 
   const hasResults = matchedTracks.length > 0 || matchedAlbums.length > 0 || matchedCreators.length > 0;
+  const resultCount = matchedTracks.length + matchedAlbums.length + matchedCreators.length;
+  const quickSearches = ["Minh An", "Mưa", "Biển", "Acoustic"];
 
   return (
     <div className="search-page">
-      <div className="search-header-box">
-        <h1 className="page-heading">Search Public Catalog</h1>
-        <div className="search-big-bar">
-          <SearchIcon width={22} height={22} />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search tracks, albums, or creators..."
-            autoFocus
-            aria-label="Keyword"
-          />
+      <section className="search-hero">
+        <div className="search-hero-copy">
+          <span className="search-kicker"><CompassIcon width={15} height={15} /> DISCOVER THE CATALOG</span>
+          <h1>Find your next <span>favorite sound.</span></h1>
+          <p>Search public tracks, albums and Vietnamese creators in one place.</p>
         </div>
-      </div>
+        <div className="search-input-panel">
+          <label htmlFor="catalog-search">What do you want to listen to?</label>
+          <div className="search-big-bar">
+            <SearchIcon width={21} height={21} />
+            <input
+              id="catalog-search"
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Track, album or creator..."
+              autoFocus
+              autoComplete="off"
+            />
+            {searchTerm ? <button type="button" onClick={() => setSearchTerm("")} aria-label="Clear search"><CloseIcon width={16} height={16} /></button> : null}
+          </div>
+          <div className="search-quick-row">
+            <span>Try</span>
+            {quickSearches.map((keyword) => <button key={keyword} onClick={() => setSearchTerm(keyword)}>{keyword}</button>)}
+          </div>
+        </div>
+      </section>
 
       {query && (
-        <div className="search-tabs">
+        <div className="search-toolbar">
+          <div className="search-result-summary"><strong>{resultCount}</strong><span>results for “{searchTerm.trim()}”</span></div>
+          <div className="search-tabs" role="tablist" aria-label="Search result types">
           <button
             className={`search-tab-pill ${activeFilter === "all" ? "search-tab-pill--active" : ""}`}
             onClick={() => setActiveFilter("all")}
+            role="tab"
+            aria-selected={activeFilter === "all"}
           >
-            All ({matchedTracks.length + matchedAlbums.length + matchedCreators.length})
+            All <span>{resultCount}</span>
           </button>
           <button
             className={`search-tab-pill ${activeFilter === "tracks" ? "search-tab-pill--active" : ""}`}
             onClick={() => setActiveFilter("tracks")}
+            role="tab"
+            aria-selected={activeFilter === "tracks"}
           >
-            Tracks ({matchedTracks.length})
+            Tracks <span>{matchedTracks.length}</span>
           </button>
           <button
             className={`search-tab-pill ${activeFilter === "albums" ? "search-tab-pill--active" : ""}`}
             onClick={() => setActiveFilter("albums")}
+            role="tab"
+            aria-selected={activeFilter === "albums"}
           >
-            Album ({matchedAlbums.length})
+            Albums <span>{matchedAlbums.length}</span>
           </button>
           <button
             className={`search-tab-pill ${activeFilter === "creators" ? "search-tab-pill--active" : ""}`}
             onClick={() => setActiveFilter("creators")}
+            role="tab"
+            aria-selected={activeFilter === "creators"}
           >
-            Creators ({matchedCreators.length})
+            Creators <span>{matchedCreators.length}</span>
           </button>
+          </div>
         </div>
       )}
 
       {!query ? (
         <div className="search-prompt-state">
-          <SearchIcon width={48} height={48} />
-          <p>Enter a keyword to explore the SoundWave catalog.</p>
-          <div className="quick-keywords">
-            <span>Suggestions:</span>
-            <button className="text-tag" onClick={() => setSearchTerm("Mưa")}>Thành Phố Sau Mưa</button>
-            <button className="text-tag" onClick={() => setSearchTerm("Minh An")}>Minh An</button>
-            <button className="text-tag" onClick={() => setSearchTerm("Biển")}>Phía Bên Kia Biển</button>
-          </div>
+          <span className="search-prompt-icon"><TrendingUpIcon width={25} height={25} /></span>
+          <div><span className="search-prompt-label">TRENDING SEARCH</span><h2>Start with what listeners love today</h2><p>Use a title, creator name or album to explore the public catalog.</p></div>
+          <button onClick={() => setSearchTerm("Minh An")}>Explore Minh An</button>
         </div>
       ) : !hasResults ? (
         <div className="state-empty-box">
+          <span className="search-empty-icon"><SearchIcon width={26} height={26} /></span>
           <p className="empty-title">No results found for "{searchTerm}"</p>
           <p className="empty-desc">Check the spelling or try a shorter keyword.</p>
+          <button className="button button-secondary" onClick={() => setSearchTerm("")}>Clear search</button>
         </div>
       ) : (
         <div className="search-results-container">
-          {/* Tracks section */}
           {(activeFilter === "all" || activeFilter === "tracks") && matchedTracks.length > 0 && (
             <section className="search-result-section">
-              <h2 className="section-title">Tracks</h2>
-              <div className="app-track-grid">
-                {matchedTracks.map((track) => {
-                  const isPlayingThis = currentTrack?.id === track.id && playing;
-                  const isCurrent = currentTrack?.id === track.id;
-
-                  return (
-                    <article key={track.id} className={`music-card ${isCurrent ? "music-card--active" : ""}`}>
-                      <div className="music-card-cover" onClick={() => onPlayTrack(track)}>
-                        <img src={track.coverUrl ?? undefined} alt={track.title} />
-                        <button className="music-card-play-btn" aria-label={`Play ${track.title}`}>
-                          {isPlayingThis ? <PauseIcon width={18} height={18} /> : <PlayIcon width={18} height={18} />}
-                        </button>
-                      </div>
-                      <a
-                        className="music-card-title"
-                        href={`#/track/${track.id}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          onNavigate(`/track/${track.id}`);
-                        }}
-                      >
-                        {track.title}
-                      </a>
-                      <a
-                        className="music-card-creator"
-                        href={`#/creator/${track.creator.userId}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          onNavigate(`/creator/${track.creator.userId}`);
-                        }}
-                      >
-                        {track.creator.displayName}
-                      </a>
-                      <span className="music-card-meta">
-                        <HeadphonesIcon width={12} height={12} /> {formatPlays(track.playCount)}
-                      </span>
-                    </article>
-                  );
-                })}
+              <div className="search-section-heading"><div><span>SONGS</span><h2>Matching tracks</h2></div><small>{matchedTracks.length} found</small></div>
+              <div className="sw-track-grid sw-track-grid--catalog">
+                {matchedTracks.map((track) => <TrackCard key={track.id} track={track} active={currentTrack?.id === track.id} playing={currentTrack?.id === track.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />)}
               </div>
             </section>
           )}
 
-          {/* Albums section */}
           {(activeFilter === "all" || activeFilter === "albums") && matchedAlbums.length > 0 && (
             <section className="search-result-section">
-              <h2 className="section-title">Album</h2>
-              <div className="app-album-grid">
-                {matchedAlbums.map((album) => (
-                  <div
-                    key={album.id}
-                    className="album-item-card"
-                    onClick={() => onNavigate(`/album/${album.id}`)}
-                  >
-                    <div className="album-card-art">
-                      <img src={album.coverUrl} alt={album.title} />
-                      <span className="album-card-play-hover">
-                        <PlayIcon width={20} height={20} />
-                      </span>
-                    </div>
-                    <h3 className="album-card-title">{album.title}</h3>
-                    <p className="album-card-creator">
-                      {album.creatorName} · {album.releaseYear}
-                    </p>
-                  </div>
-                ))}
+              <div className="search-section-heading"><div><span>COLLECTIONS</span><h2>Matching albums</h2></div><small>{matchedAlbums.length} found</small></div>
+              <div className="sw-album-grid">
+                {matchedAlbums.map((album) => <AlbumCard key={album.id} album={album} onNavigate={onNavigate} />)}
               </div>
             </section>
           )}
 
-          {/* Creators section */}
           {(activeFilter === "all" || activeFilter === "creators") && matchedCreators.length > 0 && (
             <section className="search-result-section">
-              <h2 className="section-title">Creators</h2>
-              <div className="app-creator-grid">
-                {matchedCreators.map((creator) => (
-                  <div key={creator.userId} className="creator-profile-card">
-                    <img src={creator.avatarUrl} alt="" className="creator-card-avatar" />
-                    <h3 className="creator-card-name">{creator.displayName}</h3>
-                    <p className="creator-card-bio">{creator.bio}</p>
-                    <button
-                      className="button button-secondary button-small"
-                      onClick={() => onNavigate(`/creator/${creator.userId}`)}
-                    >
-                      View profile
-                    </button>
-                  </div>
-                ))}
+              <div className="search-section-heading"><div><span>PEOPLE</span><h2>Matching creators</h2></div><small>{matchedCreators.length} found</small></div>
+              <div className="sw-creator-grid">
+                {matchedCreators.map((creator) => <CreatorCard key={creator.userId} creator={creator} onNavigate={onNavigate} />)}
               </div>
             </section>
           )}

@@ -1,4 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import { tracks } from "../data";
 import { CloseIcon, PlusIcon, SearchIcon, CheckIcon } from "../icons";
 import type { LandingTrack } from "../types";
@@ -36,9 +38,22 @@ export function AddTrackToPlaylistModal({
     );
   }, [approvedTracks, search]);
 
+  // Rule 4.7: Modal background scroll lock
+  useModalScrollLock(open);
+
+  // Rule 4.7: Escape key handler
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose]);
+
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1100 }}>
       <div
         className="modal-card"
@@ -218,6 +233,7 @@ export function AddTrackToPlaylistModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

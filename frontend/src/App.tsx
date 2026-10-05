@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
 import { playlistApi } from "./api/playlists";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
@@ -12,7 +12,6 @@ import { AlbumDetailsPage } from "./pages/AlbumDetailsPage";
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from "./pages/AuthPages";
 import { CreatorProfilePage } from "./pages/CreatorProfilePage";
 import { ExplorePage } from "./pages/ExplorePage";
-import { FilteredCatalogPage } from "./pages/FilteredCatalogPage";
 import { GenresPage } from "./pages/GenresPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { PlaylistDetailsPage } from "./pages/PlaylistDetailsPage";
@@ -20,17 +19,20 @@ import { PlaylistFormModal } from "./components/PlaylistFormModal";
 import { AddTrackToPlaylistModal } from "./components/AddTrackToPlaylistModal";
 import { DeleteConfirmationModal } from "./components/DeleteConfirmationModal";
 import { AdminDashboardPage, DashboardAccessDenied, StaffDashboardPage } from "./pages/OperationsDashboardPage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { SearchPage } from "./pages/SearchPage";
 import { StudioPage } from "./pages/StudioPage";
 import { TrackDetailsPage } from "./pages/TrackDetailsPage";
+import { UploadTrackPage } from "./pages/UploadTrackPage";
 import { VerifyEmailPage } from "./pages/VerifyEmailPage";
-import type { CurrentUser, LandingTrack, Playlist, StudioTrack } from "./types";
+import type { CurrentUser, LandingTrack, Playlist } from "./types";
 
 export default function App() {
   // 1. Authentication State
   const [user, setUser] = useState<CurrentUser | null>(() => {
     const saved = localStorage.getItem("soundwave_user") ?? sessionStorage.getItem("soundwave_user");
-    if (saved) {
+    const accessToken = localStorage.getItem("soundwave_access_token") ?? sessionStorage.getItem("soundwave_access_token");
+    if (saved && accessToken) {
       try {
         return JSON.parse(saved) as CurrentUser;
       } catch {
@@ -54,15 +56,40 @@ export default function App() {
   const handleLoginSuccess = (session: AuthSession, rememberMe: boolean) => {
     const loggedInUser: CurrentUser = {
       ...session.user,
-      avatarUrl: demoUser.avatarUrl,
+      avatarUrl: session.user.avatarUrl,
     };
     setUser(loggedInUser);
+    localStorage.removeItem("soundwave_user");
+    localStorage.removeItem("soundwave_access_token");
+    sessionStorage.removeItem("soundwave_user");
+    sessionStorage.removeItem("soundwave_access_token");
     const storage = rememberMe ? localStorage : sessionStorage;
     storage.setItem("soundwave_user", JSON.stringify(loggedInUser));
     storage.setItem("soundwave_access_token", session.accessToken);
     window.location.hash = session.user.role === "ADMIN" ? "#/admin/dashboard" : session.user.role === "STAFF" ? "#/staff/dashboard" : "#/";
   };
 
+  const handleProfileUpdated = useCallback((profile: ProfileDetails) => {
+    setUser((current) => {
+      if (!current) return current;
+      const updatedUser: CurrentUser = {
+        ...current,
+        id: profile.userId,
+        userId: profile.userId,
+        email: profile.email,
+        username: profile.username,
+        displayName: profile.displayName,
+        avatarUrl: profile.avatarUrl,
+        role: profile.role,
+        bio: profile.bio ?? undefined,
+        dateOfBirth: profile.dateOfBirth ?? undefined,
+        countryCode: profile.countryCode ?? undefined,
+      };
+      const storage = localStorage.getItem("soundwave_access_token") ? localStorage : sessionStorage;
+      storage.setItem("soundwave_user", JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  }, []);
   const handleLogout = () => setLogoutDialogOpen(true);
 
   const confirmLogout = async () => {
@@ -371,25 +398,7 @@ export default function App() {
     playTrack(tracksToPlay[0], true);
   };
 
-  // 4. Studio Tracks State
-  const [studioTracks, setStudioTracks] = useState<StudioTrack[]>(initialStudioTracks);
-
-  const handleUploadTrack = (newTrackData: Omit<StudioTrack, "id" | "createdAt">) => {
-    const newTrack: StudioTrack = {
-      ...newTrackData,
-      id: Date.now(),
-      createdAt: "Today",
-    };
-    setStudioTracks((prev) => [newTrack, ...prev]);
-  };
-
-  const handleSubmitForReview = (trackId: number) => {
-    setStudioTracks((prev) =>
-      prev.map((t) => (t.id === trackId ? { ...t, status: "PENDING" as const } : t))
-    );
-  };
-
-  // 5. Routing State
+  // 4. Routing State
   const [route, setRoute] = useState(() => window.location.hash || "#/");
 
   useMotionReveal(route);
@@ -421,6 +430,12 @@ export default function App() {
     pathname === "/reset-password";
   const isDashboardRoute = pathname.startsWith("/admin") || pathname.startsWith("/staff");
   const isMusicRoute = !isAuthRoute && !isDashboardRoute;
+  const isExploreRoute =
+    pathname === "/" ||
+    pathname === "" ||
+    pathname === "/home" ||
+    pathname === "/explore" ||
+    pathname === "/landing";
 
   useEffect(() => {
     if (isDashboardRoute) {
@@ -428,6 +443,28 @@ export default function App() {
       setPlaying(false);
     }
   }, [audio, isDashboardRoute]);
+
+  useEffect(() => {
+    if (user?.role === "STAFF") {
+      if (
+        pathname === "/login" ||
+        pathname === "/register" ||
+        pathname === "/" ||
+        pathname === "" ||
+        pathname.startsWith("/admin")
+      ) {
+        window.location.hash = "#/staff/dashboard";
+      }
+    } else if (user?.role === "ADMIN") {
+      if (
+        pathname === "/login" ||
+        pathname === "/register" ||
+        pathname.startsWith("/staff")
+      ) {
+        window.location.hash = "#/admin/dashboard";
+      }
+    }
+  }, [user, pathname]);
 
   // Render Page Content
   const renderContent = () => {
@@ -453,37 +490,18 @@ export default function App() {
       return <ResetPasswordPage email={queryParams.get("email") || ""} onNavigate={navigate} />;
     }
 
-    // App Routes - UC-08 Filtered Public Catalog / Browse Tracks
-    if (
-      pathname === "/browse" ||
-      pathname === "/catalog" ||
-      ((pathname === "/" || pathname === "" || pathname === "/home" || pathname === "/explore" || pathname === "/landing") &&
-        queryParams.has("genre"))
-    ) {
+    // App Routes
+    if (isExploreRoute) {
       const initialGenre = queryParams.get("genre") || undefined;
       const sort = queryParams.get("sort");
-      const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : sort === "title" ? "title" : undefined;
-      return (
-        <FilteredCatalogPage
-          currentTrack={currentTrack}
-          playing={playing}
-          onPlayTrack={playTrack}
-          onNavigate={navigate}
-          initialGenre={initialGenre}
-          initialSort={initialSort}
-        />
-      );
-    }
-
-    if (pathname === "/" || pathname === "" || pathname === "/home" || pathname === "/explore" || pathname === "/landing") {
-      const sort = queryParams.get("sort");
-      const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : sort === "title" ? "title" : undefined;
+      const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : undefined;
       return (
         <ExplorePage
           currentTrack={currentTrack}
           playing={playing}
           onPlayTrack={playTrack}
           onNavigate={navigate}
+          initialGenre={initialGenre}
           initialSort={initialSort}
         />
       );
@@ -503,14 +521,7 @@ export default function App() {
     }
 
     if (pathname === "/genres") {
-      return (
-        <FilteredCatalogPage
-          currentTrack={currentTrack}
-          playing={playing}
-          onPlayTrack={playTrack}
-          onNavigate={navigate}
-        />
-      );
+      return <GenresPage onNavigate={navigate} />;
     }
 
     if (pathname.startsWith("/track/")) {
@@ -557,15 +568,16 @@ export default function App() {
     }
 
     if (pathname === "/profile") {
-      return (
-        <CreatorProfilePage
-          creatorId={user?.userId ?? 101}
-          currentTrack={currentTrack}
-          playing={playing}
-          onPlayTrack={playTrack}
-          onNavigate={navigate}
-        />
-      );
+      return user
+        ? <ProfilePage onProfileUpdated={handleProfileUpdated} />
+        : (
+          <div className="state-page">
+            <span className="state-icon">!</span>
+            <h1>Log in to manage your profile</h1>
+            <p>Your profile settings are available after authentication.</p>
+            <button className="button button-primary" onClick={() => navigate("/login")}>Go to login</button>
+          </div>
+        );
     }
 
     if (pathname.startsWith("/playlist/")) {
@@ -625,12 +637,20 @@ export default function App() {
       );
     }
 
+    if (pathname === "/studio/upload") {
+      return (
+        <UploadTrackPage
+          isAuthenticated={isAuthenticated}
+          canUpload={user?.role === "LISTENER"}
+          onNavigate={navigate}
+        />
+      );
+    }
+
     if (pathname === "/studio") {
       return (
         <StudioPage
-          tracks={studioTracks}
-          onUploadTrack={handleUploadTrack}
-          onSubmitForReview={handleSubmitForReview}
+          tracks={initialStudioTracks}
           onNavigate={navigate}
         />
       );
@@ -639,13 +659,23 @@ export default function App() {
     if (pathname === "/admin" || pathname === "/admin/dashboard") {
       return user?.role === "ADMIN"
         ? <AdminDashboardPage onNavigate={navigate} />
-        : <DashboardAccessDenied onNavigate={navigate} />;
+        : <DashboardAccessDenied onNavigate={navigate} requiredRole="Administrator" />;
     }
 
-    if (pathname === "/staff" || pathname === "/staff/dashboard") {
+    if (
+      pathname === "/staff" ||
+      pathname === "/staff/dashboard" ||
+      pathname.startsWith("/staff/submissions/") ||
+      pathname.startsWith("/staff/moderation/")
+    ) {
+      const parts = pathname.split("/");
+      const submissionId =
+        pathname.startsWith("/staff/submissions/") || pathname.startsWith("/staff/moderation/")
+          ? Number(parts[3]) || null
+          : null;
       return user?.role === "STAFF" || user?.role === "ADMIN"
-        ? <StaffDashboardPage onNavigate={navigate} />
-        : <DashboardAccessDenied onNavigate={navigate} />;
+        ? <StaffDashboardPage onNavigate={navigate} initialSubmissionId={submissionId} />
+        : <DashboardAccessDenied onNavigate={navigate} requiredRole="Moderation Staff" />;
     }
 
     // Default fallback to Explore
@@ -693,6 +723,7 @@ export default function App() {
           onRemoveFromQueue={handleRemoveFromQueue}
           onClearQueue={handleClearQueue}
           hasPlayer
+          showFooter={isExploreRoute}
         >
           <div key={route} className="app-route-stage app-route-stage--music">
             {renderContent()}
