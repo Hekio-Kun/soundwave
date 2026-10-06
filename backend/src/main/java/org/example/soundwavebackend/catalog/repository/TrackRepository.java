@@ -44,6 +44,29 @@ public interface TrackRepository extends JpaRepository<Track, Long>, JpaSpecific
     @EntityGraph(attributePaths = {"genre", "album"})
     List<Track> findByIdInAndPublicationStatus(Collection<Long> ids, TrackPublicationStatus publicationStatus);
 
+    @EntityGraph(attributePaths = {"genre", "album"})
+    List<Track> findByGenre_IdAndPublicationStatusAndIdNotOrderByPlayCountDesc(
+            Long genreId,
+            TrackPublicationStatus publicationStatus,
+            Long excludedTrackId,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = {"genre", "album"})
+    List<Track> findByUploaderUserIdAndPublicationStatusAndIdNotOrderByPlayCountDesc(
+            Long uploaderUserId,
+            TrackPublicationStatus publicationStatus,
+            Long excludedTrackId,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = {"genre", "album"})
+    List<Track> findByPublicationStatusAndIdNotOrderByPlayCountDesc(
+            TrackPublicationStatus publicationStatus,
+            Long excludedTrackId,
+            Pageable pageable
+    );
+
     boolean existsByIdAndPublicationStatus(Long id, TrackPublicationStatus publicationStatus);
 
     @Query("SELECT track.id FROM Track track WHERE LOWER(track.title) LIKE LOWER(CONCAT('%', :search, '%'))")

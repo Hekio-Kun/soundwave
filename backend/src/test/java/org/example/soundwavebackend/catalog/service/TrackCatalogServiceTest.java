@@ -93,4 +93,49 @@ class TrackCatalogServiceTest {
         assertThrows(ResourceNotFoundException.class, () ->
                 trackCatalogService.getTrackByIdOrSlug("999"));
     }
+
+    @Test
+    void getRecommendations_ShouldPrioritizeGenreAndRemoveDuplicates() {
+        Genre popGenre = new Genre("Pop", "pop", "Pop songs", 1L);
+        ReflectionTestUtils.setField(popGenre, "id", 3L);
+        Track source = createTrack(1L, 50L, popGenre, "Source");
+        Track sameGenre = createTrack(2L, 60L, popGenre, "Genre Match");
+        Track sameCreator = createTrack(3L, 50L, popGenre, "Creator Match");
+
+        when(trackRepository.findByIdAndPublicationStatus(1L,
+                org.example.soundwavebackend.catalog.entity.TrackPublicationStatus.PUBLISHED))
+                .thenReturn(Optional.of(source));
+        when(trackRepository.findByGenre_IdAndPublicationStatusAndIdNotOrderByPlayCountDesc(
+                eq(3L), any(), eq(1L), any(Pageable.class)))
+                .thenReturn(List.of(sameGenre));
+        when(trackRepository.findByUploaderUserIdAndPublicationStatusAndIdNotOrderByPlayCountDesc(
+                eq(50L), any(), eq(1L), any(Pageable.class)))
+                .thenReturn(List.of(sameGenre, sameCreator));
+        when(trackRepository.findByPublicationStatusAndIdNotOrderByPlayCountDesc(
+                any(), eq(1L), any(Pageable.class)))
+                .thenReturn(List.of(sameCreator));
+        when(userAccountPublicService.getUserSummariesByIds(any())).thenReturn(java.util.Map.of(
+                50L, new UserProfileSummary(50L, "one@soundwave.com", "One", null, "LISTENER"),
+                60L, new UserProfileSummary(60L, "two@soundwave.com", "Two", null, "LISTENER")
+        ));
+
+        List<TrackResponse> result = trackCatalogService.getRecommendations("1", 5);
+
+        assertEquals(List.of(2L, 3L), result.stream().map(TrackResponse::id).toList());
+    }
+
+    private Track createTrack(Long id, Long uploaderId, Genre genre, String title) {
+        Track track = new Track(
+                uploaderId,
+                genre,
+                title,
+                title.toLowerCase().replace(" ", "-"),
+                "audio-" + id,
+                "/audio/" + id + ".mp3",
+                "audio/mpeg",
+                180000
+        );
+        ReflectionTestUtils.setField(track, "id", id);
+        return track;
+    }
 }

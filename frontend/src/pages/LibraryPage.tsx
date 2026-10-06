@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { covers, tracks } from "../data";
+import { covers } from "../data";
 import { EditIcon, HeadphonesIcon, HeartIcon, PauseIcon, PlayIcon, PlusIcon, QueueIcon, TrashIcon } from "../icons";
 import type { LandingTrack, Playlist } from "../types";
 
@@ -8,8 +8,8 @@ type Props = {
   playing: boolean;
   onPlayTrack: (track: LandingTrack) => void;
   onNavigate: (route: string) => void;
-  favoriteIds: number[];
-  onToggleFavorite: (trackId: number) => void;
+  favoriteTracks: LandingTrack[];
+  onToggleFavorite: (trackId: number) => Promise<void>;
   playlists: Playlist[];
   onCreatePlaylist: () => void;
   onEditPlaylist?: (playlist: Playlist) => void;
@@ -28,7 +28,7 @@ export function LibraryPage({
   playing,
   onPlayTrack,
   onNavigate,
-  favoriteIds,
+  favoriteTracks,
   onToggleFavorite,
   playlists,
   onCreatePlaylist,
@@ -37,8 +37,6 @@ export function LibraryPage({
   initialTab = "favorites",
 }: Props) {
   const [tab, setTab] = useState<"favorites" | "playlists">(initialTab);
-
-  const favoriteTracks = tracks.filter((t) => favoriteIds.includes(t.id));
 
   return (
     <div className="library-page">

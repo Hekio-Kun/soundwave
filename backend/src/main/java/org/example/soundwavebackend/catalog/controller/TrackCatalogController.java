@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * Controller xử lý các yêu cầu HTTP liên quan đến danh mục bài hát (Catalog Tracks).
  */
@@ -37,5 +39,16 @@ public class TrackCatalogController {
     @GetMapping("/{idOrSlug}")
     public ResponseEntity<TrackResponse> getTrackDetails(@PathVariable String idOrSlug) {
         return ResponseEntity.ok(trackCatalogService.getTrackByIdOrSlug(idOrSlug));
+    }
+
+    /**
+     * Lấy danh sách bài hát gợi ý liên quan đến bài hát hiện tại.
+     */
+    @GetMapping("/{idOrSlug}/recommendations")
+    public ResponseEntity<List<TrackResponse>> getRecommendations(
+            @PathVariable String idOrSlug,
+            @RequestParam(required = false, defaultValue = "5") int limit
+    ) {
+        return ResponseEntity.ok(trackCatalogService.getRecommendations(idOrSlug, limit));
     }
 }

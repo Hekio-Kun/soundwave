@@ -35,4 +35,8 @@ export const catalogApi = {
   getTrackById: async (idOrSlug: string | number): Promise<LandingTrack> => {
     return apiFetch<LandingTrack>(`/tracks/${idOrSlug}`);
   },
+
+  getRecommendations: async (idOrSlug: string | number, limit = 5): Promise<LandingTrack[]> => {
+    return apiFetch<LandingTrack[]>(`/tracks/${idOrSlug}/recommendations?limit=${limit}`);
+  },
 };

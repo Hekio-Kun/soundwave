@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
+import { catalogApi } from "./api/catalog";
 import { clearAccessToken, setAccessToken } from "./api/client";
+import { favoriteApi } from "./api/favorites";
 import type { ProfileDetails } from "./api/profile";
 import { playlistApi } from "./api/playlists";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
@@ -195,15 +197,8 @@ export default function App() {
   };
 
   // 3. Library & Favorites & Playlists State
-  const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
-    const saved = localStorage.getItem("soundwave_favorite_ids");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch { }
-    }
-    return [1, 2];
-  });
+  const [favoriteTracks, setFavoriteTracks] = useState<LandingTrack[]>([]);
+  const favoriteIds = useMemo(() => favoriteTracks.map((track) => track.id), [favoriteTracks]);
 
   const [playlists, setPlaylists] = useState<Playlist[]>(() => {
     const saved = localStorage.getItem("soundwave_playlists");
@@ -219,41 +214,63 @@ export default function App() {
   useEffect(() => {
     const loadPlaylists = async () => {
       try {
-        if (isAuthenticated) {
+        if (user?.role === "LISTENER") {
           const myPlaylists = await playlistApi.getMyPlaylists();
-          if (myPlaylists) {
-            setPlaylists(myPlaylists);
-          }
-        } else {
+          setPlaylists(myPlaylists ?? []);
+        } else if (!isAuthenticated) {
           const publicPlaylists = await playlistApi.getPublicPlaylists();
-          if (publicPlaylists && publicPlaylists.length > 0) {
-            setPlaylists(publicPlaylists);
-          }
+          setPlaylists(publicPlaylists ?? []);
+        } else {
+          setPlaylists([]);
         }
       } catch {
         // Fallback to local storage or demo playlists
       }
     };
     loadPlaylists();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.role]);
 
   useEffect(() => {
     localStorage.setItem("soundwave_playlists", JSON.stringify(playlists));
   }, [playlists]);
 
   useEffect(() => {
-    localStorage.setItem("soundwave_favorite_ids", JSON.stringify(favoriteIds));
-  }, [favoriteIds]);
+    let active = true;
+    if (!authReady || user?.role !== "LISTENER") {
+      setFavoriteTracks([]);
+      return () => { active = false; };
+    }
+
+    void favoriteApi.getFavorites()
+      .then((items) => {
+        if (active) setFavoriteTracks(items);
+      })
+      .catch(() => {
+        if (active) setFavoriteTracks([]);
+      });
+
+    return () => { active = false; };
+  }, [authReady, user?.id, user?.role]);
 
   const [playlistFormOpen, setPlaylistFormOpen] = useState(false);
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
   const [addTrackPlaylistId, setAddTrackPlaylistId] = useState<number | null>(null);
   const [deletePlaylistId, setDeletePlaylistId] = useState<number | null>(null);
 
-  const toggleFavorite = (trackId: number) => {
-    setFavoriteIds((prev) =>
-      prev.includes(trackId) ? prev.filter((id) => id !== trackId) : [...prev, trackId]
-    );
+  const toggleFavorite = async (trackId: number) => {
+    if (user?.role !== "LISTENER") {
+      throw new Error("Log in with a Listener account to manage favorites.");
+    }
+
+    if (favoriteIds.includes(trackId)) {
+      await favoriteApi.removeFavorite(trackId);
+      setFavoriteTracks((previous) => previous.filter((track) => track.id !== trackId));
+      return;
+    }
+
+    await favoriteApi.addFavorite(trackId);
+    const favoriteTrack = await catalogApi.getTrackById(trackId);
+    setFavoriteTracks((previous) => [favoriteTrack, ...previous.filter((track) => track.id !== trackId)]);
   };
 
   const handleOpenCreatePlaylist = () => {
@@ -335,23 +352,10 @@ export default function App() {
   };
 
   const handleAddToPlaylist = async (playlistId: number, trackId: number) => {
-    try {
-      const updated = await playlistApi.addTrackToPlaylist(playlistId, trackId);
-      setPlaylists((prev) =>
-        prev.map((pl) => (pl.id === playlistId ? updated : pl))
-      );
-    } catch {
-      // Fallback local
-      setPlaylists((prev) =>
-        prev.map((pl) => {
-          if (pl.id === playlistId && !pl.trackIds.includes(trackId)) {
-            const nextTracks = [...pl.trackIds, trackId];
-            return { ...pl, trackIds: nextTracks, trackCount: nextTracks.length };
-          }
-          return pl;
-        })
-      );
-    }
+    const updated = await playlistApi.addTrackToPlaylist(playlistId, trackId);
+    setPlaylists((prev) =>
+      prev.map((pl) => (pl.id === playlistId ? updated : pl))
+    );
   };
 
   const handleRemoveTrackFromPlaylist = async (playlistId: number, trackId: number) => {
@@ -582,6 +586,7 @@ export default function App() {
           isFavorited={favoriteIds.includes(trackId)}
           playlists={playlists}
           onAddToPlaylist={handleAddToPlaylist}
+          canManageLibrary={user?.role === "LISTENER"}
         />
       );
     }
@@ -653,7 +658,7 @@ export default function App() {
           playing={playing}
           onPlayTrack={playTrack}
           onNavigate={navigate}
-          favoriteIds={favoriteIds}
+          favoriteTracks={favoriteTracks}
           onToggleFavorite={toggleFavorite}
           playlists={playlists}
           onCreatePlaylist={handleOpenCreatePlaylist}
@@ -671,7 +676,7 @@ export default function App() {
           playing={playing}
           onPlayTrack={playTrack}
           onNavigate={navigate}
-          favoriteIds={favoriteIds}
+          favoriteTracks={favoriteTracks}
           onToggleFavorite={toggleFavorite}
           playlists={playlists}
           onCreatePlaylist={handleOpenCreatePlaylist}

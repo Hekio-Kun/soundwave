@@ -20,6 +20,8 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -71,18 +73,7 @@ public class TrackCatalogService {
      */
     @Transactional(readOnly = true)
     public TrackResponse getTrackByIdOrSlug(String idOrSlug) {
-        Track track = null;
-        try {
-            Long id = Long.parseLong(idOrSlug);
-            track = trackRepository.findByIdAndPublicationStatus(id, TrackPublicationStatus.PUBLISHED).orElse(null);
-        } catch (NumberFormatException ignored) {
-            // Not numeric ID, lookup by slug
-        }
-
-        if (track == null) {
-            track = trackRepository.findBySlugIgnoreCaseAndPublicationStatus(idOrSlug, TrackPublicationStatus.PUBLISHED)
-                    .orElseThrow(() -> new ResourceNotFoundException("TRACK_NOT_FOUND", "Track not found: " + idOrSlug));
-        }
+        Track track = findPublishedTrack(idOrSlug);
 
         UserProfileSummary uploader = null;
         try {
@@ -96,6 +87,65 @@ public class TrackCatalogService {
 
         String lyrics = officialLyricService.findLyricContentByTrackId(track.getId());
         return mapper.toTrackResponse(track, creator, lyrics);
+    }
+
+    /**
+     * Gợi ý các bài hát đã phát hành theo thể loại, người đăng và mức độ phổ biến.
+     */
+    @Transactional(readOnly = true)
+    public List<TrackResponse> getRecommendations(String idOrSlug, int requestedLimit) {
+        Track source = findPublishedTrack(idOrSlug);
+        int limit = Math.min(20, Math.max(1, requestedLimit));
+        Pageable candidates = PageRequest.of(0, limit);
+        Map<Long, Track> recommended = new LinkedHashMap<>();
+
+        if (source.getGenre() != null) {
+            addCandidates(recommended, trackRepository.findByGenre_IdAndPublicationStatusAndIdNotOrderByPlayCountDesc(
+                    source.getGenre().getId(), TrackPublicationStatus.PUBLISHED, source.getId(), candidates), limit);
+        }
+        addCandidates(recommended, trackRepository.findByUploaderUserIdAndPublicationStatusAndIdNotOrderByPlayCountDesc(
+                source.getUploaderUserId(), TrackPublicationStatus.PUBLISHED, source.getId(), candidates), limit);
+        addCandidates(recommended, trackRepository.findByPublicationStatusAndIdNotOrderByPlayCountDesc(
+                TrackPublicationStatus.PUBLISHED, source.getId(), candidates), limit);
+
+        return mapTracks(recommended.values().stream().limit(limit).toList());
+    }
+
+    private Track findPublishedTrack(String idOrSlug) {
+        Track track = null;
+        try {
+            Long id = Long.parseLong(idOrSlug);
+            track = trackRepository.findByIdAndPublicationStatus(id, TrackPublicationStatus.PUBLISHED).orElse(null);
+        } catch (NumberFormatException ignored) {
+            // Giá trị không phải ID nên tiếp tục tìm theo slug.
+        }
+
+        if (track == null) {
+            track = trackRepository.findBySlugIgnoreCaseAndPublicationStatus(idOrSlug, TrackPublicationStatus.PUBLISHED)
+                    .orElseThrow(() -> new ResourceNotFoundException("TRACK_NOT_FOUND", "Track not found: " + idOrSlug));
+        }
+        return track;
+    }
+
+    private void addCandidates(Map<Long, Track> target, List<Track> candidates, int limit) {
+        for (Track candidate : candidates) {
+            if (target.size() >= limit) {
+                return;
+            }
+            target.putIfAbsent(candidate.getId(), candidate);
+        }
+    }
+
+    private List<TrackResponse> mapTracks(List<Track> tracks) {
+        Set<Long> uploaderIds = tracks.stream().map(Track::getUploaderUserId).collect(Collectors.toSet());
+        Map<Long, UserProfileSummary> userProfiles = userAccountPublicService.getUserSummariesByIds(uploaderIds);
+        return tracks.stream().map(track -> {
+            UserProfileSummary uploader = userProfiles.get(track.getUploaderUserId());
+            CreatorSummary creator = uploader != null
+                    ? new CreatorSummary(uploader.userId(), uploader.displayName(), uploader.avatarUrl())
+                    : new CreatorSummary(track.getUploaderUserId(), "Unknown Artist", null);
+            return mapper.toTrackResponse(track, creator);
+        }).toList();
     }
 
     private Sort resolveSort(String sortType) {
