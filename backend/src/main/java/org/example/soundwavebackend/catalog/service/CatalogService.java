@@ -66,4 +66,12 @@ public class CatalogService {
         track.updatePublicationStatus(TrackPublicationStatus.REJECTED, reason, rejectedAt);
         return track;
     }
+
+    @Transactional
+    public Track takeDownTrack(Long trackId, String reason, LocalDateTime takenDownAt) {
+        Track track = trackRepository.findById(trackId)
+                .orElseThrow(() -> new IllegalArgumentException("Track not found with id: " + trackId));
+        track.updatePublicationStatus(TrackPublicationStatus.TAKEN_DOWN, reason, takenDownAt);
+        return track;
+    }
 }

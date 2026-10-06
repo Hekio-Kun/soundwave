@@ -82,8 +82,10 @@ class TrackCatalogServiceTest {
 
     @Test
     void getTrackByIdOrSlug_WhenNotFound_ShouldThrowException() {
-        when(trackRepository.findById(999L)).thenReturn(Optional.empty());
-        when(trackRepository.findBySlugIgnoreCase("999")).thenReturn(Optional.empty());
+        when(trackRepository.findByIdAndPublicationStatus(999L, org.example.soundwavebackend.catalog.entity.TrackPublicationStatus.PUBLISHED))
+                .thenReturn(Optional.empty());
+        when(trackRepository.findBySlugIgnoreCaseAndPublicationStatus("999", org.example.soundwavebackend.catalog.entity.TrackPublicationStatus.PUBLISHED))
+                .thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
                 trackCatalogService.getTrackByIdOrSlug("999"));

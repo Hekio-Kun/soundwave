@@ -6,6 +6,7 @@ import org.example.soundwavebackend.authentication.service.UserAccountPublicServ
 import org.example.soundwavebackend.catalog.dto.response.CreatorSummary;
 import org.example.soundwavebackend.catalog.dto.response.TrackResponse;
 import org.example.soundwavebackend.catalog.entity.Track;
+import org.example.soundwavebackend.catalog.entity.TrackPublicationStatus;
 import org.example.soundwavebackend.catalog.mapper.CatalogMapper;
 import org.example.soundwavebackend.catalog.repository.TrackRepository;
 import org.springframework.stereotype.Service;
@@ -25,15 +26,15 @@ public class CatalogPublicService {
     private final CatalogMapper mapper;
 
     /**
-     * Kiểm tra bài hát có tồn tại trong danh mục hay không.
+     * Kiểm tra bài hát có tồn tại và đã phát hành trong danh mục hay không.
      */
     @Transactional(readOnly = true)
     public boolean trackExists(Long trackId) {
-        return trackId != null && trackRepository.existsById(trackId);
+        return trackId != null && trackRepository.existsByIdAndPublicationStatus(trackId, TrackPublicationStatus.PUBLISHED);
     }
 
     /**
-     * Lấy danh sách chi tiết các bài hát theo đúng thứ tự của danh sách ID được cung cấp.
+     * Lấy danh sách chi tiết các bài hát đã phát hành theo đúng thứ tự của danh sách ID được cung cấp.
      */
     @Transactional(readOnly = true)
     public List<TrackResponse> getTracksByIds(List<Long> trackIds) {
@@ -41,7 +42,7 @@ public class CatalogPublicService {
             return Collections.emptyList();
         }
 
-        List<Track> foundTracks = trackRepository.findByIdIn(trackIds);
+        List<Track> foundTracks = trackRepository.findByIdInAndPublicationStatus(trackIds, TrackPublicationStatus.PUBLISHED);
         Map<Long, Track> trackMap = foundTracks.stream()
                 .collect(Collectors.toMap(Track::getId, t -> t, (a, b) -> a));
 

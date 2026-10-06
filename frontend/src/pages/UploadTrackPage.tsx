@@ -1,4 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
+import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
   studioApi,
   TrackApiError,
@@ -10,6 +12,7 @@ import {
   AlertIcon,
   CheckIcon,
   ChevronLeftIcon,
+  CloseIcon,
   FileTextIcon,
   UploadIcon,
 } from "../icons";
@@ -49,6 +52,21 @@ export function UploadTrackPage({ isAuthenticated, canUpload, onNavigate }: Prop
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uploadedTrackTitle, setUploadedTrackTitle] = useState("");
+  const [uploadedStatus, setUploadedStatus] = useState<"DRAFT" | "PENDING">("DRAFT");
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [copyrightAgreed, setCopyrightAgreed] = useState(false);
+  const [submitterNote, setSubmitterNote] = useState("");
+
+  useModalScrollLock(confirmModalOpen);
+
+  useEffect(() => {
+    if (!confirmModalOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !submitting) setConfirmModalOpen(false);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [confirmModalOpen, submitting]);
 
   const loadOptions = async () => {
     if (!isAuthenticated || !canUpload) return;
@@ -178,8 +196,7 @@ export function UploadTrackPage({ isAuthenticated, canUpload, onNavigate }: Prop
     requestAnimationFrame(() => document.getElementById(targetId)?.focus());
   };
 
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
+  const processUpload = async (submitForReview: boolean, note?: string) => {
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -190,7 +207,7 @@ export function UploadTrackPage({ isAuthenticated, canUpload, onNavigate }: Prop
     setSubmitting(true);
     setSubmitError("");
     try {
-      await studioApi.createDraft({
+      const created = await studioApi.createDraft({
         title: title.trim(),
         genreId,
         albumId: albumId === "" ? undefined : Number(albumId),
@@ -199,6 +216,13 @@ export function UploadTrackPage({ isAuthenticated, canUpload, onNavigate }: Prop
         durationMs,
         lyrics: lyrics.trim() || undefined,
       }, audioFile!, coverFile ?? undefined);
+
+      if (submitForReview && created && created.id) {
+        await studioApi.submitForReview(created.id, note);
+        setUploadedStatus("PENDING");
+      } else {
+        setUploadedStatus("DRAFT");
+      }
       setUploadedTrackTitle(title.trim());
       document.getElementById("app-scroll-region")?.scrollTo({ top: 0, behavior: "smooth" });
     } catch (error: unknown) {
@@ -212,6 +236,27 @@ export function UploadTrackPage({ isAuthenticated, canUpload, onNavigate }: Prop
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSaveDraft = async (e?: FormEvent) => {
+    if (e) e.preventDefault();
+    await processUpload(false);
+  };
+
+  const handleStartSubmitReview = (e?: FormEvent) => {
+    if (e) e.preventDefault();
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      focusFirstError(errors);
+      return;
+    }
+    setConfirmModalOpen(true);
+  };
+
+  const handleConfirmSubmitReview = async () => {
+    setConfirmModalOpen(false);
+    await processUpload(true, submitterNote.trim() || undefined);
   };
 
   const resetForm = () => {
@@ -228,6 +273,10 @@ export function UploadTrackPage({ isAuthenticated, canUpload, onNavigate }: Prop
     setFormErrors({});
     setSubmitError("");
     setUploadedTrackTitle("");
+    setUploadedStatus("DRAFT");
+    setConfirmModalOpen(false);
+    setCopyrightAgreed(false);
+    setSubmitterNote("");
   };
 
   if (!isAuthenticated || !canUpload) {
@@ -255,9 +304,15 @@ export function UploadTrackPage({ isAuthenticated, canUpload, onNavigate }: Prop
       <div className="upload-track-page">
         <section className="upload-track-success" role="status">
           <span className="upload-track-success__icon"><CheckIcon width={34} height={34} /></span>
-          <span className="eyebrow">UPLOAD COMPLETE</span>
-          <h1>Your draft is ready</h1>
-          <p><strong>{uploadedTrackTitle}</strong> has been uploaded and saved as a draft. Review it in Content Studio before submitting it to staff.</p>
+          <span className="eyebrow">{uploadedStatus === "PENDING" ? "SUBMITTED FOR REVIEW" : "UPLOAD COMPLETE"}</span>
+          <h1>{uploadedStatus === "PENDING" ? "Track queued for staff review" : "Your draft is ready"}</h1>
+          <p>
+            {uploadedStatus === "PENDING" ? (
+              <><strong>{uploadedTrackTitle}</strong> has been submitted to the moderation queue. Staff will examine the audio and metadata before making it publicly accessible.</>
+            ) : (
+              <><strong>{uploadedTrackTitle}</strong> has been uploaded and saved as a private draft. Review it in Content Studio before submitting it to staff.</>
+            )}
+          </p>
           <div className="upload-track-success__actions">
             <button className="button button-primary" onClick={() => onNavigate("/studio")}>Open Content Studio</button>
             <button className="button button-secondary" onClick={resetForm}>Upload another track</button>
@@ -298,7 +353,7 @@ export function UploadTrackPage({ isAuthenticated, canUpload, onNavigate }: Prop
       )}
 
       <div className="upload-track-layout">
-        <form className="upload-track-form-card" onSubmit={handleSubmit} noValidate>
+        <form className="upload-track-form-card" onSubmit={handleSaveDraft} noValidate>
           <div className="upload-track-card-heading">
             <div><span>01</span><h2>Track information</h2></div>
             <small><b>*</b> Required fields</small>
@@ -432,8 +487,22 @@ export function UploadTrackPage({ isAuthenticated, canUpload, onNavigate }: Prop
 
           <div className="upload-track-actions">
             <button className="button button-secondary" type="button" disabled={submitting} onClick={() => onNavigate("/studio")}>Cancel</button>
-            <button className="button button-primary" type="submit" disabled={submitting || loadingOptions || Boolean(optionsError)}>
-              <UploadIcon width={17} height={17} /> {submitting ? "Uploading..." : "Upload & save draft"}
+            <button
+              className="button button-secondary"
+              type="submit"
+              disabled={submitting || loadingOptions || Boolean(optionsError)}
+              id="btn-upload-save-draft"
+            >
+              Save draft
+            </button>
+            <button
+              className="button button-primary"
+              type="button"
+              disabled={submitting || loadingOptions || Boolean(optionsError)}
+              onClick={handleStartSubmitReview}
+              id="btn-upload-submit-review"
+            >
+              <UploadIcon width={17} height={17} /> {submitting ? "Uploading..." : "Submit for review"}
             </button>
           </div>
         </form>
@@ -450,10 +519,65 @@ export function UploadTrackPage({ isAuthenticated, canUpload, onNavigate }: Prop
           </section>
           <section className="upload-track-sidebar__note">
             <FileTextIcon width={20} height={20} />
-            <div><b>Saved as a private draft</b><p>Uploading does not publish the track. Submit it from Content Studio when it is ready for staff review.</p></div>
+            <div><b>Saved as a private draft or submit for review</b><p>You can keep your track as a private draft for further edits, or submit directly to staff for moderation review.</p></div>
           </section>
         </aside>
       </div>
+
+      {confirmModalOpen && createPortal(
+        <div className="modal-backdrop" role="presentation" onClick={() => !submitting && setConfirmModalOpen(false)}>
+          <div className="modal-card" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Submit track for Staff review</h3>
+              <button className="icon-button" onClick={() => setConfirmModalOpen(false)} disabled={submitting}>
+                <CloseIcon width={18} height={18} />
+              </button>
+            </div>
+            <p style={{ margin: "12px 0 8px", color: "var(--sw-text-secondary)" }}>
+              You are submitting <b>“{title}”</b> to the moderation queue. Once submitted, editing is locked until staff completes review.
+            </p>
+            <div className="form-group" style={{ marginTop: "12px" }}>
+              <label htmlFor="upload-submitter-note">Note for reviewer (optional)</label>
+              <textarea
+                id="upload-submitter-note"
+                rows={3}
+                placeholder="Mention master source, licenses, or specific credits..."
+                value={submitterNote}
+                onChange={(e) => setSubmitterNote(e.target.value)}
+                style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid var(--sw-border)" }}
+              />
+            </div>
+            <div style={{ marginTop: "14px", padding: "12px", background: "var(--sw-surface-alt, #f8fafc)", borderRadius: "8px", border: "1px solid var(--sw-border)" }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer", fontSize: "13px", color: "var(--sw-text-primary)" }}>
+                <input
+                  type="checkbox"
+                  id="chk-copyright-agree"
+                  checked={copyrightAgreed}
+                  onChange={(e) => setCopyrightAgreed(e.target.checked)}
+                  style={{ marginTop: "3px" }}
+                />
+                <span>
+                  I confirm that I own all rights to this audio and artwork, or hold legal authorization to publish it, and agree to SoundWave Community Guidelines.
+                </span>
+              </label>
+            </div>
+            <div className="modal-actions" style={{ marginTop: "18px" }}>
+              <button className="button button-secondary" onClick={() => setConfirmModalOpen(false)} disabled={submitting}>
+                Cancel
+              </button>
+              <button
+                className="button button-primary"
+                disabled={!copyrightAgreed || submitting}
+                onClick={() => void handleConfirmSubmitReview()}
+                id="btn-confirm-agree-submit"
+              >
+                {submitting ? "Submitting..." : "Agree & Submit"}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

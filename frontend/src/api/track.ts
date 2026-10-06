@@ -194,6 +194,8 @@ export const studioApi = {
     studioRequest<void>(`/studio/tracks/${id}`, "DELETE"),
   submitForReview: (id: number, submitterNote?: string) =>
     studioRequest<ApiTrack>(`/studio/tracks/${id}/submit`, "POST", { submitterNote }),
+  withdrawSubmission: (id: number) =>
+    studioRequest<ApiTrack>(`/studio/tracks/${id}/withdraw`, "POST"),
   getRejectionDetails: (id: number) =>
     studioRequest<RejectionDetails>(`/studio/tracks/${id}/rejection`),
   getStats: () =>

@@ -10,6 +10,7 @@ import org.example.soundwavebackend.catalog.entity.Track;
 import org.example.soundwavebackend.catalog.service.CatalogService;
 import org.example.soundwavebackend.moderation.dto.request.ApproveTrackRequest;
 import org.example.soundwavebackend.moderation.dto.request.RejectTrackRequest;
+import org.example.soundwavebackend.moderation.dto.request.TakeDownTrackRequest;
 import org.example.soundwavebackend.moderation.dto.response.SubmissionDetailResponse;
 import org.example.soundwavebackend.moderation.dto.response.SubmissionQueueItemResponse;
 import org.example.soundwavebackend.moderation.dto.response.SubmissionStatsResponse;
@@ -144,7 +145,7 @@ public class ModerationService {
                 NotificationType.TRACK_APPROVED,
                 "Track approved",
                 "Your track \"" + track.getTitle() + "\" has been approved and is now live.",
-                "/tracks/" + track.getSlug()
+                "/track/" + track.getId()
         );
 
         AppUser submitter = userRepository.findById(submission.getSubmittedByUserId()).orElse(null);
@@ -184,7 +185,7 @@ public class ModerationService {
                 NotificationType.TRACK_REJECTED,
                 "Track rejected",
                 "Your track \"" + track.getTitle() + "\" was rejected. Reason: " + rejectionReason,
-                "/creator/tracks/" + track.getId() + "/rejection"
+                "/studio"
         );
 
         AppUser submitter = userRepository.findById(submission.getSubmittedByUserId()).orElse(null);
@@ -194,6 +195,46 @@ public class ModerationService {
 
         if (submitter != null) {
             mailService.sendTrackRejectedEmail(submitter.getEmail(), submitterDisplayName, track.getTitle(), rejectionReason);
+        }
+
+        UserProfile reviewerProfile = profileRepository.findByUserId(reviewer.getId()).orElse(null);
+        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile);
+    }
+
+    @Transactional
+    public SubmissionDetailResponse takeDownSubmission(Long id, TakeDownTrackRequest request, String reviewerEmail) {
+        TrackSubmission submission = submissionRepository.findById(id)
+                .orElseThrow(() -> new SubmissionNotFoundException(id));
+
+        if (submission.getStatus() != SubmissionStatus.APPROVED) {
+            throw new InvalidSubmissionStateException("Only approved tracks can be taken down. Current status: " + submission.getStatus());
+        }
+
+        AppUser reviewer = userRepository.findByEmailIgnoreCase(reviewerEmail)
+                .orElseThrow(() -> new AccountUnavailableException("REVIEWER_NOT_FOUND", "Reviewer account not found."));
+
+        LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
+        String reason = request.takedownReason().trim();
+        String reviewerNote = request.reviewerNote();
+
+        submission.reject(reviewer.getId(), reviewerNote, reason, now);
+        Track track = catalogService.takeDownTrack(submission.getTrackId(), reason, now);
+
+        notificationService.createNotification(
+                submission.getSubmittedByUserId(),
+                NotificationType.TRACK_TAKEN_DOWN,
+                "Track taken down",
+                "Your track \"" + track.getTitle() + "\" has been taken down. Reason: " + reason,
+                "/studio"
+        );
+
+        AppUser submitter = userRepository.findById(submission.getSubmittedByUserId()).orElse(null);
+        UserProfile submitterProfile = profileRepository.findByUserId(submission.getSubmittedByUserId()).orElse(null);
+        String submitterDisplayName = submitterProfile != null && submitterProfile.getDisplayName() != null && !submitterProfile.getDisplayName().isBlank()
+                ? submitterProfile.getDisplayName() : (submitter != null ? submitter.getEmail() : "Creator");
+
+        if (submitter != null) {
+            mailService.sendTrackTakenDownEmail(submitter.getEmail(), submitterDisplayName, track.getTitle(), reason);
         }
 
         UserProfile reviewerProfile = profileRepository.findByUserId(reviewer.getId()).orElse(null);

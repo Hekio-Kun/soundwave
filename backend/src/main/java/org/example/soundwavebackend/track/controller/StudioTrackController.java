@@ -91,6 +91,14 @@ public class StudioTrackController {
     }
 
     /**
+     * Rút lại bài hát đang chờ duyệt về trạng thái DRAFT (UC-19.4 Extension).
+     */
+    @PostMapping("/tracks/{id}/withdraw")
+    public ResponseEntity<StudioTrackResponse> withdrawSubmission(@PathVariable Long id, Principal principal) {
+        return ResponseEntity.ok(studioTrackService.cancelSubmission(id, principal.getName()));
+    }
+
+    /**
      * Xem lý do từ chối và phản hồi chi tiết từ Staff khi bài hát bị REJECTED (UC-20).
      */
     @GetMapping("/tracks/{id}/rejection")

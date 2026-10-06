@@ -40,13 +40,13 @@ class CatalogPublicServiceTest {
 
     @Test
     void trackExists_WhenTrackExists_ShouldReturnTrue() {
-        when(trackRepository.existsById(10L)).thenReturn(true);
+        when(trackRepository.existsByIdAndPublicationStatus(10L, org.example.soundwavebackend.catalog.entity.TrackPublicationStatus.PUBLISHED)).thenReturn(true);
         assertTrue(catalogPublicService.trackExists(10L));
     }
 
     @Test
     void trackExists_WhenTrackDoesNotExist_ShouldReturnFalse() {
-        when(trackRepository.existsById(99L)).thenReturn(false);
+        when(trackRepository.existsByIdAndPublicationStatus(99L, org.example.soundwavebackend.catalog.entity.TrackPublicationStatus.PUBLISHED)).thenReturn(false);
         assertFalse(catalogPublicService.trackExists(99L));
     }
 
@@ -60,7 +60,8 @@ class CatalogPublicServiceTest {
         Track track2 = new Track(5L, genre, "Beat 2", "beat-2", "audio_2", "/audio/2.mp3", "audio/mpeg", 200000);
         ReflectionTestUtils.setField(track2, "id", 102L);
 
-        when(trackRepository.findByIdIn(List.of(102L, 101L))).thenReturn(List.of(track1, track2));
+        when(trackRepository.findByIdInAndPublicationStatus(List.of(102L, 101L), org.example.soundwavebackend.catalog.entity.TrackPublicationStatus.PUBLISHED))
+                .thenReturn(List.of(track1, track2));
 
         UserProfileSummary uploader = new UserProfileSummary(5L, "dj@soundwave.com", "DJ Sound", null, "LISTENER");
         when(userAccountPublicService.getUserSummariesByIds(Set.of(5L))).thenReturn(Map.of(5L, uploader));
