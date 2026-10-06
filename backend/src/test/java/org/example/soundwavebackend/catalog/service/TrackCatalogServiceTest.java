@@ -8,6 +8,7 @@ import org.example.soundwavebackend.catalog.entity.Track;
 import org.example.soundwavebackend.catalog.mapper.CatalogMapper;
 import org.example.soundwavebackend.catalog.repository.TrackRepository;
 import org.example.soundwavebackend.exception.ResourceNotFoundException;
+import org.example.soundwavebackend.lyrics.service.OfficialLyricService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,6 +34,8 @@ class TrackCatalogServiceTest {
     private TrackRepository trackRepository;
     @Mock
     private UserAccountPublicService userAccountPublicService;
+    @Mock
+    private OfficialLyricService officialLyricService;
 
     private CatalogMapper mapper;
     private TrackCatalogService trackCatalogService;
@@ -40,7 +43,7 @@ class TrackCatalogServiceTest {
     @BeforeEach
     void setUp() {
         mapper = new CatalogMapper();
-        trackCatalogService = new TrackCatalogService(trackRepository, userAccountPublicService, mapper);
+        trackCatalogService = new TrackCatalogService(trackRepository, userAccountPublicService, mapper, officialLyricService);
     }
 
     @Test

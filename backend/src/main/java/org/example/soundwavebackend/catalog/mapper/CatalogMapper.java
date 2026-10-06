@@ -38,6 +38,10 @@ public class CatalogMapper {
     }
 
     public TrackResponse toTrackResponse(Track track, CreatorSummary creator) {
+        return toTrackResponse(track, creator, null);
+    }
+
+    public TrackResponse toTrackResponse(Track track, CreatorSummary creator, String lyrics) {
         AlbumSummary albumSummary = track.getAlbum() != null
                 ? new AlbumSummary(track.getAlbum().getId(), track.getAlbum().getTitle())
                 : null;
@@ -60,7 +64,8 @@ public class CatalogMapper {
                 creator,
                 albumSummary,
                 track.getDescription(),
-                track.getCreatedAt()
+                track.getCreatedAt(),
+                lyrics
         );
     }
 }

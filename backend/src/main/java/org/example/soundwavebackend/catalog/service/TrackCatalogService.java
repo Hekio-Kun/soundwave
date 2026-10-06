@@ -11,6 +11,7 @@ import org.example.soundwavebackend.catalog.mapper.CatalogMapper;
 import org.example.soundwavebackend.catalog.repository.TrackRepository;
 import org.example.soundwavebackend.catalog.specification.TrackSpecification;
 import org.example.soundwavebackend.exception.ResourceNotFoundException;
+import org.example.soundwavebackend.lyrics.service.OfficialLyricService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +33,7 @@ public class TrackCatalogService {
     private final TrackRepository trackRepository;
     private final UserAccountPublicService userAccountPublicService;
     private final CatalogMapper mapper;
+    private final OfficialLyricService officialLyricService;
 
     /**
      * Lọc và tìm kiếm danh sách bài hát đã phát hành theo thể loại, từ khóa và sắp xếp.
@@ -92,7 +94,8 @@ public class TrackCatalogService {
                 ? new CreatorSummary(uploader.userId(), uploader.displayName(), uploader.avatarUrl())
                 : new CreatorSummary(track.getUploaderUserId(), "Unknown Artist", null);
 
-        return mapper.toTrackResponse(track, creator);
+        String lyrics = officialLyricService.findLyricContentByTrackId(track.getId());
+        return mapper.toTrackResponse(track, creator, lyrics);
     }
 
     private Sort resolveSort(String sortType) {

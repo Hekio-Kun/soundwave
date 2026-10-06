@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
@@ -89,6 +89,32 @@ export function PendingTrackDetailModal({
   const [rejectNote, setRejectNote] = useState("");
   const [submittingAction, setSubmittingAction] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Plain-text lyrics inspection state
+  const [copiedLyrics, setCopiedLyrics] = useState(false);
+
+  const handleCopyLyrics = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedLyrics(true);
+      setTimeout(() => setCopiedLyrics(false), 2000);
+    } catch {
+      // Fallback if clipboard API is restricted
+    }
+  };
+
+  const lyricLines = useMemo(() => {
+    if (!detail?.track.lyrics) return [];
+    return detail.track.lyrics.split(/\r?\n/);
+  }, [detail?.track.lyrics]);
+
+  const lyricStats = useMemo(() => {
+    if (!detail?.track.lyrics) return { lines: 0, words: 0, characters: 0 };
+    const raw = detail.track.lyrics.trim();
+    const lines = lyricLines.filter((l) => l.trim().length > 0).length;
+    const words = raw.split(/\s+/).filter(Boolean).length;
+    return { lines, words, characters: raw.length };
+  }, [detail?.track.lyrics, lyricLines]);
 
   // Rule 4.7: Scroll Lock with restoration across all containers (.ops-shell-content, .app-scroll-region, body)
   useModalScrollLock(true);
@@ -275,13 +301,12 @@ export function PendingTrackDetailModal({
         <div className="modal-header staff-inspector-header">
           <div className="staff-inspector-title-meta">
             <span
-              className={`staff-inspector-icon ${
-                detail?.status === "APPROVED"
+              className={`staff-inspector-icon ${detail?.status === "APPROVED"
                   ? "is-approved"
                   : detail?.status === "REJECTED"
-                  ? "is-rejected"
-                  : "is-pending"
-              }`}
+                    ? "is-rejected"
+                    : "is-pending"
+                }`}
             >
               <HeadphonesIcon width={20} height={20} />
             </span>
@@ -331,21 +356,20 @@ export function PendingTrackDetailModal({
               <div className="staff-status-group">
                 <span className="staff-status-label">Current Audit Status:</span>
                 <span
-                  className={`staff-status-chip ${
-                    detail.status === "APPROVED"
+                  className={`staff-status-chip ${detail.status === "APPROVED"
                       ? "is-approved"
                       : detail.status === "REJECTED"
-                      ? "is-rejected"
-                      : "is-pending"
-                  }`}
+                        ? "is-rejected"
+                        : "is-pending"
+                    }`}
                 >
                   <i />
                   <span>
                     {detail.status === "APPROVED"
                       ? "Approved & Published"
                       : detail.status === "REJECTED"
-                      ? "Rejected"
-                      : "Pending Review"}
+                        ? "Rejected"
+                        : "Pending Review"}
                   </span>
                 </span>
               </div>
@@ -532,12 +556,93 @@ export function PendingTrackDetailModal({
               </div>
             ) : null}
 
+            {/* Lyrics & Plain-Text Document Inspection Section */}
+            <div className="staff-lyrics-card">
+              <div className="staff-lyrics-header">
+                <div className="staff-lyrics-title-group">
+                  <span className="staff-lyrics-icon-badge">
+                    <FileTextIcon width={17} height={17} />
+                  </span>
+                  <div>
+                    <div className="staff-lyrics-heading-row">
+                      <h4 className="staff-lyrics-heading">Lyrics & Document Inspection</h4>
+                      <span className="staff-lyrics-pill is-unsynced">
+                        Plain-Text (.txt) · Unsynced
+                      </span>
+                    </div>
+                    <p className="staff-lyrics-subheading">
+                      Uploaded static text document. Not synchronized in real-time with audio playback.
+                    </p>
+                  </div>
+                </div>
+
+                {detail.track.lyrics ? (
+                  <div className="staff-lyrics-header-actions">
+                    <div className="staff-lyrics-stats-badge">
+                      <span><b>{lyricStats.lines}</b> lines</span>
+                      <span>·</span>
+                      <span><b>{lyricStats.words}</b> words</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="staff-lyrics-copy-btn"
+                      onClick={() => void handleCopyLyrics(detail.track.lyrics!)}
+                      title="Copy plain-text content to clipboard"
+                    >
+                      {copiedLyrics ? (
+                        <>
+                          <CheckIcon width={13} height={13} />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <FileTextIcon width={13} height={13} />
+                          <span>Copy Lyrics</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              {detail.track.lyrics ? (
+                <div className="staff-lyrics-viewer-wrapper">
+                  <div className="staff-lyrics-lines-container">
+                    {lyricLines.map((line, idx) => (
+                      <div key={idx} className="staff-lyrics-line-row">
+                        <span className="staff-lyrics-line-number" aria-hidden="true">
+                          {idx + 1}
+                        </span>
+                        <span className="staff-lyrics-line-content">
+                          {line || "\u00A0"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="staff-lyrics-footer-guide">
+                    <span>
+                      Moderator Notice: Verify uploaded text for copyright clearance, platform terms compliance, and profanity guidelines prior to approval.
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="staff-lyrics-empty-state">
+                  <FileTextIcon width={28} height={28} />
+                  <div className="staff-lyrics-empty-text">
+                    <strong>No text file or lyrics attached</strong>
+                    <span>
+                      The creator did not provide a .txt or lyrics document for this track submission.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Previous Review History (if actioned) */}
             {detail.status !== "PENDING" ? (
               <div
-                className={`staff-decision-summary ${
-                  detail.status === "APPROVED" ? "is-approved" : "is-rejected"
-                }`}
+                className={`staff-decision-summary ${detail.status === "APPROVED" ? "is-approved" : "is-rejected"
+                  }`}
               >
                 <div className="staff-decision-title">
                   {detail.status === "APPROVED" ? (

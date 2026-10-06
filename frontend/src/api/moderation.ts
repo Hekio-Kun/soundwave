@@ -51,6 +51,7 @@ export type SubmissionDetail = {
     createdAt: string;
     genre: { id: number; name: string; slug: string } | null;
     album: { id: number; title: string; slug: string; status: string } | null;
+    lyrics?: string | null;
   };
   submitter: { id: number; email: string; username: string; displayName: string } | null;
   reviewer: { id: number; email: string; username: string; displayName: string } | null;
