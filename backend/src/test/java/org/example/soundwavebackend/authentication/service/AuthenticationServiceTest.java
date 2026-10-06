@@ -65,6 +65,7 @@ class AuthenticationServiceTest {
         RegisterRequest request = new RegisterRequest("Le Hai", "User@Example.com", "Password1", "Password1");
         Role role = mock(Role.class);
         when(userRepository.existsByEmailIgnoreCase("user@example.com")).thenReturn(false);
+        when(authRateLimiterService.tryAcquireRegistrationAttempt("user@example.com", "127.0.0.1")).thenReturn(true);
         when(roleRepository.findByCode("LISTENER")).thenReturn(Optional.of(role));
         when(passwordEncoder.encode("Password1")).thenReturn("password-hash");
         when(userRepository.save(any(AppUser.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -72,7 +73,7 @@ class AuthenticationServiceTest {
         when(otpGenerator.generate()).thenReturn("123456");
         when(passwordEncoder.encode("123456")).thenReturn("otp-hash");
 
-        service.register(request);
+        service.register(request, "127.0.0.1");
 
         verify(profileRepository).save(any(UserProfile.class));
         verify(verificationTokenRepository).save(any());
@@ -82,12 +83,26 @@ class AuthenticationServiceTest {
     @Test
     void registerRejectsAnExistingEmailBeforeSendingOtp() {
         RegisterRequest request = new RegisterRequest("Le Hai", "user@example.com", "Password1", "Password1");
+        when(authRateLimiterService.tryAcquireRegistrationAttempt("user@example.com", "127.0.0.1")).thenReturn(true);
         when(userRepository.existsByEmailIgnoreCase("user@example.com")).thenReturn(true);
 
-        assertThrows(EmailAlreadyExistsException.class, () -> service.register(request));
+        assertThrows(EmailAlreadyExistsException.class, () -> service.register(request, "127.0.0.1"));
 
         verifyNoInteractions(mailService);
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void registerRejectsRateLimitedRequestBeforeCreatingUserOrSendingOtp() {
+        RegisterRequest request = new RegisterRequest("Le Hai", "user@example.com", "Password1", "Password1");
+        when(authRateLimiterService.tryAcquireRegistrationAttempt("user@example.com", "127.0.0.1")).thenReturn(false);
+
+        org.example.soundwavebackend.authentication.exception.AccountUnavailableException exception = assertThrows(
+                org.example.soundwavebackend.authentication.exception.AccountUnavailableException.class,
+                () -> service.register(request, "127.0.0.1"));
+
+        assertEquals("REGISTRATION_RATE_LIMITED", exception.getCode());
+        verifyNoInteractions(userRepository, mailService);
     }
 
     @Test

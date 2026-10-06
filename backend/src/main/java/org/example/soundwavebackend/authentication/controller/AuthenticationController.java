@@ -34,8 +34,12 @@ public class AuthenticationController {
      * Đăng ký tài khoản mới và gửi OTP xác thực email.
      */
     @PostMapping("/register")
-    public ResponseEntity<MessageResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(authenticationService.register(request));
+    public ResponseEntity<MessageResponse> register(
+            @Valid @RequestBody RegisterRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(authenticationService.register(request, httpRequest.getRemoteAddr()));
     }
 
     /**

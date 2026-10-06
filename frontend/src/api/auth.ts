@@ -1,5 +1,5 @@
 import type { CurrentUser } from "../types";
-import { API_BASE_URL } from "./client";
+import { API_BASE_URL, clearAccessToken, setAccessToken, silentRefresh } from "./client";
 
 export type AuthSession = {
   accessToken: string;
@@ -46,14 +46,32 @@ export const authApi = {
     request<MessageResponse>("/auth/verify-email", { email, otp }),
   resendVerificationOtp: (email: string) =>
     request<MessageResponse>("/auth/verification-otp", { email }),
-  login: (email: string, password: string, rememberMe: boolean) =>
-    request<AuthSession>("/auth/login", { email, password, rememberMe }),
+  login: async (email: string, password: string, rememberMe: boolean) => {
+    const session = await request<AuthSession>("/auth/login", { email, password, rememberMe });
+    setAccessToken(session.accessToken);
+    return session;
+  },
   forgotPassword: (email: string) =>
     request<MessageResponse>("/auth/forgot-password", { email }),
   resetPassword: (email: string, otp: string, newPassword: string, confirmPassword: string) =>
     request<MessageResponse>("/auth/reset-password", { email, otp, newPassword, confirmPassword }),
-  refresh: () => request<AuthSession>("/auth/refresh"),
-  logout: () => request<void>("/auth/logout"),
+  refresh: async () => {
+    const session = await silentRefresh<AuthSession>();
+    if (!session) {
+      throw new AuthApiError({
+        code: "INVALID_REFRESH_TOKEN",
+        message: "Your session has expired. Please log in again.",
+      }, 401);
+    }
+    return session;
+  },
+  logout: async () => {
+    try {
+      await request<void>("/auth/logout");
+    } finally {
+      clearAccessToken();
+    }
+  },
 };
 
 export function getAuthErrorMessage(error: unknown, fallback: string) {

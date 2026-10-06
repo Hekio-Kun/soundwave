@@ -46,6 +46,7 @@ class StudioTrackServiceTest {
     @Mock private org.example.soundwavebackend.lyrics.service.OfficialLyricService officialLyricService;
     @Mock private CloudMediaService cloudMediaService;
     @Mock private jakarta.persistence.EntityManager entityManager;
+    @Mock private jakarta.persistence.Query cleanupQuery;
 
     private StudioTrackService service;
     private AppUser testUser;
@@ -125,6 +126,44 @@ class StudioTrackServiceTest {
         assertThrows(TrackOperationNotAllowedException.class, () ->
                 service.deleteTrack(501L, "creator@soundwave.com"));
         verify(trackRepository, never()).delete(any(Track.class));
+    }
+
+    @Test
+    void deleteTrack_rejectsPublishedTrackForOwner() {
+        Track publishedTrack = new Track(101L, testGenre, "Published", "published", "pub_1", "/audio/demo.mp3", "mp3", 180000);
+        ReflectionTestUtils.setField(publishedTrack, "id", 501L);
+        ReflectionTestUtils.setField(publishedTrack, "publicationStatus", TrackPublicationStatus.PUBLISHED);
+
+        when(userRepository.findByEmailIgnoreCase("creator@soundwave.com")).thenReturn(Optional.of(testUser));
+        when(trackRepository.findById(501L)).thenReturn(Optional.of(publishedTrack));
+
+        TrackOperationNotAllowedException exception = assertThrows(TrackOperationNotAllowedException.class,
+                () -> service.deleteTrack(501L, "creator@soundwave.com"));
+
+        assertEquals("Published tracks cannot be deleted directly. Please contact staff to request a takedown.",
+                exception.getMessage());
+        verify(trackRepository, never()).delete(any(Track.class));
+    }
+
+    @Test
+    void deleteTrack_allowsAdminToDeletePublishedTrack() {
+        Role adminRole = mock(Role.class);
+        when(adminRole.getCode()).thenReturn("ADMIN");
+        AppUser admin = new AppUser(adminRole, "admin@soundwave.com", "hash");
+        ReflectionTestUtils.setField(admin, "id", 1L);
+        Track publishedTrack = new Track(101L, testGenre, "Published", "published", "pub_1", "/audio/demo.mp3", "mp3", 180000);
+        ReflectionTestUtils.setField(publishedTrack, "id", 501L);
+        ReflectionTestUtils.setField(publishedTrack, "publicationStatus", TrackPublicationStatus.PUBLISHED);
+
+        when(userRepository.findByEmailIgnoreCase("admin@soundwave.com")).thenReturn(Optional.of(admin));
+        when(trackRepository.findById(501L)).thenReturn(Optional.of(publishedTrack));
+        when(entityManager.createNativeQuery(anyString())).thenReturn(cleanupQuery);
+        when(cleanupQuery.setParameter("id", 501L)).thenReturn(cleanupQuery);
+        when(cleanupQuery.executeUpdate()).thenReturn(0);
+
+        service.deleteTrack(501L, "admin@soundwave.com");
+
+        verify(trackRepository).delete(publishedTrack);
     }
 
     @Test

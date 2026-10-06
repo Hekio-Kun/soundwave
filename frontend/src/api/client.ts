@@ -25,86 +25,110 @@ export class ApiError extends Error {
   }
 }
 
-export function getAuthToken(): string | null {
-  return (
-    localStorage.getItem("soundwave_access_token") ??
-    sessionStorage.getItem("soundwave_access_token")
-  );
+type RefreshSession = {
+  accessToken: string;
+};
+
+let accessToken: string | null = null;
+let refreshPromise: Promise<RefreshSession | null> | null = null;
+
+export function setAccessToken(token: string | null): void {
+  accessToken = token;
 }
 
-export async function apiFetch<T>(
-  path: string,
-  options: {
-    method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-    body?: unknown;
-    headers?: Record<string, string>;
-  } = {}
-): Promise<T> {
-  const token = getAuthToken();
-  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
-  const headers: Record<string, string> = {
-    ...options.headers,
-  };
+export function clearAccessToken(): void {
+  accessToken = null;
+}
 
+export function getAuthToken(): string | null {
+  return accessToken;
+}
+
+/**
+ * Khôi phục phiên bằng refresh cookie HttpOnly và dùng chung một request khi có nhiều API đồng thời.
+ */
+export async function silentRefresh<T extends RefreshSession>(): Promise<T | null> {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          clearAccessToken();
+          return null;
+        }
+        const session = await response.json() as RefreshSession;
+        if (!session.accessToken) {
+          clearAccessToken();
+          return null;
+        }
+        setAccessToken(session.accessToken);
+        return session;
+      })
+      .catch(() => {
+        clearAccessToken();
+        return null;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+  return refreshPromise as Promise<T | null>;
+}
+
+type ApiFetchOptions = {
+  method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+  body?: unknown;
+  headers?: Record<string, string>;
+};
+
+function createRequest(options: ApiFetchOptions, token: string | null): RequestInit {
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const headers: Record<string, string> = { ...options.headers };
   if (options.body !== undefined && !isFormData && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
-
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
-
-  const getBody = () => (isFormData ? (options.body as FormData) : (options.body !== undefined ? JSON.stringify(options.body) : undefined));
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  return {
     method: options.method ?? "GET",
     credentials: "include",
     headers,
-    body: getBody(),
-  });
+    body: isFormData
+      ? options.body as FormData
+      : options.body !== undefined
+        ? JSON.stringify(options.body)
+        : undefined,
+  };
+}
 
+async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    if (response.status === 401 && !path.includes("/auth/")) {
-      try {
-        const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
-        });
-        if (refreshRes.ok) {
-          const session = await refreshRes.json();
-          if (session?.accessToken) {
-            const storage = localStorage.getItem("soundwave_access_token") ? localStorage : sessionStorage;
-            storage.setItem("soundwave_access_token", session.accessToken);
-            headers["Authorization"] = `Bearer ${session.accessToken}`;
-            const retryRes = await fetch(`${API_BASE_URL}${path}`, {
-              method: options.method ?? "GET",
-              credentials: "include",
-              headers,
-              body: getBody(),
-            });
-            if (retryRes.ok) {
-              if (retryRes.status === 204) return undefined as T;
-              return retryRes.json() as Promise<T>;
-            }
-          }
-        }
-      } catch {
-        // Fall through to error throwing
-      }
-    }
-
     const errorBody = await response.json().catch(() => ({}));
     throw new ApiError(
       response.status,
-      errorBody.message || (response.status === 401 ? "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." : `Request failed with status ${response.status}`),
+      errorBody.message || (response.status === 401
+        ? "Your session has expired. Please log in again."
+        : `Request failed with status ${response.status}`),
       errorBody.code,
-      errorBody.fieldErrors
+      errorBody.fieldErrors,
     );
   }
+  if (response.status === 204) return undefined as T;
+  return response.json() as Promise<T>;
+}
 
-  if (response.status === 204) {
-    return undefined as T;
+export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
+  let response = await fetch(`${API_BASE_URL}${path}`, createRequest(options, getAuthToken()));
+
+  if (response.status === 401 && !path.startsWith("/auth/")) {
+    const session = await silentRefresh<RefreshSession>();
+    if (session) {
+      response = await fetch(`${API_BASE_URL}${path}`, createRequest(options, session.accessToken));
+    }
   }
 
-  return response.json() as Promise<T>;
+  return parseResponse<T>(response);
 }

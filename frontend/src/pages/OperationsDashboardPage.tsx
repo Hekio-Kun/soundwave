@@ -152,7 +152,7 @@ function PanelHeading({
   );
 }
 
-export function AdminDashboardPage({ onNavigate }: DashboardProps) {
+export function AdminDashboardPage({ onNavigate: _onNavigate }: DashboardProps) {
   const [range, setRange] = useState("7d");
   const growthBars = [38, 51, 46, 64, 58, 76, 88];
 
@@ -160,11 +160,10 @@ export function AdminDashboardPage({ onNavigate }: DashboardProps) {
     <div className="ops-dashboard ops-dashboard--admin">
       <DashboardHeading
         eyebrow="ADMINISTRATION"
-        title="System Statistics Dashboard"
-        description="Monitor platform health, users, and content quality in one place."
+        title="System Administration"
+        description="Review users, published content, reports, and platform activity."
         icon={<ShieldIcon width={15} height={15} />}
       >
-        <span className="ops-live-status"><i /> System stable</span>
         <label className="ops-range-select">
           <span>Date range</span>
           <select value={range} onChange={(event) => setRange(event.target.value)} aria-label="Date range">
@@ -227,7 +226,6 @@ export function AdminDashboardPage({ onNavigate }: DashboardProps) {
           <PanelHeading
             title="Recent accounts"
             description="Accounts that recently completed verification"
-            action={<button className="ops-text-button" onClick={() => onNavigate("/admin/dashboard")}>View all <span>→</span></button>}
           />
           <div className="ops-table-wrap">
             <table className="ops-table">
@@ -281,7 +279,7 @@ export function DashboardAccessDenied({
       <small>403 · RESTRICTED AREA</small>
       <h1>Access denied</h1>
       <p>This workspace is available only to accounts with the {requiredRole} role. Please log in with an authorized account.</p>
-      <div><button className="button button-primary" onClick={() => onNavigate("/login")}>Login with another account</button><button className="button button-secondary" onClick={() => onNavigate("/")}>Back to Explore</button></div>
+      <div><button className="button button-primary" onClick={() => onNavigate("/login")}>Login with another account</button></div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
+import { clearAccessToken, setAccessToken } from "./api/client";
 import type { ProfileDetails } from "./api/profile";
 import { playlistApi } from "./api/playlists";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
@@ -31,18 +32,8 @@ import type { CurrentUser, LandingTrack, Playlist } from "./types";
 
 export default function App() {
   // 1. Authentication State
-  const [user, setUser] = useState<CurrentUser | null>(() => {
-    const saved = localStorage.getItem("soundwave_user") ?? sessionStorage.getItem("soundwave_user");
-    const accessToken = localStorage.getItem("soundwave_access_token") ?? sessionStorage.getItem("soundwave_access_token");
-    if (saved && accessToken) {
-      try {
-        return JSON.parse(saved) as CurrentUser;
-      } catch {
-        // ignore parse error
-      }
-    }
-    return null;
-  });
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   const isAuthenticated = Boolean(user);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -50,24 +41,46 @@ export default function App() {
   const [logoutNotice, setLogoutNotice] = useState("");
 
   useEffect(() => {
+    let active = true;
+    localStorage.removeItem("soundwave_user");
+    localStorage.removeItem("soundwave_access_token");
+    sessionStorage.removeItem("soundwave_user");
+    sessionStorage.removeItem("soundwave_access_token");
+
+    void authApi.refresh()
+      .then((session) => {
+        if (active) setUser(session.user);
+      })
+      .catch(() => {
+        clearAccessToken();
+        if (active) setUser(null);
+      })
+      .finally(() => {
+        if (active) setAuthReady(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!logoutNotice) return;
     const timeoutId = window.setTimeout(() => setLogoutNotice(""), 3500);
     return () => window.clearTimeout(timeoutId);
   }, [logoutNotice]);
 
-  const handleLoginSuccess = (session: AuthSession, rememberMe: boolean) => {
+  const handleLoginSuccess = (session: AuthSession, _rememberMe: boolean) => {
     const loggedInUser: CurrentUser = {
       ...session.user,
       avatarUrl: session.user.avatarUrl,
     };
+    setAccessToken(session.accessToken);
     setUser(loggedInUser);
     localStorage.removeItem("soundwave_user");
     localStorage.removeItem("soundwave_access_token");
     sessionStorage.removeItem("soundwave_user");
     sessionStorage.removeItem("soundwave_access_token");
-    const storage = rememberMe ? localStorage : sessionStorage;
-    storage.setItem("soundwave_user", JSON.stringify(loggedInUser));
-    storage.setItem("soundwave_access_token", session.accessToken);
     window.location.hash = session.user.role === "ADMIN" ? "#/admin/dashboard" : session.user.role === "STAFF" ? "#/staff/dashboard" : "#/";
   };
 
@@ -87,8 +100,6 @@ export default function App() {
         dateOfBirth: profile.dateOfBirth ?? undefined,
         countryCode: profile.countryCode ?? undefined,
       };
-      const storage = localStorage.getItem("soundwave_access_token") ? localStorage : sessionStorage;
-      storage.setItem("soundwave_user", JSON.stringify(updatedUser));
       return updatedUser;
     });
   }, []);
@@ -103,6 +114,7 @@ export default function App() {
       serverSessionRevoked = false;
     } finally {
       setUser(null);
+      clearAccessToken();
       localStorage.removeItem("soundwave_user");
       localStorage.removeItem("soundwave_access_token");
       sessionStorage.removeItem("soundwave_user");
@@ -461,6 +473,11 @@ export default function App() {
   }, [audio, isDashboardRoute]);
 
   useEffect(() => {
+    if (!authReady) return;
+    if (!isAuthenticated && pathname.startsWith("/studio")) {
+      window.location.hash = "#/login";
+      return;
+    }
     if (user?.role === "STAFF") {
       if (
         pathname === "/login" ||
@@ -480,7 +497,7 @@ export default function App() {
         window.location.hash = "#/admin/dashboard";
       }
     }
-  }, [user, pathname]);
+  }, [authReady, isAuthenticated, user, pathname]);
 
   // Render Page Content
   const renderContent = () => {
@@ -665,6 +682,7 @@ export default function App() {
     }
 
     if (pathname === "/studio/upload") {
+      if (!authReady || !isAuthenticated) return null;
       return (
         <UploadTrackPage
           isAuthenticated={isAuthenticated}
@@ -675,6 +693,7 @@ export default function App() {
     }
 
     if (pathname === "/studio") {
+      if (!authReady || !isAuthenticated) return null;
       return (
         <StudioPage
           tracks={initialStudioTracks}

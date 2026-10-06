@@ -251,6 +251,10 @@ public class StudioTrackService {
         if (!isOwner && !isAdmin) {
             throw new TrackOperationNotAllowedException("You can only delete tracks that you uploaded.");
         }
+        if (track.getPublicationStatus() == TrackPublicationStatus.PUBLISHED && !isAdmin) {
+            throw new TrackOperationNotAllowedException(
+                    "Published tracks cannot be deleted directly. Please contact staff to request a takedown.");
+        }
 
         // Dọn dẹp liên kết ở tất cả các bảng phụ thuộc trước khi xóa để tránh lỗi khóa ngoại
         entityManager.createNativeQuery("DELETE FROM playlist_tracks WHERE track_id = :id").setParameter("id", trackId).executeUpdate();

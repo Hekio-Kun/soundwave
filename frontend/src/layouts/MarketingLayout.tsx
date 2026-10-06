@@ -15,7 +15,7 @@ export function MarketingLayout({ children, isAuthenticated, hasPlayer }: Props)
       <div className="marketing-content">
         {children}
       </div>
-      <SoundWaveFooter hasPlayer={hasPlayer} />
+      <SoundWaveFooter hasPlayer={hasPlayer} isAuthenticated={isAuthenticated} />
     </div>
   );
 }

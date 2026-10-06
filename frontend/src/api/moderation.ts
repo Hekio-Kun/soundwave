@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./client";
+import { apiFetch } from "./client";
 
 export type SubmissionStatus = "PENDING" | "APPROVED" | "REJECTED";
 
@@ -67,45 +67,6 @@ export type PageResponse<T> = {
   last: boolean;
 };
 
-function getAuthToken(): string | null {
-  return localStorage.getItem("soundwave_access_token") ?? sessionStorage.getItem("soundwave_access_token");
-}
-
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getAuthToken();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(options.headers as Record<string, string> | undefined),
-  };
-
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    credentials: "include",
-    headers,
-  });
-
-  if (!response.ok) {
-    let errorMessage = `Request failed (${response.status})`;
-    try {
-      const errorJson = await response.json();
-      errorMessage = errorJson.message || errorJson.error || errorMessage;
-    } catch {
-      // ignore parse error
-    }
-    throw new Error(errorMessage);
-  }
-
-  if (response.status === 204) {
-    return undefined as unknown as T;
-  }
-
-  return response.json() as Promise<T>;
-}
-
 export const moderationApi = {
   getStats: () => apiFetch<SubmissionStats>("/moderation/submissions/stats"),
 
@@ -136,7 +97,7 @@ export const moderationApi = {
         : reviewerNoteOrRequest?.reviewerNote;
     return apiFetch<SubmissionDetail>(`/moderation/submissions/${id}/approve`, {
       method: "POST",
-      body: JSON.stringify({ reviewerNote: note || undefined }),
+      body: { reviewerNote: note || undefined },
     });
   },
 
@@ -155,10 +116,10 @@ export const moderationApi = {
         : reasonOrRequest.reviewerNote;
     return apiFetch<SubmissionDetail>(`/moderation/submissions/${id}/reject`, {
       method: "POST",
-      body: JSON.stringify({
+      body: {
         rejectionReason: reason,
         reviewerNote: note || undefined,
-      }),
+      },
     });
   },
 
@@ -177,10 +138,10 @@ export const moderationApi = {
         : reasonOrRequest.reviewerNote;
     return apiFetch<SubmissionDetail>(`/moderation/submissions/${id}/takedown`, {
       method: "POST",
-      body: JSON.stringify({
+      body: {
         takedownReason: reason,
         reviewerNote: note || undefined,
-      }),
+      },
     });
   },
 };

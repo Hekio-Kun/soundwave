@@ -84,12 +84,7 @@ public class PlaylistService {
     @Transactional(readOnly = true)
     public List<PlaylistResponse> getMyPlaylists(String currentUserEmail) {
         UserProfileSummary currentUser = userAccountPublicService.getUserSummaryByEmail(currentUserEmail);
-        List<Playlist> playlists = new java.util.ArrayList<>(playlistRepository.findByOwnerUserIdOrderByUpdatedAtDesc(currentUser.userId()));
-        if (currentUser.userId().equals(1L) || currentUser.userId().equals(5L)) {
-            if (playlists.stream().noneMatch(p -> p.getId().equals(1L))) {
-                playlistRepository.findById(1L).ifPresent(playlists::add);
-            }
-        }
+        List<Playlist> playlists = playlistRepository.findByOwnerUserIdOrderByUpdatedAtDesc(currentUser.userId());
 
         return playlists.stream().map(playlist -> {
             List<Long> trackIds = playlistTrackRepository.findByPlaylistIdOrderByPositionAsc(playlist.getId()).stream()
@@ -158,9 +153,6 @@ public class PlaylistService {
 
     private boolean canManagePlaylist(Playlist playlist, Long currentUserId) {
         if (currentUserId.equals(playlist.getOwnerUserId())) {
-            return true;
-        }
-        if (playlist.getId() != null && playlist.getId().equals(1L) && (currentUserId.equals(1L) || currentUserId.equals(5L))) {
             return true;
         }
         try {

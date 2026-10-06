@@ -170,7 +170,7 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 .logout-dialog-confirm { min-height: 44px; border: 1px solid #b42318; border-radius: 12px; color: #fff; background: #b42318; font-weight: 700; cursor: pointer; }
 .logout-dialog-confirm:hover { border-color: #912018; background: #912018; }
 .logout-dialog-confirm:disabled, .logout-dialog .button:disabled { cursor: wait; opacity: .65; }
-.app-toast { position: fixed; z-index: 130; top: 22px; right: 22px; max-width: min(360px, calc(100vw - 32px)); padding: 13px 17px; border: 1px solid #a6f4c5; border-radius: 12px; color: #05603a; background: #ecfdf3; box-shadow: 0 16px 35px rgba(16,24,40,.14); font-size: 12px; font-weight: 700; animation: dialog-in .24s ease-out; }
+.app-toast { position: fixed; z-index: 130; top: 84px; right: 22px; max-width: min(360px, calc(100vw - 32px)); padding: 13px 17px; border: 1px solid #a6f4c5; border-radius: 12px; color: #05603a; background: #ecfdf3; box-shadow: 0 16px 35px rgba(16,24,40,.14); font-size: 12px; font-weight: 700; pointer-events: none; animation: dialog-in .24s ease-out; }
 .state-page { min-height: calc(100vh - 76px); padding: 145px 24px 80px; display: flex; align-items: center; flex-direction: column; text-align: center; }.state-icon { width: 62px; height: 62px; display: grid; place-items: center; border-radius: 18px; color: var(--brand); background: #ecfeff; font-weight: 800; font-size: 27px; }.state-page h1 { margin: 23px 0 10px; font-size: 30px; }.state-page p { margin: 0 0 24px; color: #667085; }.skeleton { position: relative; overflow: hidden; border-radius: 15px; background: #e9edf2; }.skeleton::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent); transform: translateX(-100%); animation: shimmer 1.25s infinite; }.skeleton-hero { width: min(calc(100% - 48px), var(--container)); height: 490px; margin: 50px auto 25px; }.skeleton-heading { width: 360px; height: 60px; margin-bottom: 30px; }.skeleton-card { aspect-ratio: .78; }
 
 @keyframes wave { from { transform: scaleY(.6); } to { transform: scaleY(1.12); } }
@@ -183,6 +183,10 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
   .hero { grid-template-columns: 1fr 1fr; gap: 25px; }.hero h1 { font-size: 55px; }.hero-visual { transform: scale(.88); transform-origin: center right; }
   .track-grid { grid-template-columns: repeat(3, 1fr); gap: 22px; }.track-card:nth-child(n+4) { display: none; }
   .genre-grid { grid-template-columns: repeat(2, 1fr); }.release-list { grid-template-columns: 1fr; }.album-grid { gap: 17px; }
+}
+
+@media (max-width: 680px) {
+  .app-toast { top: 76px; right: 16px; left: 16px; max-width: none; text-align: center; }
 }
 
 @media (max-width: 860px) {
