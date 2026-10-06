@@ -1,10 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
-  ClockIcon,
   CloseIcon,
   DashboardIcon,
-  HomeIcon,
   LogoutIcon,
   MenuIcon,
   ShieldIcon,
@@ -49,21 +47,18 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
   const renderSidebarContent = () => (
     <>
       <div className="ops-sidebar-header">
-        <button
-          type="button"
+        <div
           className="ops-shell-brand"
-          onClick={() => handleNavClick("/")}
-          aria-label="Return to SoundWave Explore"
-          title="Return to SoundWave"
+          aria-label={isAdmin ? "SoundWave administration workspace" : "SoundWave moderation workspace"}
         >
           <div className="ops-brand-logo-wrap">
             <img src="/soundwave-logo.png" alt="SoundWave" />
           </div>
           <div className="ops-brand-info">
             <span className="ops-brand-name">SoundWave</span>
-            <span className="ops-brand-badge">OPS WORKSPACE</span>
+            <span className="ops-brand-badge">{isAdmin ? "ADMINISTRATION" : "MODERATION"}</span>
           </div>
-        </button>
+        </div>
 
         {mobileDrawerOpen ? (
           <button
@@ -128,18 +123,6 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
             </button>
           </>
         )}
-
-        <span className="ops-nav-heading" style={{ marginTop: "16px" }}>
-          QUICK ACCESS
-        </span>
-        <button
-          type="button"
-          className="ops-nav-subitem"
-          onClick={() => handleNavClick("/")}
-        >
-          <HomeIcon width={16} height={16} />
-          <span>Explore SoundWave</span>
-        </button>
       </nav>
 
       {/* Sidebar Footer User Card & Logout */}
@@ -229,22 +212,6 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
           </div>
 
           <div className="ops-shell-actions">
-            {/* Active Shift Indicator */}
-            <div className="ops-topbar-shift-badge">
-              <span className="ops-shift-pulse-ring" />
-              <span>Live Queue</span>
-            </div>
-
-            <button
-              type="button"
-              className="ops-topbar-home-btn"
-              onClick={() => onNavigate("/")}
-              title="Return to music streaming"
-            >
-              <HomeIcon width={15} height={15} />
-              <span>Public App</span>
-            </button>
-
             {user ? (
               <div className="ops-topbar-user-pill">
                 <div className="ops-topbar-avatar">

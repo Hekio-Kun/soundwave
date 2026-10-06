@@ -4,10 +4,11 @@ import type { CurrentUser } from "../types";
 type Props = {
   activeRoute: string;
   onNavigate: (route: string) => void;
+  isAuthenticated: boolean;
   userRole?: CurrentUser["role"];
 };
 
-export function MobileBottomNav({ activeRoute, onNavigate, userRole }: Props) {
+export function MobileBottomNav({ activeRoute, onNavigate, isAuthenticated, userRole }: Props) {
   const isCurrent = (route: string) => activeRoute === route || (route !== "/" && activeRoute.startsWith(route));
 
   return (
@@ -52,7 +53,7 @@ export function MobileBottomNav({ activeRoute, onNavigate, userRole }: Props) {
           <DashboardIcon width={20} height={20} />
           <span>Dashboard</span>
         </button>
-      ) : (
+      ) : isAuthenticated ? (
         <button
           className={`mobile-nav-item ${isCurrent("/studio") ? "mobile-nav-item--active" : ""}`}
           onClick={() => onNavigate("/studio")}
@@ -60,7 +61,7 @@ export function MobileBottomNav({ activeRoute, onNavigate, userRole }: Props) {
           <UploadIcon width={20} height={20} />
           <span>Studio</span>
         </button>
-      )}
+      ) : null}
     </nav>
   );
 }

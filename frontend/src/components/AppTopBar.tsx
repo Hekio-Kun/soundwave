@@ -62,9 +62,7 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
     ? "/admin/dashboard"
     : user?.role === "STAFF"
     ? "/staff/dashboard"
-    : isAuthenticated
-    ? "/studio/upload"
-    : "/login";
+    : "/studio/upload";
   const workspaceLabel = hasDashboardAccess ? "Open dashboard" : "Upload music";
 
   return (
@@ -100,14 +98,16 @@ export function AppTopBar({ user, isAuthenticated, onNavigate, onLogout, unreadN
       </form>
 
       <div className="topbar-actions" ref={actionsRef}>
-        <button
-          className="button button-ghost button-small topbar-upload-btn"
-          onClick={() => onNavigate(workspaceRoute)}
-          aria-label={workspaceLabel}
-        >
-          {user?.role === "ADMIN" ? <ShieldIcon width={16} height={16} /> : user?.role === "STAFF" ? <DashboardIcon width={16} height={16} /> : <UploadIcon width={16} height={16} />}
-          <span>{workspaceLabel}</span>
-        </button>
+        {isAuthenticated && (
+          <button
+            className="button button-ghost button-small topbar-upload-btn"
+            onClick={() => onNavigate(workspaceRoute)}
+            aria-label={workspaceLabel}
+          >
+            {user?.role === "ADMIN" ? <ShieldIcon width={16} height={16} /> : user?.role === "STAFF" ? <DashboardIcon width={16} height={16} /> : <UploadIcon width={16} height={16} />}
+            <span>{workspaceLabel}</span>
+          </button>
+        )}
 
         {isAuthenticated && (
           <div className="topbar-notification-wrapper">

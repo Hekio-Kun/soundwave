@@ -1,6 +1,7 @@
 package org.example.soundwavebackend.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.example.soundwavebackend.authentication.exception.*;
 import org.example.soundwavebackend.media.exception.InvalidAvatarFileException;
 import org.example.soundwavebackend.media.exception.CloudStorageUnavailableException;
@@ -22,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception,
@@ -54,7 +56,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({InvalidOtpException.class, AccountUnavailableException.class})
     public ResponseEntity<ApiErrorResponse> handleBadRequest(AuthenticationException exception, HttpServletRequest request) {
-        return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
+        HttpStatus status = "REGISTRATION_RATE_LIMITED".equals(exception.getCode())
+                ? HttpStatus.TOO_MANY_REQUESTS
+                : HttpStatus.BAD_REQUEST;
+        return build(status, exception.getCode(), exception.getMessage(), request, Map.of());
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -75,6 +80,74 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BadRequestOperationException.class)
     public ResponseEntity<ApiErrorResponse> handleBadRequestOperation(BadRequestOperationException exception, HttpServletRequest request) {
         return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiErrorResponse> handleMaxUploadSizeExceeded(
+            MaxUploadSizeExceededException exception,
+            HttpServletRequest request
+    ) {
+        return build(HttpStatus.PAYLOAD_TOO_LARGE, "FILE_TOO_LARGE",
+                "File size exceeds maximum allowed upload limit (30MB)", request, Map.of());
+    }
+
+    @ExceptionHandler({InvalidTrackAudioException.class, InvalidTrackCoverException.class, InvalidAvatarFileException.class})
+    public ResponseEntity<ApiErrorResponse> handleInvalidMediaFile(
+            org.example.soundwavebackend.media.exception.MediaException exception,
+            HttpServletRequest request
+    ) {
+        return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(CloudStorageUnavailableException.class)
+    public ResponseEntity<ApiErrorResponse> handleCloudStorageUnavailable(
+            CloudStorageUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(TrackException.class)
+    public ResponseEntity<ApiErrorResponse> handleTrackException(
+            TrackException exception,
+            HttpServletRequest request
+    ) {
+        return build(exception.getStatus(), exception.getCode(), exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(SubmissionNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleSubmissionNotFound(
+            SubmissionNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return build(HttpStatus.NOT_FOUND, "SUBMISSION_NOT_FOUND", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(InvalidSubmissionStateException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidSubmissionState(
+            InvalidSubmissionStateException exception,
+            HttpServletRequest request
+    ) {
+        return build(HttpStatus.CONFLICT, "INVALID_SUBMISSION_STATE", exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(
+            AccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        return build(HttpStatus.FORBIDDEN, "ACCESS_DENIED", "You do not have permission to perform this action.",
+                request, Map.of());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiErrorResponse> handleUnexpectedException(
+            Exception exception,
+            HttpServletRequest request
+    ) {
+        log.error("Unhandled exception while processing {} {}", request.getMethod(), request.getRequestURI(), exception);
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_SERVER_ERROR",
+                "An unexpected error occurred. Please try again later.", request, Map.of());
     }
 
     private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String code, String message,

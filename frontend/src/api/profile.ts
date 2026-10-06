@@ -1,5 +1,5 @@
 import { AuthApiError } from "./auth";
-import { API_BASE_URL } from "./client";
+import { ApiError, apiFetch } from "./client";
 
 export type ProfileDetails = {
   userId: number;
@@ -23,47 +23,28 @@ export type UpdateProfileInput = {
   countryCode: string | null;
 };
 
-type ApiError = {
-  code?: string;
-  message?: string;
-  fieldErrors?: Record<string, string>;
-};
-
-function getAccessToken() {
-  return localStorage.getItem("soundwave_access_token")
-    ?? sessionStorage.getItem("soundwave_access_token");
-}
-
 async function request<T>(method: "GET" | "PATCH", body?: UpdateProfileInput, avatar?: File): Promise<T> {
-  const accessToken = getAccessToken();
-  if (!accessToken) {
-    throw new AuthApiError({
-      code: "AUTH_REQUIRED",
-      message: "Your login session is missing. Please log in again.",
-    }, 401);
-  }
-
   const formData = avatar ? new FormData() : null;
   if (formData && avatar) {
     formData.append("profile", new Blob([JSON.stringify(body)], { type: "application/json" }));
     formData.append("avatar", avatar);
   }
 
-  const response = await fetch(`${API_BASE_URL}/profile`, {
-    method,
-    credentials: "include",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      ...(formData ? {} : { "Content-Type": "application/json" }),
-    },
-    body: formData ?? (body ? JSON.stringify(body) : undefined),
-  });
-
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => ({}))) as ApiError;
-    throw new AuthApiError(payload, response.status);
+  try {
+    return await apiFetch<T>("/profile", {
+      method,
+      body: formData ?? body,
+    });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new AuthApiError({
+        code: error.code,
+        message: error.message,
+        fieldErrors: error.fieldErrors,
+      }, error.status);
+    }
+    throw error;
   }
-  return response.json() as Promise<T>;
 }
 
 export const profileApi = {

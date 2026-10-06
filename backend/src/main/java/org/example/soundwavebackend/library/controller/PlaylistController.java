@@ -67,8 +67,11 @@ public class PlaylistController {
             @RequestParam(required = false, defaultValue = "false") boolean myOnly,
             Principal principal
     ) {
+        if (myOnly && principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         if (myOnly || principal != null) {
-            return ResponseEntity.ok(playlistService.getMyPlaylists(principal != null ? principal.getName() : ""));
+            return ResponseEntity.ok(playlistService.getMyPlaylists(principal.getName()));
         }
         return ResponseEntity.ok(playlistService.getPublicPlaylists());
     }

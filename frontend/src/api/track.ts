@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "./client";
+import { ApiError, apiFetch } from "./client";
 
 export type ApiTrack = {
   id: number;
@@ -95,76 +95,23 @@ export class TrackApiError extends Error {
   }
 }
 
-function getAuthToken(): string | null {
-  return localStorage.getItem("soundwave_access_token") ?? sessionStorage.getItem("soundwave_access_token");
-}
-
 async function studioRequest<T>(
   path: string,
   method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
   body?: unknown | FormData
 ): Promise<T> {
-  const token = getAuthToken();
-  if (!token) {
-    throw new TrackApiError({
-      code: "AUTH_REQUIRED",
-      message: "Please log in before managing your tracks.",
-    }, 401);
-  }
-
-  const headers: Record<string, string> = {};
-  headers["Authorization"] = `Bearer ${token}`;
-  const isMultipart = body instanceof FormData;
-  if (body !== undefined && !isMultipart) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    credentials: "include",
-    body: body === undefined ? undefined : isMultipart ? body : JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) {
-      try {
-        const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
-        });
-        if (refreshRes.ok) {
-          const session = await refreshRes.json();
-          if (session?.accessToken) {
-            const storage = localStorage.getItem("soundwave_access_token") ? localStorage : sessionStorage;
-            storage.setItem("soundwave_access_token", session.accessToken);
-            headers["Authorization"] = `Bearer ${session.accessToken}`;
-            const retryRes = await fetch(`${API_BASE_URL}${path}`, {
-              method,
-              headers,
-              credentials: "include",
-              body: body === undefined ? undefined : isMultipart ? body : JSON.stringify(body),
-            });
-            if (retryRes.ok) {
-              if (retryRes.status === 204) return undefined as T;
-              return retryRes.json() as Promise<T>;
-            }
-          }
-        }
-      } catch {
-        // Fall through
-      }
+  try {
+    return await apiFetch<T>(path, { method, body });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new TrackApiError({
+        code: error.code,
+        message: error.message,
+        fieldErrors: error.fieldErrors,
+      }, error.status);
     }
-
-    const errorPayload = await response.json().catch(() => ({})) as TrackApiErrorPayload;
-    throw new TrackApiError(errorPayload, response.status);
+    throw error;
   }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json() as Promise<T>;
 }
 
 function buildTrackFormData(

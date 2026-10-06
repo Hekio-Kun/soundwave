@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -123,6 +124,36 @@ class PlaylistServiceTest {
 
         assertThrows(ForbiddenOperationException.class, () ->
                 playlistService.deletePlaylist(100L, "hacker@soundwave.com"));
+    }
+
+    @Test
+    void deletePlaylist_DoesNotGrantHardcodedUserAccessToPlaylistOne() {
+        Playlist playlist = new Playlist(99L, "Protected Playlist");
+        ReflectionTestUtils.setField(playlist, "id", 1L);
+        when(playlistRepository.findById(1L)).thenReturn(Optional.of(playlist));
+        when(userAccountPublicService.getUserIdByEmail("legacy@soundwave.com")).thenReturn(5L);
+        when(userAccountPublicService.getUserSummaryById(5L))
+                .thenReturn(new UserProfileSummary(5L, "legacy@soundwave.com", "Legacy", null, "LISTENER"));
+
+        assertThrows(ForbiddenOperationException.class,
+                () -> playlistService.deletePlaylist(1L, "legacy@soundwave.com"));
+
+        verify(playlistRepository, never()).delete(any());
+    }
+
+    @Test
+    void getMyPlaylists_ReturnsOnlyPlaylistsOwnedByCurrentUser() {
+        UserProfileSummary user = new UserProfileSummary(5L, "listener@soundwave.com", "Listener", null, "LISTENER");
+        Playlist owned = new Playlist(5L, "Owned Playlist");
+        ReflectionTestUtils.setField(owned, "id", 20L);
+        when(userAccountPublicService.getUserSummaryByEmail(user.email())).thenReturn(user);
+        when(playlistRepository.findByOwnerUserIdOrderByUpdatedAtDesc(5L)).thenReturn(List.of(owned));
+
+        List<PlaylistResponse> result = playlistService.getMyPlaylists(user.email());
+
+        assertEquals(1, result.size());
+        assertEquals(20L, result.getFirst().id());
+        verify(playlistRepository, never()).findById(1L);
     }
 
     @Test
