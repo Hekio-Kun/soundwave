@@ -199,7 +199,7 @@ export default function App() {
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch {}
+      } catch { }
     }
     return [1, 2];
   });
@@ -209,7 +209,7 @@ export default function App() {
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch {}
+      } catch { }
     }
     return demoPlaylists;
   });
@@ -283,12 +283,12 @@ export default function App() {
           prev.map((p) =>
             p.id === editingPlaylist.id
               ? {
-                  ...p,
-                  title: data.title,
-                  description: data.description,
-                  isPrivate: data.isPrivate,
-                  coverUrl: data.coverUrl,
-                }
+                ...p,
+                title: data.title,
+                description: data.description,
+                isPrivate: data.isPrivate,
+                coverUrl: data.coverUrl,
+              }
               : p
           )
         );
