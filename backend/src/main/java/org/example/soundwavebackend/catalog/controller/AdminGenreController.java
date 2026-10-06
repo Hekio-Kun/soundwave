@@ -7,7 +7,7 @@ import org.example.soundwavebackend.catalog.dto.request.UpdateGenreRequest;
 import org.example.soundwavebackend.catalog.dto.request.UpdateGenreStatusRequest;
 import org.example.soundwavebackend.catalog.dto.response.AdminGenreResponse;
 import org.example.soundwavebackend.catalog.dto.response.AdminGenrePageResponse;
-import org.example.soundwavebackend.catalog.service.GenreManagementService;
+import org.example.soundwavebackend.catalog.service.GenreService;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -26,7 +26,7 @@ import java.security.Principal;
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminGenreController {
-    private final GenreManagementService genreManagementService;
+    private final GenreService genreService;
 
     /**
      * Lấy danh sách thể loại có tìm kiếm, lọc trạng thái và phân trang.
@@ -36,7 +36,7 @@ public class AdminGenreController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean active,
             @PageableDefault(sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
-        return ResponseEntity.ok(genreManagementService.getGenres(search, active, pageable));
+        return ResponseEntity.ok(genreService.getGenres(search, active, pageable));
     }
 
     /**
@@ -44,7 +44,7 @@ public class AdminGenreController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<AdminGenreResponse> getGenre(@PathVariable Long id) {
-        return ResponseEntity.ok(genreManagementService.getGenre(id));
+        return ResponseEntity.ok(genreService.getGenre(id));
     }
 
     /**
@@ -54,7 +54,7 @@ public class AdminGenreController {
     public ResponseEntity<AdminGenreResponse> createGenre(@Valid @RequestBody CreateGenreRequest request,
                                                            Principal principal) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(genreManagementService.createGenre(request, principal.getName()));
+                .body(genreService.createGenre(request, principal.getName()));
     }
 
     /**
@@ -63,7 +63,7 @@ public class AdminGenreController {
     @PutMapping("/{id}")
     public ResponseEntity<AdminGenreResponse> updateGenre(@PathVariable Long id,
                                                            @Valid @RequestBody UpdateGenreRequest request) {
-        return ResponseEntity.ok(genreManagementService.updateGenre(id, request));
+        return ResponseEntity.ok(genreService.updateGenre(id, request));
     }
 
     /**
@@ -73,6 +73,6 @@ public class AdminGenreController {
     public ResponseEntity<AdminGenreResponse> updateGenreStatus(
             @PathVariable Long id,
             @Valid @RequestBody UpdateGenreStatusRequest request) {
-        return ResponseEntity.ok(genreManagementService.updateActiveState(id, request.active()));
+        return ResponseEntity.ok(genreService.updateActiveState(id, request.active()));
     }
 }
