@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { covers, tracks } from "../data";
-import { EditIcon, HeadphonesIcon, HeartIcon, PauseIcon, PlayIcon, PlusIcon, TrashIcon } from "../icons";
+import { EditIcon, HeadphonesIcon, HeartIcon, PauseIcon, PlayIcon, PlusIcon, QueueIcon, TrashIcon } from "../icons";
 import type { LandingTrack, Playlist } from "../types";
 
 type Props = {
@@ -193,6 +193,27 @@ export function LibraryPage({
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <button
+                  className="icon-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate(`/playlist/${pl.id}`);
+                  }}
+                  title="Manage Playlist Tracks"
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    border: "1px solid #A7F3D0",
+                    background: "#ECFDF5",
+                    color: "#065F46",
+                    cursor: "pointer",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <QueueIcon width={15} height={15} />
+                </button>
                 {onEditPlaylist && (
                   <button
                     className="icon-button"

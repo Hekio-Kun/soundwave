@@ -347,17 +347,23 @@ export default function App() {
       setPlaylists((prev) =>
         prev.map((pl) => (pl.id === playlistId ? updated : pl))
       );
-    } catch {
+    } catch (err) {
       // Fallback local
       setPlaylists((prev) =>
         prev.map((pl) => {
           if (pl.id === playlistId) {
             const nextTracks = pl.trackIds.filter((id) => id !== trackId);
-            return { ...pl, trackIds: nextTracks, trackCount: nextTracks.length };
+            return {
+              ...pl,
+              trackIds: nextTracks,
+              tracks: pl.tracks ? pl.tracks.filter((t) => t.id !== trackId) : undefined,
+              trackCount: nextTracks.length,
+            };
           }
           return pl;
         })
       );
+      throw err;
     }
   };
 
@@ -374,7 +380,7 @@ export default function App() {
       setPlaylists((prev) =>
         prev.map((pl) => (pl.id === playlistId ? updated : pl))
       );
-    } catch {
+    } catch (err) {
       // Fallback local
       setPlaylists((prev) =>
         prev.map((pl) => {
@@ -386,11 +392,19 @@ export default function App() {
             const copy = [...pl.trackIds];
             const [moved] = copy.splice(idx, 1);
             copy.splice(targetIdx, 0, moved);
-            return { ...pl, trackIds: copy };
+
+            let nextTracks = pl.tracks ? [...pl.tracks] : undefined;
+            if (nextTracks && nextTracks.length === pl.trackIds.length) {
+              const [movedTrack] = nextTracks.splice(idx, 1);
+              nextTracks.splice(targetIdx, 0, movedTrack);
+            }
+
+            return { ...pl, trackIds: copy, tracks: nextTracks };
           }
           return pl;
         })
       );
+      throw err;
     }
   };
 

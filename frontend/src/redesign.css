@@ -6,8 +6,12 @@
   --sw-bg: #f7f8fa;
   --sw-surface: #ffffff;
   --sw-text: #101828;
+  --sw-text-secondary: #475467;
   --sw-muted: #667085;
   --sw-border: #e4e7ec;
+  --sw-danger: #dc2626;
+  --sw-danger-dark: #b91c1c;
+  --sw-danger-light: #fef2f2;
   --sw-shadow-sm: 0 8px 24px rgba(16, 24, 40, 0.06);
   --sw-shadow-md: 0 18px 48px rgba(16, 24, 40, 0.11);
 }

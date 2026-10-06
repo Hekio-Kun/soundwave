@@ -21,6 +21,15 @@ export const playlistApi = {
     return apiFetch<Playlist>(`/playlists/${id}`);
   },
 
+  uploadCover: async (file: File): Promise<{ coverUrl: string }> => {
+    const formData = new FormData();
+    formData.append("cover", file);
+    return apiFetch<{ coverUrl: string }>("/playlists/upload-cover", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
   createPlaylist: async (data: PlaylistFormData): Promise<Playlist> => {
     return apiFetch<Playlist>("/playlists", {
       method: "POST",
