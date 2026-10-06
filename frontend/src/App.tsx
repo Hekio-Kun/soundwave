@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
+import { type ProfileDetails } from "./api/profile";
 import { playlistApi } from "./api/playlists";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
@@ -524,7 +525,7 @@ export default function App() {
       return <GenresPage onNavigate={navigate} />;
     }
 
-    if (pathname.startsWith("/track/")) {
+    if (pathname.startsWith("/track/") || pathname.startsWith("/tracks/")) {
       const trackId = Number(pathname.split("/")[2]) || 1;
       return (
         <TrackDetailsPage

@@ -99,6 +99,7 @@ class StudioTrackServiceTest {
     void submitForReview_success() {
         Track draftTrack = new Track(101L, testGenre, "Song 1", "song-1", "pub_1", "/audio/demo.mp3", "mp3", 180000);
         ReflectionTestUtils.setField(draftTrack, "id", 501L);
+        ReflectionTestUtils.setField(draftTrack, "latestRejectionReason", "Previous issue");
 
         when(userRepository.findByEmailIgnoreCase("creator@soundwave.com")).thenReturn(Optional.of(testUser));
         when(trackRepository.findByIdAndUploaderUserId(501L, 101L)).thenReturn(Optional.of(draftTrack));
@@ -108,6 +109,7 @@ class StudioTrackServiceTest {
 
         assertNotNull(response);
         assertEquals("PENDING", response.status());
+        assertNull(draftTrack.getLatestRejectionReason());
         verify(submissionRepository).save(any(TrackSubmission.class));
     }
 
@@ -145,5 +147,41 @@ class StudioTrackServiceTest {
         assertNotNull(details);
         assertEquals("Poor audio quality", details.rejectionReason());
         assertEquals("Audio clipping detected", details.reviewerNote());
+    }
+
+    @Test
+    void cancelSubmission_success() {
+        Track pendingTrack = new Track(101L, testGenre, "Song 1", "song-1", "pub_1", "/audio/demo.mp3", "mp3", 180000);
+        ReflectionTestUtils.setField(pendingTrack, "id", 501L);
+        ReflectionTestUtils.setField(pendingTrack, "publicationStatus", TrackPublicationStatus.PENDING);
+
+        TrackSubmission pendingSub = new TrackSubmission(501L, 101L, "Initial");
+
+        when(userRepository.findByEmailIgnoreCase("creator@soundwave.com")).thenReturn(Optional.of(testUser));
+        when(trackRepository.findByIdAndUploaderUserId(501L, 101L)).thenReturn(Optional.of(pendingTrack));
+        when(submissionRepository.findFirstByTrackIdAndStatusOrderBySubmittedAtDesc(501L, SubmissionStatus.PENDING))
+                .thenReturn(Optional.of(pendingSub));
+
+        StudioTrackResponse response = service.cancelSubmission(501L, "creator@soundwave.com");
+
+        assertNotNull(response);
+        assertEquals("DRAFT", response.status());
+        assertEquals(TrackPublicationStatus.DRAFT, pendingTrack.getPublicationStatus());
+        verify(trackRepository).save(pendingTrack);
+        verify(submissionRepository).delete(pendingSub);
+    }
+
+    @Test
+    void cancelSubmission_notAllowedWhenNotPending() {
+        Track draftTrack = new Track(101L, testGenre, "Song 1", "song-1", "pub_1", "/audio/demo.mp3", "mp3", 180000);
+        ReflectionTestUtils.setField(draftTrack, "id", 501L);
+
+        when(userRepository.findByEmailIgnoreCase("creator@soundwave.com")).thenReturn(Optional.of(testUser));
+        when(trackRepository.findByIdAndUploaderUserId(501L, 101L)).thenReturn(Optional.of(draftTrack));
+
+        assertThrows(TrackOperationNotAllowedException.class, () ->
+                service.cancelSubmission(501L, "creator@soundwave.com"));
+        verify(trackRepository, never()).save(any());
+        verify(submissionRepository, never()).delete(any());
     }
 }
