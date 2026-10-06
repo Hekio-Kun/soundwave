@@ -30,10 +30,21 @@ public interface TrackRepository extends JpaRepository<Track, Long>, JpaSpecific
     Optional<Track> findById(@NonNull Long id);
 
     @EntityGraph(attributePaths = {"genre", "album"})
+    Optional<Track> findByIdAndPublicationStatus(Long id, TrackPublicationStatus publicationStatus);
+
+    @EntityGraph(attributePaths = {"genre", "album"})
     Optional<Track> findBySlugIgnoreCase(String slug);
 
     @EntityGraph(attributePaths = {"genre", "album"})
+    Optional<Track> findBySlugIgnoreCaseAndPublicationStatus(String slug, TrackPublicationStatus publicationStatus);
+
+    @EntityGraph(attributePaths = {"genre", "album"})
     List<Track> findByIdIn(Collection<Long> ids);
+
+    @EntityGraph(attributePaths = {"genre", "album"})
+    List<Track> findByIdInAndPublicationStatus(Collection<Long> ids, TrackPublicationStatus publicationStatus);
+
+    boolean existsByIdAndPublicationStatus(Long id, TrackPublicationStatus publicationStatus);
 
     @Query("SELECT track.id FROM Track track WHERE LOWER(track.title) LIKE LOWER(CONCAT('%', :search, '%'))")
     List<Long> findTrackIdsByTitleContainingIgnoreCase(@Param("search") String search);
@@ -42,7 +53,16 @@ public interface TrackRepository extends JpaRepository<Track, Long>, JpaSpecific
     List<Track> findByUploaderUserIdOrderByCreatedAtDesc(Long uploaderUserId);
 
     @EntityGraph(attributePaths = {"genre", "album"})
+    List<Track> findByUploaderUserIdOrderByUpdatedAtDesc(Long uploaderUserId);
+
+    @EntityGraph(attributePaths = {"genre", "album"})
     List<Track> findByUploaderUserIdAndPublicationStatusOrderByCreatedAtDesc(
+            Long uploaderUserId,
+            TrackPublicationStatus publicationStatus
+    );
+
+    @EntityGraph(attributePaths = {"genre", "album"})
+    List<Track> findByUploaderUserIdAndPublicationStatusOrderByUpdatedAtDesc(
             Long uploaderUserId,
             TrackPublicationStatus publicationStatus
     );

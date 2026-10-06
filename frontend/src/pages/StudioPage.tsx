@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
@@ -15,6 +15,9 @@ import {
   CheckIcon,
   CloseIcon,
   FileTextIcon,
+  PauseIcon,
+  PlayIcon,
+  SearchIcon,
   TrashIcon,
   UploadIcon,
 } from "../icons";
@@ -59,6 +62,12 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
   const [rejectionModalTrack, setRejectionModalTrack] = useState<RejectionDetails | null>(null);
   const [submittingNoteTrack, setSubmittingNoteTrack] = useState<StudioTrack | null>(null);
   const [submitterNote, setSubmitterNote] = useState("");
+  const [submitCopyrightAgreed, setSubmitCopyrightAgreed] = useState(false);
+  const [withdrawConfirmTrack, setWithdrawConfirmTrack] = useState<StudioTrack | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [previewAudioUrl, setPreviewAudioUrl] = useState<string | null>(null);
+  const [previewAudioPlaying, setPreviewAudioPlaying] = useState(false);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Form inputs
   const [title, setTitle] = useState("");
@@ -140,7 +149,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
 
   // Rule 4.7: Modal background scroll lock
   useModalScrollLock(
-    Boolean(trackModalOpen || deleteConfirmTrack || rejectionModalTrack || submittingNoteTrack)
+    Boolean(trackModalOpen || deleteConfirmTrack || rejectionModalTrack || submittingNoteTrack || withdrawConfirmTrack)
   );
 
   useEffect(() => {
@@ -312,19 +321,57 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
     }
   };
 
-  // Submit For Review (UC-19.5)
+  // Submit For Review (UC-19.4)
   const handleSubmitReview = async () => {
     if (!submittingNoteTrack) return;
     try {
       setIsSaving(true);
       await studioApi.submitForReview(submittingNoteTrack.id, submitterNote.trim() || undefined);
+      const title = submittingNoteTrack.title;
       setSubmittingNoteTrack(null);
       setSubmitterNote("");
+      setSubmitCopyrightAgreed(false);
+      setActionSuccess(`Track "${title}" submitted for moderation review successfully.`);
       await loadStudioData();
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : "Failed to submit track.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Withdraw Submission from Review (UC-19.4 Extension)
+  const handleWithdrawSubmission = async () => {
+    if (!withdrawConfirmTrack) return;
+    try {
+      setIsSaving(true);
+      await studioApi.withdrawSubmission(withdrawConfirmTrack.id);
+      const title = withdrawConfirmTrack.title;
+      setWithdrawConfirmTrack(null);
+      setActionSuccess(`Track "${title}" has been withdrawn from review and returned to Draft.`);
+      await loadStudioData();
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : "Failed to withdraw track submission.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Audio Preview Player
+  const handleToggleAudioPreview = (audioUrl?: string) => {
+    if (!audioUrl) return;
+    if (!previewAudioRef.current) return;
+    if (previewAudioUrl === audioUrl && previewAudioPlaying) {
+      previewAudioRef.current.pause();
+      setPreviewAudioPlaying(false);
+    } else {
+      previewAudioRef.current.src = audioUrl;
+      previewAudioRef.current.play().then(() => {
+        setPreviewAudioUrl(audioUrl);
+        setPreviewAudioPlaying(true);
+      }).catch(() => {
+        setPreviewAudioPlaying(false);
+      });
     }
   };
 
@@ -343,6 +390,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
             track.latestRejectionReason ||
             "The audio file or metadata does not satisfy SoundWave community standards.",
           reviewerNote: track.reviewerNote,
+          reviewedAt: track.createdAt,
         });
       }
     } catch {
@@ -352,13 +400,23 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
         status: "REJECTED",
         rejectionReason:
           track.latestRejectionReason || "Audio content violates policy.",
+        reviewedAt: track.createdAt,
       });
     }
   };
 
-  const filtered = trackList.filter(
-    (t) => filterStatus === "ALL" || t.status === filterStatus
-  );
+  const filtered = trackList.filter((t) => {
+    const matchesStatus = filterStatus === "ALL" || t.status === filterStatus;
+    if (!matchesStatus) return false;
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.trim().toLowerCase();
+    return (
+      t.title.toLowerCase().includes(query) ||
+      (t.genreName && t.genreName.toLowerCase().includes(query)) ||
+      (t.albumTitle && t.albumTitle.toLowerCase().includes(query)) ||
+      (t.description && t.description.toLowerCase().includes(query))
+    );
+  });
 
   return (
     <div className="studio-page">
@@ -464,39 +522,79 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
         </div>
       </div>
 
-      {/* Status Filter Bar */}
-      <div className="studio-tabs-bar">
-        <button
-          className={`filter-pill ${filterStatus === "ALL" ? "filter-pill--active" : ""}`}
-          onClick={() => setFilterStatus("ALL")}
-        >
-          All ({stats.total})
-        </button>
-        <button
-          className={`filter-pill ${filterStatus === "APPROVED" ? "filter-pill--active" : ""}`}
-          onClick={() => setFilterStatus("APPROVED")}
-        >
-          Published ({stats.approved})
-        </button>
-        <button
-          className={`filter-pill ${filterStatus === "PENDING" ? "filter-pill--active" : ""}`}
-          onClick={() => setFilterStatus("PENDING")}
-        >
-          Pending ({stats.pending})
-        </button>
-        <button
-          className={`filter-pill ${filterStatus === "REJECTED" ? "filter-pill--active" : ""}`}
-          onClick={() => setFilterStatus("REJECTED")}
-        >
-          Rejected ({stats.rejected})
-        </button>
-        <button
-          className={`filter-pill ${filterStatus === "DRAFT" ? "filter-pill--active" : ""}`}
-          onClick={() => setFilterStatus("DRAFT")}
-        >
-          Draft ({stats.draft})
-        </button>
+      {/* Status Filter Bar and Search */}
+      <div className="studio-tabs-bar" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+          <button
+            className={`filter-pill ${filterStatus === "ALL" ? "filter-pill--active" : ""}`}
+            onClick={() => setFilterStatus("ALL")}
+          >
+            All ({stats.total})
+          </button>
+          <button
+            className={`filter-pill ${filterStatus === "APPROVED" ? "filter-pill--active" : ""}`}
+            onClick={() => setFilterStatus("APPROVED")}
+          >
+            Published ({stats.approved})
+          </button>
+          <button
+            className={`filter-pill ${filterStatus === "PENDING" ? "filter-pill--active" : ""}`}
+            onClick={() => setFilterStatus("PENDING")}
+          >
+            Pending ({stats.pending})
+          </button>
+          <button
+            className={`filter-pill ${filterStatus === "REJECTED" ? "filter-pill--active" : ""}`}
+            onClick={() => setFilterStatus("REJECTED")}
+          >
+            Rejected ({stats.rejected})
+          </button>
+          <button
+            className={`filter-pill ${filterStatus === "DRAFT" ? "filter-pill--active" : ""}`}
+            onClick={() => setFilterStatus("DRAFT")}
+          >
+            Draft ({stats.draft})
+          </button>
+        </div>
+
+        <div style={{ position: "relative", minWidth: "220px" }}>
+          <input
+            type="text"
+            placeholder="Search tracks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "7px 12px 7px 32px",
+              borderRadius: "20px",
+              border: "1px solid var(--sw-border)",
+              background: "var(--sw-surface)",
+              color: "var(--sw-text-primary)",
+              fontSize: "13px",
+              boxSizing: "border-box",
+            }}
+          />
+          <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--sw-text-muted)", pointerEvents: "none", display: "flex" }}>
+            <SearchIcon width={14} height={14} />
+          </span>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              style={{ position: "absolute", right: "8px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "var(--sw-text-muted)", padding: "2px", display: "flex" }}
+              aria-label="Clear search"
+            >
+              <CloseIcon width={12} height={12} />
+            </button>
+          )}
+        </div>
       </div>
+
+      <audio
+        ref={previewAudioRef}
+        style={{ display: "none" }}
+        onEnded={() => setPreviewAudioPlaying(false)}
+        onError={() => setPreviewAudioPlaying(false)}
+      />
 
       {/* Tracks Table */}
       <div className="studio-table-container">
@@ -520,7 +618,9 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="table-empty-cell">
-                    No tracks in this category. Click &quot;Upload track&quot; to create one.
+                    {searchQuery
+                      ? `No tracks match "${searchQuery}".`
+                      : "No tracks in this category. Click \"Upload track\" to create one."}
                   </td>
                 </tr>
               ) : (
@@ -528,7 +628,41 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                   <tr key={t.id}>
                     <td>
                       <div className="table-track-cell">
-                        <img src={t.coverUrl ?? "/pics/album.png"} alt={t.title} />
+                        <div style={{ position: "relative", width: "42px", height: "42px", flexShrink: 0 }}>
+                          <img
+                            src={t.coverUrl ?? "/pics/album.png"}
+                            alt={t.title}
+                            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "6px", display: "block" }}
+                          />
+                          {t.audioUrl && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleAudioPreview(t.audioUrl)}
+                              style={{
+                                position: "absolute",
+                                inset: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background: previewAudioUrl === t.audioUrl && previewAudioPlaying ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0.35)",
+                                border: "none",
+                                borderRadius: "6px",
+                                color: "#fff",
+                                cursor: "pointer",
+                                opacity: previewAudioUrl === t.audioUrl && previewAudioPlaying ? 1 : 0.8,
+                                transition: "opacity 0.2s",
+                              }}
+                              title={previewAudioUrl === t.audioUrl && previewAudioPlaying ? "Pause audio preview" : "Play audio preview"}
+                              aria-label={previewAudioUrl === t.audioUrl && previewAudioPlaying ? `Pause ${t.title}` : `Play ${t.title}`}
+                            >
+                              {previewAudioUrl === t.audioUrl && previewAudioPlaying ? (
+                                <PauseIcon width={16} height={16} />
+                              ) : (
+                                <PlayIcon width={16} height={16} />
+                              )}
+                            </button>
+                          )}
+                        </div>
                         <div>
                           <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                             <b>{t.title}</b>
@@ -602,6 +736,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                               onClick={() => {
                                 setSubmittingNoteTrack(t);
                                 setSubmitterNote("");
+                                setSubmitCopyrightAgreed(false);
                               }}
                             >
                               Submit for review
@@ -637,6 +772,7 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                               onClick={() => {
                                 setSubmittingNoteTrack(t);
                                 setSubmitterNote("");
+                                setSubmitCopyrightAgreed(false);
                               }}
                             >
                               Resubmit
@@ -662,7 +798,16 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                         )}
 
                         {t.status === "PENDING" && (
-                          <span className="text-muted small">Under review by staff...</span>
+                          <>
+                            <span className="text-muted small" style={{ marginRight: "6px" }}>Under review...</span>
+                            <button
+                              className="button button-ghost button-small text-danger"
+                              onClick={() => setWithdrawConfirmTrack(t)}
+                              title="Withdraw submission back to draft"
+                            >
+                              Withdraw
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -1104,7 +1249,21 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                 style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid var(--sw-border)" }}
               />
             </div>
-            <div className="modal-actions">
+            <div style={{ marginTop: "14px", padding: "12px", background: "var(--sw-surface-alt, #f8fafc)", borderRadius: "8px", border: "1px solid var(--sw-border)" }}>
+              <label style={{ display: "flex", alignItems: "flex-start", gap: "10px", cursor: "pointer", fontSize: "13px", color: "var(--sw-text-primary)" }}>
+                <input
+                  type="checkbox"
+                  id="chk-studio-agree-copyright"
+                  checked={submitCopyrightAgreed}
+                  onChange={(e) => setSubmitCopyrightAgreed(e.target.checked)}
+                  style={{ marginTop: "3px" }}
+                />
+                <span>
+                  I confirm that I own all rights to this audio and artwork, or hold legal authorization to publish it, and agree to SoundWave Community Guidelines.
+                </span>
+              </label>
+            </div>
+            <div className="modal-actions" style={{ marginTop: "18px" }}>
               <button
                 className="button button-secondary"
                 onClick={() => setSubmittingNoteTrack(null)}
@@ -1115,9 +1274,10 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
               <button
                 className="button button-primary"
                 onClick={handleSubmitReview}
-                disabled={isSaving}
+                disabled={!submitCopyrightAgreed || isSaving}
+                id="btn-studio-agree-submit"
               >
-                {isSaving ? "Submitting..." : "Confirm submission"}
+                {isSaving ? "Submitting..." : "Agree & Submit"}
               </button>
             </div>
           </div>
@@ -1147,9 +1307,14 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                 <CloseIcon width={18} height={18} />
               </button>
             </div>
-            <p className="rejection-track-name">
+            <p className="rejection-track-name" style={{ marginBottom: "6px" }}>
               Track: <b>{rejectionModalTrack.trackTitle}</b>
             </p>
+            {rejectionModalTrack.reviewedAt && (
+              <p style={{ margin: "0 0 14px", fontSize: "12px", color: "var(--sw-text-muted)" }}>
+                Decision recorded: {new Date(rejectionModalTrack.reviewedAt).toLocaleString()}
+              </p>
+            )}
             <div className="rejection-box">
               <b style={{ display: "block", marginBottom: "4px", color: "#b42318" }}>
                 Staff rejection reason:
@@ -1187,6 +1352,53 @@ export function StudioPage({ tracks: fallbackTracks, onNavigate }: Props) {
                 }}
               >
                 Edit track
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Withdraw Submission Modal (UC-19.4 Extension) */}
+      {withdrawConfirmTrack && createPortal(
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => !isSaving && setWithdrawConfirmTrack(null)}
+        >
+          <div
+            className="modal-card"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h3>Withdraw submission</h3>
+              <button
+                className="icon-button"
+                onClick={() => setWithdrawConfirmTrack(null)}
+                disabled={isSaving}
+              >
+                <CloseIcon width={18} height={18} />
+              </button>
+            </div>
+            <p style={{ margin: "16px 0", color: "var(--sw-text-secondary)" }}>
+              Are you sure you want to withdraw &quot;<b>{withdrawConfirmTrack.title}</b>&quot; from moderation review? The track will return to <b>Draft</b> status so you can continue editing or replacing media.
+            </p>
+            <div className="modal-actions">
+              <button
+                className="button button-secondary"
+                onClick={() => setWithdrawConfirmTrack(null)}
+                disabled={isSaving}
+              >
+                Keep in review
+              </button>
+              <button
+                className="button button-primary"
+                onClick={handleWithdrawSubmission}
+                disabled={isSaving}
+              >
+                {isSaving ? "Withdrawing..." : "Confirm withdraw"}
               </button>
             </div>
           </div>

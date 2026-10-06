@@ -126,12 +126,12 @@ public class StudioTrackService {
         if (statusFilter != null && !statusFilter.isBlank() && !"ALL".equalsIgnoreCase(statusFilter.trim())) {
             try {
                 TrackPublicationStatus status = TrackPublicationStatus.valueOf(statusFilter.trim().toUpperCase(Locale.ROOT));
-                tracks = trackRepository.findByUploaderUserIdAndPublicationStatusOrderByCreatedAtDesc(user.getId(), status);
+                tracks = trackRepository.findByUploaderUserIdAndPublicationStatusOrderByUpdatedAtDesc(user.getId(), status);
             } catch (IllegalArgumentException e) {
-                tracks = trackRepository.findByUploaderUserIdOrderByCreatedAtDesc(user.getId());
+                tracks = trackRepository.findByUploaderUserIdOrderByUpdatedAtDesc(user.getId());
             }
         } else {
-            tracks = trackRepository.findByUploaderUserIdOrderByCreatedAtDesc(user.getId());
+            tracks = trackRepository.findByUploaderUserIdOrderByUpdatedAtDesc(user.getId());
         }
 
         return tracks.stream()
@@ -287,6 +287,35 @@ public class StudioTrackService {
         log.info("Submitted track ID: {} for review. Submission ID: {}", track.getId(), savedSubmission.getId());
         String lyrics = officialLyricService.findLyricContentByTrackId(track.getId());
         return trackMapper.toStudioTrackResponse(track, savedSubmission, lyrics);
+    }
+
+    /**
+     * Rút lại bài hát đang chờ duyệt về trạng thái DRAFT (UC-19.4 Extension).
+     */
+    @Transactional
+    public StudioTrackResponse cancelSubmission(Long trackId, String currentUserEmail) {
+        AppUser user = getCurrentUser(currentUserEmail);
+        Track track = trackRepository.findByIdAndUploaderUserId(trackId, user.getId())
+                .orElseThrow(TrackNotFoundException::new);
+
+        if (track.getPublicationStatus() != TrackPublicationStatus.PENDING) {
+            throw new TrackOperationNotAllowedException("Only tracks pending review can be withdrawn.");
+        }
+
+        LocalDateTime now = nowUtc();
+        track.updatePublicationStatus(TrackPublicationStatus.DRAFT, null, now);
+        trackRepository.save(track);
+
+        TrackSubmission pendingSubmission = submissionRepository
+                .findFirstByTrackIdAndStatusOrderBySubmittedAtDesc(track.getId(), SubmissionStatus.PENDING)
+                .orElse(null);
+        if (pendingSubmission != null) {
+            submissionRepository.delete(pendingSubmission);
+        }
+
+        log.info("Withdrawn submission for track ID: {} by user: {}", track.getId(), user.getEmail());
+        String lyrics = officialLyricService.findLyricContentByTrackId(track.getId());
+        return trackMapper.toStudioTrackResponse(track, null, lyrics);
     }
 
     /**

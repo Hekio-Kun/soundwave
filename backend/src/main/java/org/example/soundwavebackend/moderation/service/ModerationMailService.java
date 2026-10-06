@@ -51,4 +51,21 @@ public class ModerationMailService {
             log.warn("Failed to send track rejection email to {}: {}", recipient, ex.getMessage());
         }
     }
+
+    public void sendTrackTakenDownEmail(String recipient, String displayName, String trackTitle, String takedownReason) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromAddress);
+            message.setTo(recipient);
+            message.setSubject("Notice: Your track \"" + trackTitle + "\" has been taken down");
+            message.setText("Hello " + displayName + ",\n\n"
+                    + "We are writing to inform you that your track \"" + trackTitle + "\" has been taken down from SoundWave.\n\n"
+                    + "Reason for removal:\n" + takedownReason + "\n\n"
+                    + "If you believe this was done in error, please contact our support team.\n\n"
+                    + "Best regards,\nSoundWave Team");
+            mailSender.send(message);
+        } catch (Exception ex) {
+            log.warn("Failed to send track takedown email to {}: {}", recipient, ex.getMessage());
+        }
+    }
 }

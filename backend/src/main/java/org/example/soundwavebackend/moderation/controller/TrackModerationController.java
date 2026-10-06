@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.example.soundwavebackend.moderation.dto.request.ApproveTrackRequest;
 import org.example.soundwavebackend.moderation.dto.request.RejectTrackRequest;
+import org.example.soundwavebackend.moderation.dto.request.TakeDownTrackRequest;
 import org.example.soundwavebackend.moderation.dto.response.SubmissionDetailResponse;
 import org.example.soundwavebackend.moderation.dto.response.SubmissionQueueItemResponse;
 import org.example.soundwavebackend.moderation.dto.response.SubmissionStatsResponse;
@@ -58,5 +59,13 @@ public class TrackModerationController {
             @Valid @RequestBody RejectTrackRequest request,
             Principal principal) {
         return ResponseEntity.ok(moderationService.rejectSubmission(id, request, principal.getName()));
+    }
+
+    @PostMapping("/{id}/takedown")
+    public ResponseEntity<SubmissionDetailResponse> takeDownSubmission(
+            @PathVariable Long id,
+            @Valid @RequestBody TakeDownTrackRequest request,
+            Principal principal) {
+        return ResponseEntity.ok(moderationService.takeDownSubmission(id, request, principal.getName()));
     }
 }

@@ -72,13 +72,13 @@ public class TrackCatalogService {
         Track track = null;
         try {
             Long id = Long.parseLong(idOrSlug);
-            track = trackRepository.findById(id).orElse(null);
+            track = trackRepository.findByIdAndPublicationStatus(id, TrackPublicationStatus.PUBLISHED).orElse(null);
         } catch (NumberFormatException ignored) {
             // Not numeric ID, lookup by slug
         }
 
         if (track == null) {
-            track = trackRepository.findBySlugIgnoreCase(idOrSlug)
+            track = trackRepository.findBySlugIgnoreCaseAndPublicationStatus(idOrSlug, TrackPublicationStatus.PUBLISHED)
                     .orElseThrow(() -> new ResourceNotFoundException("TRACK_NOT_FOUND", "Track not found: " + idOrSlug));
         }
 
