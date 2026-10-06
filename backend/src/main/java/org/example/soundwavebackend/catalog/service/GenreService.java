@@ -38,13 +38,13 @@ public class GenreService {
         Genre genre = null;
         try {
             Long id = Long.parseLong(slugOrId);
-            genre = genreRepository.findById(id).orElse(null);
+            genre = genreRepository.findByIdAndActiveTrue(id).orElse(null);
         } catch (NumberFormatException ignored) {
             // Not a numeric ID, search by slug
         }
 
         if (genre == null) {
-            genre = genreRepository.findBySlugIgnoreCase(slugOrId)
+            genre = genreRepository.findBySlugIgnoreCaseAndActiveTrue(slugOrId)
                     .orElseThrow(() -> new ResourceNotFoundException("GENRE_NOT_FOUND", "Genre not found with identifier: " + slugOrId));
         }
 

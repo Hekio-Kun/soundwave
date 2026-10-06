@@ -1,6 +1,7 @@
 package org.example.soundwavebackend.catalog.mapper;
 
 import org.example.soundwavebackend.catalog.dto.response.AlbumSummary;
+import org.example.soundwavebackend.catalog.dto.response.AdminGenreResponse;
 import org.example.soundwavebackend.catalog.dto.response.CreatorSummary;
 import org.example.soundwavebackend.catalog.dto.response.GenreResponse;
 import org.example.soundwavebackend.catalog.dto.response.TrackResponse;
@@ -34,6 +35,19 @@ public class CatalogMapper {
                 genre.getDescription(),
                 palette[0],
                 palette[1]
+        );
+    }
+
+    public AdminGenreResponse toAdminGenreResponse(Genre genre) {
+        return new AdminGenreResponse(
+                genre.getId(),
+                genre.getName(),
+                genre.getSlug(),
+                genre.getDescription(),
+                genre.isActive(),
+                genre.getCreatedByUserId(),
+                genre.getCreatedAt(),
+                genre.getUpdatedAt()
         );
     }
 

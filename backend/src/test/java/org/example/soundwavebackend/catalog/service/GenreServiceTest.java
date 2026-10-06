@@ -54,7 +54,7 @@ class GenreServiceTest {
         Genre genre = new Genre("Ballad", "ballad", "Soft ballad", 1L);
         ReflectionTestUtils.setField(genre, "id", 2L);
 
-        when(genreRepository.findBySlugIgnoreCase("ballad")).thenReturn(Optional.of(genre));
+        when(genreRepository.findBySlugIgnoreCaseAndActiveTrue("ballad")).thenReturn(Optional.of(genre));
 
         GenreResponse response = genreService.getGenreBySlugOrId("ballad");
 
@@ -64,7 +64,7 @@ class GenreServiceTest {
 
     @Test
     void getGenreBySlugOrId_WhenNotFound_ShouldThrowException() {
-        when(genreRepository.findBySlugIgnoreCase("unknown")).thenReturn(Optional.empty());
+        when(genreRepository.findBySlugIgnoreCaseAndActiveTrue("unknown")).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
                 genreService.getGenreBySlugOrId("unknown"));

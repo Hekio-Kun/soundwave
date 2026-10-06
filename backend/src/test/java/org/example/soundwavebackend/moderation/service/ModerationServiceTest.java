@@ -7,6 +7,7 @@ import org.example.soundwavebackend.authentication.repository.UserProfileReposit
 import org.example.soundwavebackend.catalog.entity.Genre;
 import org.example.soundwavebackend.catalog.entity.Track;
 import org.example.soundwavebackend.catalog.service.CatalogService;
+import org.example.soundwavebackend.lyrics.service.OfficialLyricService;
 import org.example.soundwavebackend.moderation.dto.request.ApproveTrackRequest;
 import org.example.soundwavebackend.moderation.dto.request.RejectTrackRequest;
 import org.example.soundwavebackend.moderation.dto.request.TakeDownTrackRequest;
@@ -41,6 +42,7 @@ class ModerationServiceTest {
     @Mock private TrackSubmissionMapper mapper;
     @Mock private AppUserRepository userRepository;
     @Mock private UserProfileRepository profileRepository;
+    @Mock private OfficialLyricService officialLyricService;
 
     private ModerationService moderationService;
     private AppUser staffUser;
@@ -55,7 +57,8 @@ class ModerationServiceTest {
                 mailService,
                 mapper,
                 userRepository,
-                profileRepository
+                profileRepository,
+                officialLyricService
         );
 
         Role staffRole = mock(Role.class);

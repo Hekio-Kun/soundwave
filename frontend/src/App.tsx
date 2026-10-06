@@ -22,6 +22,7 @@ import { PlaylistFormModal } from "./components/PlaylistFormModal";
 import { AddTrackToPlaylistModal } from "./components/AddTrackToPlaylistModal";
 import { DeleteConfirmationModal } from "./components/DeleteConfirmationModal";
 import { AdminDashboardPage, DashboardAccessDenied, StaffDashboardPage } from "./pages/OperationsDashboardPage";
+import { AdminGenreManagementPage } from "./pages/AdminGenreManagementPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SearchPage } from "./pages/SearchPage";
 import { StudioPage } from "./pages/StudioPage";
@@ -700,6 +701,12 @@ export default function App() {
           onNavigate={navigate}
         />
       );
+    }
+
+    if (pathname === "/admin/genres") {
+      return user?.role === "ADMIN"
+        ? <AdminGenreManagementPage />
+        : <DashboardAccessDenied onNavigate={navigate} requiredRole="Administrator" />;
     }
 
     if (pathname === "/admin" || pathname === "/admin/dashboard") {

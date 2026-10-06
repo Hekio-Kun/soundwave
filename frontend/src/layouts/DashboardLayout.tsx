@@ -3,6 +3,7 @@ import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
   CloseIcon,
   DashboardIcon,
+  DiscIcon,
   LogoutIcon,
   MenuIcon,
   ShieldIcon,
@@ -107,11 +108,19 @@ export function DashboardLayout({ children, activeRoute, user, onNavigate, onLog
           <>
             <button
               type="button"
-              className={activeRoute.startsWith("/admin") ? "is-active" : ""}
+              className={activeRoute === "/admin" || activeRoute === "/admin/dashboard" ? "is-active" : ""}
               onClick={() => handleNavClick("/admin/dashboard")}
             >
               <ShieldIcon width={17} height={17} />
               <span>System Dashboard</span>
+            </button>
+            <button
+              type="button"
+              className={activeRoute === "/admin/genres" ? "is-active" : ""}
+              onClick={() => handleNavClick("/admin/genres")}
+            >
+              <DiscIcon width={17} height={17} />
+              <span>Genre Management</span>
             </button>
             <button
               type="button"
