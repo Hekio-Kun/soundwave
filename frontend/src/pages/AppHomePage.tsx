@@ -6,7 +6,7 @@ import type { FeaturedAlbum, FeaturedCreator, LandingTrack } from "../types";
 type Props = {
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string) => void;
   onNavigate: (route: string) => void;
   onToggleFavorite: (trackId: number) => void;
   favoriteIds: number[];
@@ -45,7 +45,7 @@ export function AppHomePage({
           <div className="hero-banner-actions">
             <button
               className="button button-primary button-large"
-              onClick={() => onPlayTrack(heroTrack)}
+              onClick={() => onPlayTrack(heroTrack, approvedTracks, "Recommended")}
             >
               {currentTrack?.id === heroTrack.id && playing ? <PauseIcon /> : <PlayIcon />}
               <span>{currentTrack?.id === heroTrack.id && playing ? "Pause" : "Listen now"}</span>
@@ -58,7 +58,7 @@ export function AppHomePage({
             </button>
           </div>
         </div>
-        <div className="hero-banner-art" onClick={() => onPlayTrack(heroTrack)}>
+        <div className="hero-banner-art" onClick={() => onPlayTrack(heroTrack, approvedTracks, "Recommended")}>
           <img src={heroTrack.coverUrl ?? undefined} alt={heroTrack.title} />
           <div className="hero-banner-play-overlay">
             {currentTrack?.id === heroTrack.id && playing ? <PauseIcon width={32} height={32} /> : <PlayIcon width={32} height={32} />}
@@ -85,7 +85,7 @@ export function AppHomePage({
             const isCurrent = currentTrack?.id === track.id;
             return (
               <article key={track.id} className={`music-card ${isCurrent ? "music-card--active" : ""}`}>
-                <div className="music-card-cover" onClick={() => onPlayTrack(track)}>
+                <div className="music-card-cover" onClick={() => onPlayTrack(track, approvedTracks.slice(0, 5), "Trending tracks")}>
                   <img src={track.coverUrl ?? undefined} alt={track.title} loading="lazy" />
                   <button
                     className="music-card-play-btn"
@@ -154,7 +154,7 @@ export function AppHomePage({
               >
                 <span className="row-index">{String(idx + 1).padStart(2, "0")}</span>
 
-                <div className="row-thumbnail" onClick={() => onPlayTrack(track)}>
+                <div className="row-thumbnail" onClick={() => onPlayTrack(track, approvedTracks.slice(1, 7), "New releases")}>
                   <img src={track.coverUrl ?? undefined} alt="" />
                   <button className="row-hover-play" aria-label={`Play ${track.title}`}>
                     {isPlayingThis ? <PauseIcon width={14} height={14} /> : <PlayIcon width={14} height={14} />}

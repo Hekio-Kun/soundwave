@@ -11,7 +11,7 @@ type Props = {
   trackId: number;
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string) => void;
   onNavigate: (route: string) => void;
   onToggleFavorite: (trackId: number) => void;
   isFavorited: boolean;
@@ -102,7 +102,7 @@ export function TrackDetailsPage({
       <section className="track-showcase">
         <div className="track-showcase-glow" style={{ backgroundImage: `url(${track.coverUrl ?? ""})` }} aria-hidden="true" />
         <div className="track-showcase-visual">
-          <button className="track-cover-button" onClick={() => onPlayTrack(track)} aria-label={isPlayingThis ? `Tạm dừng ${track.title}` : `Phát ${track.title}`}>
+          <button className="track-cover-button" onClick={() => onPlayTrack(track, [track, ...recommendations], `Track • ${track.title}`)} aria-label={isPlayingThis ? `Tạm dừng ${track.title}` : `Phát ${track.title}`}>
             <img src={track.coverUrl ?? undefined} alt={`Ảnh bìa ${track.title}`} />
             <span>{isPlayingThis ? <PauseIcon width={28} height={28} /> : <PlayIcon width={28} height={28} />}</span>
           </button>
@@ -127,7 +127,7 @@ export function TrackDetailsPage({
           </div>
 
           <div className="track-primary-actions">
-            <button className="button button-primary button-large" onClick={() => onPlayTrack(track)}>{isPlayingThis ? <PauseIcon /> : <PlayIcon />}<span>{isPlayingThis ? "Tạm dừng" : "Phát bài hát"}</span></button>
+            <button className="button button-primary button-large" onClick={() => onPlayTrack(track, [track, ...recommendations], `Track • ${track.title}`)}>{isPlayingThis ? <PauseIcon /> : <PlayIcon />}<span>{isPlayingThis ? "Tạm dừng" : "Phát bài hát"}</span></button>
             <button className={`track-round-action ${isFavorited ? "is-favorite" : ""}`} onClick={() => onToggleFavorite(track.id)} aria-label={isFavorited ? "Bỏ yêu thích" : "Yêu thích"}>{isFavorited ? <HeartFillIcon /> : <HeartIcon />}</button>
             <button className="track-round-action" onClick={() => setPlaylistModalOpen(true)} aria-label="Thêm vào playlist"><PlusIcon /></button>
           </div>
@@ -170,7 +170,16 @@ export function TrackDetailsPage({
       <section className="track-recommendations">
         <SectionHeader title="Có thể bạn cũng thích" description="Những bài hát tiếp theo dành cho bạn" actionLabel="Khám phá thêm" onAction={() => onNavigate("/")} />
         <div className="sw-track-grid">
-          {recommendations.map((item) => <TrackCard key={item.id} track={item} active={currentTrack?.id === item.id} playing={currentTrack?.id === item.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />)}
+          {recommendations.map((item) => (
+            <TrackCard
+              key={item.id}
+              track={item}
+              active={currentTrack?.id === item.id}
+              playing={currentTrack?.id === item.id && playing}
+              onPlay={(t) => onPlayTrack(t, recommendations, `Similar to ${track.title}`)}
+              onNavigate={onNavigate}
+            />
+          ))}
         </div>
       </section>
 

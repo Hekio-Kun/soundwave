@@ -20,8 +20,8 @@ type Props = {
   playlists: Playlist[];
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
-  onPlayAll: (tracksToPlay: LandingTrack[]) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string, contextKey?: string) => void;
+  onPlayAll: (tracksToPlay: LandingTrack[], contextTitle?: string, contextKey?: string) => void;
   onNavigate: (route: string) => void;
   onEditPlaylist: (playlist: Playlist) => void;
   onDeletePlaylist: (playlistId: number) => void;
@@ -29,6 +29,7 @@ type Props = {
   onReorderTracks: (playlistId: number, trackId: number, direction: "up" | "down") => void;
   onOpenAddTrackModal: () => void;
   currentUser: CurrentUser | null;
+  allTracks?: LandingTrack[];
 };
 
 const formatDuration = (ms: number) => {
@@ -51,16 +52,18 @@ export function PlaylistDetailsPage({
   onReorderTracks,
   onOpenAddTrackModal,
   currentUser,
+  allTracks,
 }: Props) {
   const playlist = playlists.find((p) => p.id === playlistId);
 
-  // Load ordered tracks matching playlist.trackIds
+  // Load ordered tracks matching playlist.trackIds from allTracks or fallback
+  const availableTracks = allTracks && allTracks.length > 0 ? allTracks : tracks;
   const playlistTracks = useMemo(() => {
     if (!playlist) return [];
     return playlist.trackIds
-      .map((id) => tracks.find((t) => t.id === id))
+      .map((id) => availableTracks.find((t) => t.id === id) || tracks.find((t) => t.id === id))
       .filter((t): t is LandingTrack => Boolean(t));
-  }, [playlist]);
+  }, [playlist, availableTracks]);
 
   if (!playlist) {
     return (
@@ -216,7 +219,7 @@ export function PlaylistDetailsPage({
             <button
               className="button button-primary button-large"
               disabled={playlistTracks.length === 0}
-              onClick={() => onPlayAll(playlistTracks)}
+              onClick={() => onPlayAll(playlistTracks, `Playlist • ${playlist.title}`, `playlist-${playlist.id}`)}
               style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}
             >
               <PlayIcon width={18} height={18} />
@@ -361,7 +364,7 @@ export function PlaylistDetailsPage({
                   {/* Thumbnail & Play button */}
                   <div
                     style={{ position: "relative", width: "44px", height: "44px", borderRadius: "8px", overflow: "hidden", cursor: "pointer" }}
-                    onClick={() => onPlayTrack(track)}
+                    onClick={() => onPlayTrack(track, playlistTracks, `Playlist • ${playlist.title}`, `playlist-${playlist.id}`)}
                   >
                     <img
                       src={track.coverUrl ?? undefined}
@@ -371,6 +374,10 @@ export function PlaylistDetailsPage({
                     <button
                       className="row-hover-play"
                       aria-label={`Play ${track.title}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPlayTrack(track, playlistTracks, `Playlist • ${playlist.title}`, `playlist-${playlist.id}`)}
+                      }
                       style={{
                         position: "absolute",
                         inset: 0,

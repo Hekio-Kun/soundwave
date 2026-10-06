@@ -6,7 +6,8 @@ import type { LandingTrack, Playlist } from "../types";
 type Props = {
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string, contextKey?: string) => void;
+  onPlayAll?: (tracksToPlay: LandingTrack[], contextTitle?: string, contextKey?: string) => void;
   onNavigate: (route: string) => void;
   favoriteIds: number[];
   onToggleFavorite: (trackId: number) => void;
@@ -15,6 +16,7 @@ type Props = {
   onEditPlaylist?: (playlist: Playlist) => void;
   onDeletePlaylist: (playlistId: number) => void;
   initialTab?: "favorites" | "playlists";
+  allTracks?: LandingTrack[];
 };
 
 const formatDuration = (ms: number) => {
@@ -27,6 +29,7 @@ export function LibraryPage({
   currentTrack,
   playing,
   onPlayTrack,
+  onPlayAll,
   onNavigate,
   favoriteIds,
   onToggleFavorite,
@@ -35,10 +38,12 @@ export function LibraryPage({
   onEditPlaylist,
   onDeletePlaylist,
   initialTab = "favorites",
+  allTracks,
 }: Props) {
   const [tab, setTab] = useState<"favorites" | "playlists">(initialTab);
 
-  const favoriteTracks = tracks.filter((t) => favoriteIds.includes(t.id));
+  const availableTracks = allTracks && allTracks.length > 0 ? allTracks : tracks;
+  const favoriteTracks = availableTracks.filter((t) => favoriteIds.includes(t.id));
 
   return (
     <div className="library-page">
@@ -65,6 +70,20 @@ export function LibraryPage({
             Playlists ({playlists.length})
           </button>
         </div>
+
+        {tab === "favorites" && favoriteTracks.length > 0 && (
+          <button
+            className="button button-primary button-small"
+            onClick={() =>
+              onPlayAll
+                ? onPlayAll(favoriteTracks, "Favorite tracks", "favorites")
+                : onPlayTrack(favoriteTracks[0], favoriteTracks, "Favorite tracks", "favorites")
+            }
+          >
+            <PlayIcon width={16} height={16} />
+            <span>Play all</span>
+          </button>
+        )}
 
         {tab === "playlists" && (
           <button className="button button-primary button-small" onClick={onCreatePlaylist}>
@@ -97,9 +116,19 @@ export function LibraryPage({
                 >
                   <span className="row-index">{String(idx + 1).padStart(2, "0")}</span>
 
-                  <div className="row-thumbnail" onClick={() => onPlayTrack(track)}>
+                  <div
+                    className="row-thumbnail"
+                    onClick={() => onPlayTrack(track, favoriteTracks, "Favorite tracks", "favorites")}
+                  >
                     <img src={track.coverUrl ?? undefined} alt="" />
-                    <button className="row-hover-play" aria-label={`Play ${track.title}`}>
+                    <button
+                      className="row-hover-play"
+                      aria-label={`Play ${track.title}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPlayTrack(track, favoriteTracks, "Favorite tracks", "favorites");
+                      }}
+                    >
                       {isPlayingThis ? <PauseIcon width={14} height={14} /> : <PlayIcon width={14} height={14} />}
                     </button>
                   </div>

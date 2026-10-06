@@ -23,6 +23,7 @@ type Props = {
   onPlayTrack: (track: LandingTrack) => void;
   onRemoveFromQueue: (trackId: number) => void;
   onClearQueue: () => void;
+  playbackContext?: string | null;
   hasPlayer: boolean;
   showFooter: boolean;
 };
@@ -43,6 +44,7 @@ export function MusicAppShell({
   onPlayTrack,
   onRemoveFromQueue,
   onClearQueue,
+  playbackContext,
   hasPlayer,
   showFooter,
 }: Props) {
@@ -93,6 +95,7 @@ export function MusicAppShell({
         onPlayTrack={onPlayTrack}
         onRemoveFromQueue={onRemoveFromQueue}
         onClearQueue={onClearQueue}
+        playbackContext={playbackContext}
       />
 
       {/* 4. Mobile Bottom Navigation */}

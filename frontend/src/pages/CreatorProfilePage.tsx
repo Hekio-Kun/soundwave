@@ -7,7 +7,7 @@ type Props = {
   creatorId: number;
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string) => void;
   onNavigate: (route: string) => void;
 };
 
@@ -74,9 +74,19 @@ export function CreatorProfilePage({ creatorId, currentTrack, playing, onPlayTra
               >
                 <span className="row-index">{String(idx + 1).padStart(2, "0")}</span>
 
-                <div className="row-thumbnail" onClick={() => onPlayTrack(track)}>
+                <div
+                  className="row-thumbnail"
+                  onClick={() => onPlayTrack(track, creatorTracks, `Artist • ${creator.displayName}`)}
+                >
                   <img src={track.coverUrl ?? undefined} alt="" />
-                  <button className="row-hover-play" aria-label={`Play ${track.title}`}>
+                  <button
+                    className="row-hover-play"
+                    aria-label={`Play ${track.title}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPlayTrack(track, creatorTracks, `Artist • ${creator.displayName}`);
+                    }}
+                  >
                     {isPlayingThis ? <PauseIcon width={14} height={14} /> : <PlayIcon width={14} height={14} />}
                   </button>
                 </div>

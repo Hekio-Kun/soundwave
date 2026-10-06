@@ -8,7 +8,7 @@ import type { LandingTrack } from "../types";
 type Props = {
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string) => void;
   onNavigate: (route: string) => void;
   initialQuery?: string;
 };
@@ -157,7 +157,22 @@ export function SearchPage({ currentTrack, playing, onPlayTrack, onNavigate, ini
             <section className="search-result-section">
               <div className="search-section-heading"><div><span>SONGS</span><h2>Matching tracks</h2></div><small>{matchedTracks.length} found</small></div>
               <div className="sw-track-grid sw-track-grid--catalog">
-                {matchedTracks.map((track) => <TrackCard key={track.id} track={track} active={currentTrack?.id === track.id} playing={currentTrack?.id === track.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />)}
+                {matchedTracks.map((track) => (
+                  <TrackCard
+                    key={track.id}
+                    track={track}
+                    active={currentTrack?.id === track.id}
+                    playing={currentTrack?.id === track.id && playing}
+                    onPlay={(t) =>
+                      onPlayTrack(
+                        t,
+                        matchedTracks,
+                        searchTerm ? `Search • "${searchTerm}"` : "Search results"
+                      )
+                    }
+                    onNavigate={onNavigate}
+                  />
+                ))}
               </div>
             </section>
           )}

@@ -9,7 +9,7 @@ import type { Genre, LandingTrack } from "../types";
 type Props = {
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string) => void;
   onNavigate: (route: string) => void;
   initialGenre?: string;
   initialSort?: "trending" | "newest" | "title";
@@ -99,7 +99,7 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
           <h1 id="discover-title">Music for<br /><span>the rhythm of your life.</span></h1>
           <p>Find new tracks, follow Vietnamese creators, and save music for every moment.</p>
           <div className="discover-hero-actions">
-            <button className="button button-primary button-large" onClick={() => onPlayTrack(heroTrack)}>
+            <button className="button button-primary button-large" onClick={() => onPlayTrack(heroTrack, approvedTracks, "Recommended")}>
               {heroPlaying ? <PauseIcon /> : <PlayIcon />} {heroPlaying ? "Pause" : "Listen now"}
             </button>
             <button className="button button-secondary button-large" onClick={() => document.getElementById("trending")?.scrollIntoView({ behavior: "smooth" })}>
@@ -112,7 +112,7 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
             <span><b>Every day</b><small>new music added</small></span>
           </div>
         </div>
-        <button className="discover-feature" onClick={() => onPlayTrack(heroTrack)} aria-label={`${heroPlaying ? "Pause" : "Play"} ${heroTrack.title}`}>
+        <button className="discover-feature" onClick={() => onPlayTrack(heroTrack, approvedTracks, "Recommended")} aria-label={`${heroPlaying ? "Pause" : "Play"} ${heroTrack.title}`}>
           <span className="discover-feature-art"><img src={heroTrack.coverUrl ?? undefined} alt="" /></span>
           <span className="discover-feature-info"><small>RECOMMENDED SONGS</small><strong>{heroTrack.title}</strong><em>{heroTrack.creator.displayName} · {heroTrack.album?.title ?? "Single"}</em></span>
           <span className="discover-feature-play">{heroPlaying ? <PauseIcon /> : <PlayIcon />}</span>
@@ -122,7 +122,17 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
       <section className="sw-section" id="trending">
         <SectionHeader title="Trending tracks" description="The most-played tracks in the SoundWave community this week" actionLabel="View all" onAction={scrollToCatalog} />
         <div className="sw-track-grid">
-          {approvedTracks.slice(0, 5).map((track, index) => <TrackCard key={track.id} track={track} rank={index + 1} active={currentTrack?.id === track.id} playing={currentTrack?.id === track.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />)}
+          {approvedTracks.slice(0, 5).map((track, index) => (
+            <TrackCard
+              key={track.id}
+              track={track}
+              rank={index + 1}
+              active={currentTrack?.id === track.id}
+              playing={currentTrack?.id === track.id && playing}
+              onPlay={(t) => onPlayTrack(t, approvedTracks.slice(0, 5), "Trending tracks")}
+              onNavigate={onNavigate}
+            />
+          ))}
         </div>
       </section>
 
@@ -131,7 +141,11 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
           <SectionHeader title="New releases" description="Recently published on SoundWave" />
           <div className="sw-release-list">
             {approvedTracks.slice(1, 6).map((track, index) => (
-              <button key={track.id} className={`sw-release-row ${currentTrack?.id === track.id ? "is-active" : ""}`} onClick={() => onPlayTrack(track)}>
+              <button
+                key={track.id}
+                className={`sw-release-row ${currentTrack?.id === track.id ? "is-active" : ""}`}
+                onClick={() => onPlayTrack(track, approvedTracks.slice(1, 6), "New releases")}
+              >
                 <span className="sw-release-index">{String(index + 1).padStart(2, "0")}</span>
                 <img src={track.coverUrl ?? undefined} alt="" />
                 <span className="sw-release-copy"><strong>{track.title}</strong><small>{track.creator.displayName} · {track.genreSlug}</small></span>
@@ -224,7 +238,13 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate, in
                 track={track}
                 active={currentTrack?.id === track.id}
                 playing={currentTrack?.id === track.id && playing}
-                onPlay={onPlayTrack}
+                onPlay={(t) =>
+                  onPlayTrack(
+                    t,
+                    filteredTracks,
+                    selectedGenre !== "all" ? `Genre • ${selectedGenre}` : "Explore catalog"
+                  )
+                }
                 onNavigate={onNavigate}
               />
             ))}

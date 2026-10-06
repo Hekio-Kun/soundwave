@@ -9,7 +9,7 @@ import type { Genre, LandingTrack } from "../types";
 type Props = {
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string) => void;
   onNavigate: (route: string) => void;
   initialGenre?: string;
   initialSort?: "newest" | "trending" | "title";
@@ -260,7 +260,13 @@ export function FilteredCatalogPage({
               track={track}
               active={currentTrack?.id === track.id}
               playing={currentTrack?.id === track.id && playing}
-              onPlay={onPlayTrack}
+              onPlay={(t) =>
+                onPlayTrack(
+                  t,
+                  filteredTracks,
+                  selectedGenre !== "all" ? `Genre • ${selectedGenre}` : "Catalog"
+                )
+              }
               onNavigate={onNavigate}
             />
           ))}

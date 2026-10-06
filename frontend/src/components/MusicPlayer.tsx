@@ -14,6 +14,7 @@ type Props = {
   onToggleQueue?: () => void;
   isQueueOpen?: boolean;
   onRecordPlay?: (trackId: number, listenedDurationMs: number, completed: boolean) => void;
+  playbackContext?: string | null;
 };
 
 const formatTime = (seconds: number) => {
@@ -34,6 +35,7 @@ export function MusicPlayer({
   onToggleQueue,
   isQueueOpen,
   onRecordPlay,
+  playbackContext,
 }: Props) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(track.durationMs / 1000);
@@ -57,11 +59,15 @@ export function MusicPlayer({
 
   const index = useMemo(() => queue.findIndex((item) => item.id === track.id), [queue, track.id]);
   const nextTrack = () => {
+    if (!queue.length) return track;
     if (shuffle && queue.length > 1) {
       const candidates = queue.filter((item) => item.id !== track.id);
-      return candidates[Math.floor(Math.random() * candidates.length)];
+      if (candidates.length > 0) {
+        return candidates[Math.floor(Math.random() * candidates.length)];
+      }
     }
-    return queue[(index + 1 + queue.length) % queue.length];
+    const curIdx = index >= 0 ? index : 0;
+    return queue[(curIdx + 1) % queue.length];
   };
 
   useEffect(() => {
@@ -90,7 +96,9 @@ export function MusicPlayer({
       audio.currentTime = 0;
       return;
     }
-    onTrackChange(queue[(index - 1 + queue.length) % queue.length], true);
+    if (!queue.length) return;
+    const curIdx = index >= 0 ? index : 0;
+    onTrackChange(queue[(curIdx - 1 + queue.length) % queue.length], true);
   };
 
   const seek = (value: number) => {
@@ -144,6 +152,25 @@ export function MusicPlayer({
         <div>
           <a href={`#/track/${track.id}`}>{track.title}</a>
           <a href={`#/creator/${track.creator.userId}`}>{track.creator.displayName}</a>
+          {playbackContext && (
+            <span
+              style={{
+                display: "block",
+                fontSize: "11px",
+                fontWeight: 600,
+                color: "var(--brand, #0891b2)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                maxWidth: "200px",
+                lineHeight: 1.3,
+                marginTop: "2px",
+              }}
+              title={playbackContext}
+            >
+              {playbackContext}
+            </span>
+          )}
         </div>
       </div>
 
@@ -173,7 +200,13 @@ export function MusicPlayer({
 
       {!onToggleQueue && localQueueOpen && (
         <div className="queue-popover">
-          <div className="queue-heading"><div><span>NEXT</span><h3>Queue</h3></div><button className="text-button" onClick={() => setLocalQueueOpen(false)}>Close</button></div>
+          <div className="queue-heading">
+            <div>
+              <span>PLAYING FROM</span>
+              <h3>{playbackContext || "Queue"}</h3>
+            </div>
+            <button className="text-button" onClick={() => setLocalQueueOpen(false)}>Close</button>
+          </div>
           <div className="queue-list">
             {queue.map((item) => (
               <button key={item.id} className={item.id === track.id ? "queue-item queue-item--active" : "queue-item"} onClick={() => onTrackChange(item, true)}>

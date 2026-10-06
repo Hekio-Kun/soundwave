@@ -11,6 +11,7 @@ type Props = {
   playlistTitle: string;
   currentTrackIds: number[];
   onAddTrack: (trackId: number) => void;
+  allTracks?: LandingTrack[];
 };
 
 export function AddTrackToPlaylistModal({
@@ -19,12 +20,14 @@ export function AddTrackToPlaylistModal({
   playlistTitle,
   currentTrackIds,
   onAddTrack,
+  allTracks,
 }: Props) {
   const [search, setSearch] = useState("");
 
+  const availableTracks = allTracks && allTracks.length > 0 ? allTracks : tracks;
   const approvedTracks = useMemo(
-    () => tracks.filter((t) => t.publicationStatus === "APPROVED"),
-    []
+    () => availableTracks.filter((t) => t.publicationStatus === "APPROVED" || t.publicationStatus === "PUBLISHED"),
+    [availableTracks]
   );
 
   const filteredTracks = useMemo(() => {

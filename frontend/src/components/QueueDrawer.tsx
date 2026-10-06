@@ -11,6 +11,7 @@ type Props = {
   onPlayTrack: (track: LandingTrack) => void;
   onRemoveFromQueue: (trackId: number) => void;
   onClearQueue: () => void;
+  playbackContext?: string | null;
 };
 
 const formatDuration = (ms: number) => {
@@ -29,10 +30,15 @@ export function QueueDrawer({
   onPlayTrack,
   onRemoveFromQueue,
   onClearQueue,
+  playbackContext,
 }: Props) {
   const [tab, setTab] = useState<"queue" | "recent">("queue");
 
-  const nextTracks = currentTrack ? queue.filter((t) => t.id !== currentTrack.id) : queue;
+  const currentIndex = currentTrack ? queue.findIndex((t) => t.id === currentTrack.id) : -1;
+  const nextTracks =
+    currentIndex >= 0
+      ? [...queue.slice(currentIndex + 1), ...queue.slice(0, currentIndex)]
+      : queue;
 
   return (
     <aside className={`queue-drawer ${isOpen ? "queue-drawer--open" : ""}`} aria-label="Playback queue">
@@ -60,7 +66,9 @@ export function QueueDrawer({
       <div className="queue-drawer-body">
         {currentTrack && (
           <div className="queue-now-playing">
-            <span className="queue-section-label">NOW PLAYING</span>
+            <span className="queue-section-label">
+              NOW PLAYING {playbackContext ? `• ${playbackContext}` : ""}
+            </span>
             <div className="queue-track-card queue-track-card--active">
               <div className="queue-track-cover">
                 <img src={currentTrack.coverUrl ?? undefined} alt="" />
