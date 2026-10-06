@@ -58,11 +58,21 @@ public class TrackSubmissionMapper {
                                                      UserProfile submitterProfile,
                                                      AppUser reviewer,
                                                      UserProfile reviewerProfile) {
+        return toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile, null);
+    }
+
+    public SubmissionDetailResponse toDetailResponse(TrackSubmission submission,
+                                                     Track track,
+                                                     AppUser submitter,
+                                                     UserProfile submitterProfile,
+                                                     AppUser reviewer,
+                                                     UserProfile reviewerProfile,
+                                                     String lyrics) {
         if (submission == null) {
             return null;
         }
 
-        TrackDetailResponse trackDetail = toTrackDetailResponse(track);
+        TrackDetailResponse trackDetail = toTrackDetailResponse(track, lyrics);
         UserSummaryResponse submitterSummary = toUserSummaryResponse(submitter, submitterProfile);
         UserSummaryResponse reviewerSummary = toUserSummaryResponse(reviewer, reviewerProfile);
 
@@ -81,6 +91,10 @@ public class TrackSubmissionMapper {
     }
 
     public TrackDetailResponse toTrackDetailResponse(Track track) {
+        return toTrackDetailResponse(track, null);
+    }
+
+    public TrackDetailResponse toTrackDetailResponse(Track track, String lyrics) {
         if (track == null) {
             return null;
         }
@@ -104,7 +118,8 @@ public class TrackSubmissionMapper {
                 track.getLatestRejectionReason(),
                 track.getCreatedAt(),
                 genreSummary,
-                albumSummary
+                albumSummary,
+                lyrics
         );
     }
 

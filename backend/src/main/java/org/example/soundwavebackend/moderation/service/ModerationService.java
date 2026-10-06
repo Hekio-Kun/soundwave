@@ -8,6 +8,7 @@ import org.example.soundwavebackend.authentication.repository.AppUserRepository;
 import org.example.soundwavebackend.authentication.repository.UserProfileRepository;
 import org.example.soundwavebackend.catalog.entity.Track;
 import org.example.soundwavebackend.catalog.service.CatalogService;
+import org.example.soundwavebackend.lyrics.service.OfficialLyricService;
 import org.example.soundwavebackend.moderation.dto.request.ApproveTrackRequest;
 import org.example.soundwavebackend.moderation.dto.request.RejectTrackRequest;
 import org.example.soundwavebackend.moderation.dto.request.TakeDownTrackRequest;
@@ -44,6 +45,7 @@ public class ModerationService {
     private final TrackSubmissionMapper mapper;
     private final AppUserRepository userRepository;
     private final UserProfileRepository profileRepository;
+    private final OfficialLyricService officialLyricService;
 
     @Transactional(readOnly = true)
     public Page<SubmissionQueueItemResponse> getQueue(SubmissionStatus status, String search, Pageable pageable) {
@@ -103,6 +105,7 @@ public class ModerationService {
                 .orElseThrow(() -> new SubmissionNotFoundException(id));
 
         Track track = catalogService.findTrackById(submission.getTrackId()).orElse(null);
+        String lyrics = track != null ? officialLyricService.findLyricContentByTrackId(track.getId()) : null;
         AppUser submitter = userRepository.findById(submission.getSubmittedByUserId()).orElse(null);
         UserProfile submitterProfile = profileRepository.findByUserId(submission.getSubmittedByUserId()).orElse(null);
         AppUser reviewer = submission.getReviewerUserId() != null ?
@@ -110,7 +113,7 @@ public class ModerationService {
         UserProfile reviewerProfile = submission.getReviewerUserId() != null ?
                 profileRepository.findByUserId(submission.getReviewerUserId()).orElse(null) : null;
 
-        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile);
+        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile, lyrics);
     }
 
     @Transactional(readOnly = true)
@@ -139,6 +142,7 @@ public class ModerationService {
 
         submission.approve(reviewer.getId(), reviewerNote, now);
         Track track = catalogService.approveTrack(submission.getTrackId(), now);
+        officialLyricService.publishLyricForTrack(submission.getTrackId(), now);
 
         notificationService.createNotification(
                 submission.getSubmittedByUserId(),
@@ -158,7 +162,8 @@ public class ModerationService {
         }
 
         UserProfile reviewerProfile = profileRepository.findByUserId(reviewer.getId()).orElse(null);
-        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile);
+        String lyrics = track != null ? officialLyricService.findLyricContentByTrackId(track.getId()) : null;
+        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile, lyrics);
     }
 
     @Transactional
@@ -179,6 +184,7 @@ public class ModerationService {
 
         submission.reject(reviewer.getId(), reviewerNote, rejectionReason, now);
         Track track = catalogService.rejectTrack(submission.getTrackId(), rejectionReason, now);
+        officialLyricService.unpublishLyricForTrack(submission.getTrackId(), now);
 
         notificationService.createNotification(
                 submission.getSubmittedByUserId(),
@@ -198,7 +204,8 @@ public class ModerationService {
         }
 
         UserProfile reviewerProfile = profileRepository.findByUserId(reviewer.getId()).orElse(null);
-        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile);
+        String lyrics = track != null ? officialLyricService.findLyricContentByTrackId(track.getId()) : null;
+        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile, lyrics);
     }
 
     @Transactional
@@ -219,6 +226,7 @@ public class ModerationService {
 
         submission.reject(reviewer.getId(), reviewerNote, reason, now);
         Track track = catalogService.takeDownTrack(submission.getTrackId(), reason, now);
+        officialLyricService.unpublishLyricForTrack(submission.getTrackId(), now);
 
         notificationService.createNotification(
                 submission.getSubmittedByUserId(),
@@ -238,6 +246,7 @@ public class ModerationService {
         }
 
         UserProfile reviewerProfile = profileRepository.findByUserId(reviewer.getId()).orElse(null);
-        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile);
+        String lyrics = track != null ? officialLyricService.findLyricContentByTrackId(track.getId()) : null;
+        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile, lyrics);
     }
 }

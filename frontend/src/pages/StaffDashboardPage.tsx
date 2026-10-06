@@ -7,6 +7,14 @@ type Props = {
 };
 
 export function StaffDashboardPage({ onNavigate, initialSubmissionId }: Props) {
+  const [activeSubmissionId, setActiveSubmissionId] = useState<number | null>(
+    initialSubmissionId ?? null
+  );
+
+  useEffect(() => {
+    setActiveSubmissionId(initialSubmissionId ?? null);
+  }, [initialSubmissionId]);
+
   return (
     <div className="ops-dashboard ops-dashboard--staff">
       {/* Executive Hero Banner */}
@@ -30,8 +38,10 @@ export function StaffDashboardPage({ onNavigate, initialSubmissionId }: Props) {
       {/* Main Review Center */}
       <ModeratePendingTracks
         onNavigate={onNavigate}
-        initialSubmissionId={initialSubmissionId}
+        initialSubmissionId={activeSubmissionId}
+        onSelectionChange={(id) => setActiveSubmissionId(id)}
       />
     </div>
   );
 }
+
