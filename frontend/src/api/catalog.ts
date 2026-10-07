@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { API_BASE_URL, apiFetch } from "./client";
 import type { Genre, LandingTrack } from "../types";
 
 export type PageResponse<T> = {
@@ -7,6 +7,12 @@ export type PageResponse<T> = {
   totalPages: number;
   size: number;
   number: number;
+};
+
+export type RecordPlayResponse = {
+  trackId: number;
+  playCount: number;
+  recordedHistory: boolean;
 };
 
 export const catalogApi = {

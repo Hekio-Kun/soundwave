@@ -31,7 +31,8 @@ public class TrackSpecification {
                 String pattern = "%" + keyword.trim().toLowerCase() + "%";
                 Predicate titleLike = cb.like(cb.lower(root.get("title")), pattern);
                 Predicate descLike = cb.like(cb.lower(root.get("description")), pattern);
-                predicates.add(cb.or(titleLike, descLike));
+                Predicate slugLike = cb.like(cb.lower(root.get("slug")), pattern);
+                predicates.add(cb.or(titleLike, descLike, slugLike));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));

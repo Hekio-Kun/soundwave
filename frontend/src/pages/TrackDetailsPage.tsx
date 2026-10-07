@@ -11,7 +11,7 @@ type Props = {
   trackId: number;
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string) => void;
   onNavigate: (route: string) => void;
   onToggleFavorite: (trackId: number) => Promise<void>;
   isFavorited: boolean;

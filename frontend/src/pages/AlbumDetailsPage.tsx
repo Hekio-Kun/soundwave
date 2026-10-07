@@ -6,7 +6,7 @@ type Props = {
   albumId: number;
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string, contextKey?: string) => void;
   onNavigate: (route: string) => void;
 };
 
@@ -38,7 +38,7 @@ export function AlbumDetailsPage({ albumId, currentTrack, playing, onPlayTrack, 
           <div className="album-actions">
             <button
               className="button button-primary button-large"
-              onClick={() => albumTracks.length > 0 && onPlayTrack(albumTracks[0])}
+              onClick={() => albumTracks.length > 0 && onPlayTrack(albumTracks[0], albumTracks, `Album • ${album.title}`, `album-${album.id}`)}
             >
               <PlayIcon />
               <span>Play all</span>
@@ -61,9 +61,16 @@ export function AlbumDetailsPage({ albumId, currentTrack, playing, onPlayTrack, 
               >
                 <span className="row-index">{String(idx + 1).padStart(2, "0")}</span>
 
-                <div className="row-thumbnail" onClick={() => onPlayTrack(track)}>
+                <div className="row-thumbnail" onClick={() => onPlayTrack(track, albumTracks, `Album • ${album.title}`, `album-${album.id}`)}>
                   <img src={track.coverUrl ?? undefined} alt="" />
-                  <button className="row-hover-play" aria-label={`Play ${track.title}`}>
+                  <button
+                    className="row-hover-play"
+                    aria-label={`Play ${track.title}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPlayTrack(track, albumTracks, `Album • ${album.title}`, `album-${album.id}`);
+                    }}
+                  >
                     {isPlayingThis ? <PauseIcon width={14} height={14} /> : <PlayIcon width={14} height={14} />}
                   </button>
                 </div>

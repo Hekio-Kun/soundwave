@@ -5,6 +5,7 @@ import { clearAccessToken, setAccessToken } from "./api/client";
 import { favoriteApi } from "./api/favorites";
 import type { ProfileDetails } from "./api/profile";
 import { playlistApi } from "./api/playlists";
+import type { ProfileDetails } from "./api/profile";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
 import { LogoutConfirmationDialog } from "./components/LogoutConfirmationDialog";
@@ -137,10 +138,29 @@ export default function App() {
   const [playing, setPlaying] = useState(false);
   const [queue, setQueue] = useState<LandingTrack[]>(tracks);
   const [queueOpen, setQueueOpen] = useState(false);
+  const [playbackContext, setPlaybackContext] = useState<string | null>(null);
+  const [playbackContextKey, setPlaybackContextKey] = useState<string | null>(null);
+  const [allCatalogTracks, setAllCatalogTracks] = useState<LandingTrack[]>(tracks);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const [pendingTrack, setPendingTrack] = useState<LandingTrack | null>(null);
 
   useEffect(() => () => audio.pause(), [audio]);
+
+  useEffect(() => {
+    catalogApi.getTracks({ size: 100 })
+      .then((res) => {
+        if (res?.content && res.content.length > 0) {
+          const isPublic = (t: LandingTrack) =>
+            t.publicationStatus === "APPROVED" || t.publicationStatus === "PUBLISHED";
+          const serverIds = new Set(res.content.map((t) => t.id));
+          const fallbackMocks = tracks.filter((t) => !serverIds.has(t.id));
+          const merged = [...res.content, ...fallbackMocks].filter(isPublic);
+          setAllCatalogTracks(merged);
+          setQueue(merged);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const setAudioPlaying = (shouldPlay: boolean) => {
     if (shouldPlay) {
@@ -154,16 +174,47 @@ export default function App() {
     }
   };
 
-  const playTrack = (track: LandingTrack, autoplay = true) => {
+  const playTrack = (
+    track: LandingTrack,
+    contextOrAutoplay: LandingTrack[] | boolean = true,
+    contextTitle?: string,
+    contextKeyOrAutoplay?: string | boolean,
+    autoplayParam = true
+  ) => {
+    let autoplay = true;
+    let newContextQueue: LandingTrack[] | null = null;
+    let contextKey: string | undefined = undefined;
+
+    if (typeof contextOrAutoplay === "boolean") {
+      autoplay = contextOrAutoplay;
+    } else if (Array.isArray(contextOrAutoplay)) {
+      newContextQueue = contextOrAutoplay;
+      if (typeof contextKeyOrAutoplay === "boolean") {
+        autoplay = contextKeyOrAutoplay;
+      } else if (typeof contextKeyOrAutoplay === "string") {
+        contextKey = contextKeyOrAutoplay;
+        autoplay = autoplayParam;
+      }
+    }
+
+    if (newContextQueue && newContextQueue.length > 0) {
+      setQueue(newContextQueue);
+      if (contextTitle) {
+        setPlaybackContext(contextTitle);
+        setPlaybackContextKey(contextKey || contextTitle);
+      }
+    } else {
+      if (!queue.some((item) => item.id === track.id)) {
+        setQueue((prev) => [track, ...prev]);
+      }
+    }
+
     if (currentTrack?.id === track.id) {
       setAudioPlaying(!playing);
       return;
     }
+
     setCurrentTrack(track);
-    // Ensure track is in queue
-    if (!queue.some((item) => item.id === track.id)) {
-      setQueue((prev) => [track, ...prev]);
-    }
     audio.src = track.audioUrl;
     audio.load();
     if (autoplay) setAudioPlaying(true);
@@ -195,6 +246,18 @@ export default function App() {
       setQueue([]);
     }
   };
+
+  const handleRecordPlay = useCallback(async (trackId: number, durationMs: number, completed: boolean) => {
+    try {
+      const res = await catalogApi.recordPlay(trackId, durationMs, completed);
+      setCurrentTrack((prev) => (prev && prev.id === trackId ? { ...prev, playCount: res.playCount } : prev));
+      setQueue((prev) =>
+        prev.map((item) => (item.id === trackId ? { ...item, playCount: res.playCount } : item))
+      );
+    } catch {
+      // Ignore background reporting errors silently
+    }
+  }, []);
 
   // 3. Library & Favorites & Playlists State
   const [favoriteTracks, setFavoriteTracks] = useState<LandingTrack[]>([]);
@@ -311,6 +374,10 @@ export default function App() {
           )
         );
       }
+      // Dynamic Queue Sync: rename context title if currently playing this playlist
+      if (playbackContextKey === `playlist-${editingPlaylist.id}`) {
+        setPlaybackContext(`Playlist • ${data.title}`);
+      }
       setEditingPlaylist(null);
     } else {
       try {
@@ -346,6 +413,13 @@ export default function App() {
     }
     setPlaylists((prev) => prev.filter((pl) => pl.id !== targetId));
     setDeletePlaylistId(null);
+
+    // Dynamic Queue Sync: if currently playing the deleted playlist, clear context
+    if (playbackContextKey === `playlist-${targetId}`) {
+      setPlaybackContext(null);
+      setPlaybackContextKey(null);
+    }
+
     if (window.location.hash.includes(`/playlist/${targetId}`)) {
       window.location.hash = "#/playlists";
     }
@@ -382,6 +456,11 @@ export default function App() {
       );
       throw err;
     }
+
+    // Dynamic Queue Sync: remove from active queue if currently playing this playlist
+    if (playbackContextKey === `playlist-${playlistId}`) {
+      setQueue((prevQueue) => prevQueue.filter((t) => t.id !== trackId));
+    }
   };
 
   const handleReorderPlaylistTracks = async (
@@ -389,6 +468,7 @@ export default function App() {
     trackId: number,
     direction: "up" | "down"
   ) => {
+    let nextTrackIds: number[] = [];
     try {
       const updated = await playlistApi.reorderPlaylistTracks(playlistId, {
         trackId,
@@ -423,12 +503,25 @@ export default function App() {
       );
       throw err;
     }
+
+    // Dynamic Queue Sync: reorder active queue immediately if currently playing this playlist
+    if (playbackContextKey === `playlist-${playlistId}` && nextTrackIds.length > 0) {
+      setQueue((prevQueue) => {
+        const map = new Map(allCatalogTracks.map((t) => [t.id, t]));
+        prevQueue.forEach((t) => map.set(t.id, t));
+        const reordered = nextTrackIds.map((id) => map.get(id)).filter(Boolean) as LandingTrack[];
+        return reordered.length > 0 ? reordered : prevQueue;
+      });
+    }
   };
 
-  const handlePlayAllTracks = (tracksToPlay: LandingTrack[]) => {
+  const handlePlayAllTracks = (
+    tracksToPlay: LandingTrack[],
+    contextTitle?: string,
+    contextKey?: string
+  ) => {
     if (!tracksToPlay.length) return;
-    setQueue(tracksToPlay);
-    playTrack(tracksToPlay[0], true);
+    playTrack(tracksToPlay[0], tracksToPlay, contextTitle, contextKey, true);
   };
 
   // 4. Routing State
@@ -647,6 +740,7 @@ export default function App() {
           onReorderTracks={handleReorderPlaylistTracks}
           onOpenAddTrackModal={() => setAddTrackPlaylistId(playlistId)}
           currentUser={user}
+          allTracks={allCatalogTracks}
         />
       );
     }
@@ -657,6 +751,7 @@ export default function App() {
           currentTrack={currentTrack}
           playing={playing}
           onPlayTrack={playTrack}
+          onPlayAll={handlePlayAllTracks}
           onNavigate={navigate}
           favoriteTracks={favoriteTracks}
           onToggleFavorite={toggleFavorite}
@@ -665,6 +760,7 @@ export default function App() {
           onEditPlaylist={handleOpenEditPlaylist}
           onDeletePlaylist={(id) => setDeletePlaylistId(id)}
           initialTab="favorites"
+          allTracks={allCatalogTracks}
         />
       );
     }
@@ -675,6 +771,7 @@ export default function App() {
           currentTrack={currentTrack}
           playing={playing}
           onPlayTrack={playTrack}
+          onPlayAll={handlePlayAllTracks}
           onNavigate={navigate}
           favoriteTracks={favoriteTracks}
           onToggleFavorite={toggleFavorite}
@@ -683,6 +780,7 @@ export default function App() {
           onEditPlaylist={handleOpenEditPlaylist}
           onDeletePlaylist={(id) => setDeletePlaylistId(id)}
           initialTab="playlists"
+          allTracks={queue}
         />
       );
     }
@@ -780,6 +878,7 @@ export default function App() {
           onPlayTrack={playTrack}
           onRemoveFromQueue={handleRemoveFromQueue}
           onClearQueue={handleClearQueue}
+          playbackContext={playbackContext}
           hasPlayer
           showFooter={isExploreRoute}
         >
@@ -802,6 +901,8 @@ export default function App() {
           isAuthenticated={isAuthenticated}
           onToggleQueue={() => setQueueOpen((prev) => !prev)}
           isQueueOpen={queueOpen}
+          onRecordPlay={handleRecordPlay}
+          playbackContext={playbackContext}
         />
       )}
 
@@ -841,6 +942,7 @@ export default function App() {
         onClose={() => setAddTrackPlaylistId(null)}
         playlistTitle={playlists.find((p) => p.id === addTrackPlaylistId)?.title ?? "Playlist"}
         currentTrackIds={playlists.find((p) => p.id === addTrackPlaylistId)?.trackIds ?? []}
+        allTracks={allCatalogTracks}
         onAddTrack={(trackId) => {
           if (addTrackPlaylistId) {
             handleAddToPlaylist(addTrackPlaylistId, trackId);
