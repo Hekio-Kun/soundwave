@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlbumCard, CreatorCard, TrackCard } from "../components/MusicCards";
 import { albums, featuredCreators, tracks } from "../data";
+import { catalogApi } from "../api/catalog";
 import { CloseIcon, CompassIcon, SearchIcon, TrendingUpIcon } from "../icons";
 import type { LandingTrack } from "../types";
 
 type Props = {
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string) => void;
   onNavigate: (route: string) => void;
   initialQuery?: string;
 };
@@ -15,6 +16,23 @@ type Props = {
 export function SearchPage({ currentTrack, playing, onPlayTrack, onNavigate, initialQuery = "" }: Props) {
   const [searchTerm, setSearchTerm] = useState(initialQuery);
   const [activeFilter, setActiveFilter] = useState<"all" | "tracks" | "albums" | "creators">("all");
+  const [serverTracks, setServerTracks] = useState<LandingTrack[]>([]);
+
+  useEffect(() => {
+    catalogApi.getTracks({ size: 100 })
+      .then((res) => {
+        if (res?.content) setServerTracks(res.content);
+      })
+      .catch(() => {});
+  }, []);
+
+  const allSearchableTracks = useMemo(() => {
+    const isPublic = (t: LandingTrack) =>
+      t.publicationStatus === "APPROVED" || t.publicationStatus === "PUBLISHED";
+    const serverIds = new Set(serverTracks.map((t) => t.id));
+    const fallbackMocks = tracks.filter((t) => !serverIds.has(t.id));
+    return [...serverTracks, ...fallbackMocks].filter(isPublic);
+  }, [serverTracks]);
 
   const query = searchTerm.trim().toLowerCase();
 
@@ -22,15 +40,15 @@ export function SearchPage({ currentTrack, playing, onPlayTrack, onNavigate, ini
 
   const matchedTracks = useMemo(() => {
     if (!query) return [];
-    return tracks.filter(
+    return allSearchableTracks.filter(
       (t) =>
-        t.publicationStatus === "APPROVED" &&
-        (t.title.toLowerCase().includes(query) ||
-          t.creator.displayName.toLowerCase().includes(query) ||
-          (t.genreSlug?.toLowerCase().includes(query) ?? false) ||
-          (t.album?.title.toLowerCase().includes(query) ?? false))
+        t.title.toLowerCase().includes(query) ||
+        (t.slug && t.slug.toLowerCase().includes(query)) ||
+        t.creator.displayName.toLowerCase().includes(query) ||
+        (t.genreSlug?.toLowerCase().includes(query) ?? false) ||
+        (t.album?.title?.toLowerCase().includes(query) ?? false)
     );
-  }, [query]);
+  }, [allSearchableTracks, query]);
 
   const matchedAlbums = useMemo(() => {
     if (!query) return [];
@@ -139,7 +157,22 @@ export function SearchPage({ currentTrack, playing, onPlayTrack, onNavigate, ini
             <section className="search-result-section">
               <div className="search-section-heading"><div><span>SONGS</span><h2>Matching tracks</h2></div><small>{matchedTracks.length} found</small></div>
               <div className="sw-track-grid sw-track-grid--catalog">
-                {matchedTracks.map((track) => <TrackCard key={track.id} track={track} active={currentTrack?.id === track.id} playing={currentTrack?.id === track.id && playing} onPlay={onPlayTrack} onNavigate={onNavigate} />)}
+                {matchedTracks.map((track) => (
+                  <TrackCard
+                    key={track.id}
+                    track={track}
+                    active={currentTrack?.id === track.id}
+                    playing={currentTrack?.id === track.id && playing}
+                    onPlay={(t) =>
+                      onPlayTrack(
+                        t,
+                        matchedTracks,
+                        searchTerm ? `Search • "${searchTerm}"` : "Search results"
+                      )
+                    }
+                    onNavigate={onNavigate}
+                  />
+                ))}
               </div>
             </section>
           )}

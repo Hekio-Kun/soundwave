@@ -1,11 +1,19 @@
 package org.example.soundwavebackend.catalog.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.example.soundwavebackend.catalog.dto.request.RecordPlayRequest;
+import org.example.soundwavebackend.catalog.dto.response.AudioStreamInfo;
+import org.example.soundwavebackend.catalog.dto.response.RecordPlayResponse;
 import org.example.soundwavebackend.catalog.dto.response.TrackResponse;
 import org.example.soundwavebackend.catalog.service.TrackCatalogService;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.util.List;
 
@@ -52,3 +60,4 @@ public class TrackCatalogController {
         return ResponseEntity.ok(trackCatalogService.getRecommendations(idOrSlug, limit));
     }
 }
+

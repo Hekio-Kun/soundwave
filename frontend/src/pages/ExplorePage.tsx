@@ -8,7 +8,7 @@ import type { Genre, LandingTrack } from "../types";
 type Props = {
   currentTrack: LandingTrack | null;
   playing: boolean;
-  onPlayTrack: (track: LandingTrack) => void;
+  onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string) => void;
   onNavigate: (route: string) => void;
 };
 
@@ -55,6 +55,16 @@ export function ExplorePage({ currentTrack, playing, onPlayTrack, onNavigate }: 
         if (data && data.length > 0) setGenresList(data);
       })
       .catch(() => {});
+
+    catalogApi.getTracks({ size: 100 })
+      .then((res) => {
+        if (res && res.content) {
+          setServerTracks(res.content);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load tracks from catalog API:", err);
+      });
   }, []);
 
   useEffect(() => {
