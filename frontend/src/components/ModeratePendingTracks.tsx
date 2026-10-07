@@ -15,7 +15,6 @@ import {
   EyeIcon,
   RefreshIcon,
   SearchIcon,
-  TrendingUpIcon,
   UserIcon,
 } from "../icons";
 

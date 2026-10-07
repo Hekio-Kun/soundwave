@@ -5,7 +5,12 @@ import org.example.soundwavebackend.authentication.entity.UserProfile;
 import org.example.soundwavebackend.catalog.entity.Album;
 import org.example.soundwavebackend.catalog.entity.Genre;
 import org.example.soundwavebackend.catalog.entity.Track;
-import org.example.soundwavebackend.moderation.dto.response.*;
+import org.example.soundwavebackend.moderation.dto.response.AlbumSummaryResponse;
+import org.example.soundwavebackend.moderation.dto.response.GenreSummaryResponse;
+import org.example.soundwavebackend.moderation.dto.response.SubmissionDetailResponse;
+import org.example.soundwavebackend.moderation.dto.response.SubmissionQueueItemResponse;
+import org.example.soundwavebackend.moderation.dto.response.TrackDetailResponse;
+import org.example.soundwavebackend.moderation.dto.response.UserSummaryResponse;
 import org.example.soundwavebackend.moderation.entity.TrackSubmission;
 import org.springframework.stereotype.Component;
 

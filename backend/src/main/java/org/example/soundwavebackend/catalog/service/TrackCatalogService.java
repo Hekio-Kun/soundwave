@@ -32,6 +32,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class TrackCatalogService {
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_RECOMMENDATIONS = 20;
+    private static final String UNKNOWN_CREATOR_NAME = "Unknown Artist";
+
     private final TrackRepository trackRepository;
     private final UserAccountPublicService userAccountPublicService;
     private final CatalogMapper mapper;
@@ -43,7 +47,7 @@ public class TrackCatalogService {
     @Transactional(readOnly = true)
     public Page<TrackResponse> getPublishedTracks(String genre, String search, String sortType, int page, int size) {
         Sort sort = resolveSort(sortType);
-        Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(100, Math.max(1, size)), sort);
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(MAX_PAGE_SIZE, Math.max(1, size)), sort);
 
         Specification<Track> spec = TrackSpecification.filterCatalog(
                 TrackPublicationStatus.PUBLISHED,
@@ -60,11 +64,7 @@ public class TrackCatalogService {
         Map<Long, UserProfileSummary> userProfiles = userAccountPublicService.getUserSummariesByIds(uploaderIds);
 
         return trackPage.map(track -> {
-            UserProfileSummary uploader = userProfiles.get(track.getUploaderUserId());
-            CreatorSummary creator = uploader != null
-                    ? new CreatorSummary(uploader.userId(), uploader.displayName(), uploader.avatarUrl())
-                    : new CreatorSummary(track.getUploaderUserId(), "Unknown Artist", null);
-            return mapper.toTrackResponse(track, creator);
+            return mapper.toTrackResponse(track, toCreatorSummary(track, userProfiles.get(track.getUploaderUserId())));
         });
     }
 
@@ -75,15 +75,8 @@ public class TrackCatalogService {
     public TrackResponse getTrackByIdOrSlug(String idOrSlug) {
         Track track = findPublishedTrack(idOrSlug);
 
-        UserProfileSummary uploader = null;
-        try {
-            uploader = userAccountPublicService.getUserSummaryById(track.getUploaderUserId());
-        } catch (Exception ignored) {
-        }
-
-        CreatorSummary creator = uploader != null
-                ? new CreatorSummary(uploader.userId(), uploader.displayName(), uploader.avatarUrl())
-                : new CreatorSummary(track.getUploaderUserId(), "Unknown Artist", null);
+        UserProfileSummary uploader = userAccountPublicService.findUserSummaryById(track.getUploaderUserId()).orElse(null);
+        CreatorSummary creator = toCreatorSummary(track, uploader);
 
         String lyrics = officialLyricService.findLyricContentByTrackId(track.getId());
         return mapper.toTrackResponse(track, creator, lyrics);
@@ -95,7 +88,7 @@ public class TrackCatalogService {
     @Transactional(readOnly = true)
     public List<TrackResponse> getRecommendations(String idOrSlug, int requestedLimit) {
         Track source = findPublishedTrack(idOrSlug);
-        int limit = Math.min(20, Math.max(1, requestedLimit));
+        int limit = Math.min(MAX_RECOMMENDATIONS, Math.max(1, requestedLimit));
         Pageable candidates = PageRequest.of(0, limit);
         Map<Long, Track> recommended = new LinkedHashMap<>();
 
@@ -140,16 +133,21 @@ public class TrackCatalogService {
         Set<Long> uploaderIds = tracks.stream().map(Track::getUploaderUserId).collect(Collectors.toSet());
         Map<Long, UserProfileSummary> userProfiles = userAccountPublicService.getUserSummariesByIds(uploaderIds);
         return tracks.stream().map(track -> {
-            UserProfileSummary uploader = userProfiles.get(track.getUploaderUserId());
-            CreatorSummary creator = uploader != null
-                    ? new CreatorSummary(uploader.userId(), uploader.displayName(), uploader.avatarUrl())
-                    : new CreatorSummary(track.getUploaderUserId(), "Unknown Artist", null);
-            return mapper.toTrackResponse(track, creator);
+            return mapper.toTrackResponse(track, toCreatorSummary(track, userProfiles.get(track.getUploaderUserId())));
         }).toList();
     }
 
+    private CreatorSummary toCreatorSummary(Track track, UserProfileSummary uploader) {
+        if (uploader == null) {
+            return new CreatorSummary(track.getUploaderUserId(), UNKNOWN_CREATOR_NAME, null);
+        }
+        return new CreatorSummary(uploader.userId(), uploader.displayName(), uploader.avatarUrl());
+    }
+
     private Sort resolveSort(String sortType) {
-        if (sortType == null) return Sort.by(Sort.Direction.DESC, "createdAt");
+        if (sortType == null) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
         return switch (sortType.toLowerCase().trim()) {
             case "trending", "plays" -> Sort.by(Sort.Direction.DESC, "playCount").and(Sort.by(Sort.Direction.DESC, "id"));
             case "title", "name" -> Sort.by(Sort.Direction.ASC, "title");

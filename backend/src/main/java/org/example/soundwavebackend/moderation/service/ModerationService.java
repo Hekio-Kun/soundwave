@@ -30,7 +30,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -38,6 +42,8 @@ import java.util.stream.Stream;
 @Service
 @RequiredArgsConstructor
 public class ModerationService {
+    private static final String DEFAULT_CREATOR_NAME = "Creator";
+
     private final TrackSubmissionRepository submissionRepository;
     private final CatalogService catalogService;
     private final NotificationService notificationService;
@@ -47,9 +53,12 @@ public class ModerationService {
     private final UserProfileRepository profileRepository;
     private final OfficialLyricService officialLyricService;
 
+    /**
+     * Lấy hàng đợi kiểm duyệt theo trạng thái và từ khóa tìm kiếm.
+     */
     @Transactional(readOnly = true)
     public Page<SubmissionQueueItemResponse> getQueue(SubmissionStatus status, String search, Pageable pageable) {
-        boolean searchProvided = search != null && !search.trim().isBlank();
+        boolean searchProvided = search != null && !search.isBlank();
         Page<TrackSubmission> page;
 
         if (searchProvided) {
@@ -99,23 +108,17 @@ public class ModerationService {
         });
     }
 
+    /**
+     * Lấy đầy đủ thông tin một submission để Staff đánh giá.
+     */
     @Transactional(readOnly = true)
     public SubmissionDetailResponse getSubmissionDetail(Long id) {
-        TrackSubmission submission = submissionRepository.findById(id)
-                .orElseThrow(() -> new SubmissionNotFoundException(id));
-
-        Track track = catalogService.findTrackById(submission.getTrackId()).orElse(null);
-        String lyrics = track != null ? officialLyricService.findLyricContentByTrackId(track.getId()) : null;
-        AppUser submitter = userRepository.findById(submission.getSubmittedByUserId()).orElse(null);
-        UserProfile submitterProfile = profileRepository.findByUserId(submission.getSubmittedByUserId()).orElse(null);
-        AppUser reviewer = submission.getReviewerUserId() != null ?
-                userRepository.findById(submission.getReviewerUserId()).orElse(null) : null;
-        UserProfile reviewerProfile = submission.getReviewerUserId() != null ?
-                profileRepository.findByUserId(submission.getReviewerUserId()).orElse(null) : null;
-
-        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile, lyrics);
+        return buildDetailResponse(findSubmission(id), null);
     }
 
+    /**
+     * Thống kê số lượng submission theo trạng thái.
+     */
     @Transactional(readOnly = true)
     public SubmissionStatsResponse getQueueStats() {
         long pending = submissionRepository.countByStatus(SubmissionStatus.PENDING);
@@ -125,17 +128,14 @@ public class ModerationService {
         return new SubmissionStatsResponse(pending, approved, rejected, total);
     }
 
+    /**
+     * Phê duyệt bài hát đang chờ và phát hành nội dung liên quan.
+     */
     @Transactional
     public SubmissionDetailResponse approveSubmission(Long id, ApproveTrackRequest request, String reviewerEmail) {
-        TrackSubmission submission = submissionRepository.findById(id)
-                .orElseThrow(() -> new SubmissionNotFoundException(id));
-
-        if (submission.getStatus() != SubmissionStatus.PENDING) {
-            throw new InvalidSubmissionStateException("Track submission is not in PENDING status. Current status: " + submission.getStatus());
-        }
-
-        AppUser reviewer = userRepository.findByEmailIgnoreCase(reviewerEmail)
-                .orElseThrow(() -> new AccountUnavailableException("REVIEWER_NOT_FOUND", "Reviewer account not found."));
+        TrackSubmission submission = findSubmission(id);
+        requireStatus(submission, SubmissionStatus.PENDING, "Track submission is not in PENDING status.");
+        AppUser reviewer = findReviewer(reviewerEmail);
 
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         String reviewerNote = request != null ? request.reviewerNote() : null;
@@ -152,31 +152,25 @@ public class ModerationService {
                 "/track/" + track.getId()
         );
 
-        AppUser submitter = userRepository.findById(submission.getSubmittedByUserId()).orElse(null);
-        UserProfile submitterProfile = profileRepository.findByUserId(submission.getSubmittedByUserId()).orElse(null);
-        String submitterDisplayName = submitterProfile != null && submitterProfile.getDisplayName() != null && !submitterProfile.getDisplayName().isBlank()
-                ? submitterProfile.getDisplayName() : (submitter != null ? submitter.getEmail() : "Creator");
-
-        if (submitter != null) {
-            mailService.sendTrackApprovedEmail(submitter.getEmail(), submitterDisplayName, track.getTitle());
+        ParticipantContext participants = loadParticipants(submission, reviewer);
+        if (participants.submitter() != null) {
+            mailService.sendTrackApprovedEmail(
+                    participants.submitter().getEmail(),
+                    participants.submitterDisplayName(),
+                    track.getTitle()
+            );
         }
-
-        UserProfile reviewerProfile = profileRepository.findByUserId(reviewer.getId()).orElse(null);
-        String lyrics = track != null ? officialLyricService.findLyricContentByTrackId(track.getId()) : null;
-        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile, lyrics);
+        return toDetailResponse(submission, track, participants);
     }
 
+    /**
+     * Từ chối bài hát đang chờ và gửi lý do cho người đăng.
+     */
     @Transactional
     public SubmissionDetailResponse rejectSubmission(Long id, RejectTrackRequest request, String reviewerEmail) {
-        TrackSubmission submission = submissionRepository.findById(id)
-                .orElseThrow(() -> new SubmissionNotFoundException(id));
-
-        if (submission.getStatus() != SubmissionStatus.PENDING) {
-            throw new InvalidSubmissionStateException("Track submission is not in PENDING status. Current status: " + submission.getStatus());
-        }
-
-        AppUser reviewer = userRepository.findByEmailIgnoreCase(reviewerEmail)
-                .orElseThrow(() -> new AccountUnavailableException("REVIEWER_NOT_FOUND", "Reviewer account not found."));
+        TrackSubmission submission = findSubmission(id);
+        requireStatus(submission, SubmissionStatus.PENDING, "Track submission is not in PENDING status.");
+        AppUser reviewer = findReviewer(reviewerEmail);
 
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         String rejectionReason = request.rejectionReason().trim();
@@ -194,31 +188,26 @@ public class ModerationService {
                 "/studio"
         );
 
-        AppUser submitter = userRepository.findById(submission.getSubmittedByUserId()).orElse(null);
-        UserProfile submitterProfile = profileRepository.findByUserId(submission.getSubmittedByUserId()).orElse(null);
-        String submitterDisplayName = submitterProfile != null && submitterProfile.getDisplayName() != null && !submitterProfile.getDisplayName().isBlank()
-                ? submitterProfile.getDisplayName() : (submitter != null ? submitter.getEmail() : "Creator");
-
-        if (submitter != null) {
-            mailService.sendTrackRejectedEmail(submitter.getEmail(), submitterDisplayName, track.getTitle(), rejectionReason);
+        ParticipantContext participants = loadParticipants(submission, reviewer);
+        if (participants.submitter() != null) {
+            mailService.sendTrackRejectedEmail(
+                    participants.submitter().getEmail(),
+                    participants.submitterDisplayName(),
+                    track.getTitle(),
+                    rejectionReason
+            );
         }
-
-        UserProfile reviewerProfile = profileRepository.findByUserId(reviewer.getId()).orElse(null);
-        String lyrics = track != null ? officialLyricService.findLyricContentByTrackId(track.getId()) : null;
-        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile, lyrics);
+        return toDetailResponse(submission, track, participants);
     }
 
+    /**
+     * Gỡ một bài hát đã duyệt khi Staff xác nhận vi phạm.
+     */
     @Transactional
     public SubmissionDetailResponse takeDownSubmission(Long id, TakeDownTrackRequest request, String reviewerEmail) {
-        TrackSubmission submission = submissionRepository.findById(id)
-                .orElseThrow(() -> new SubmissionNotFoundException(id));
-
-        if (submission.getStatus() != SubmissionStatus.APPROVED) {
-            throw new InvalidSubmissionStateException("Only approved tracks can be taken down. Current status: " + submission.getStatus());
-        }
-
-        AppUser reviewer = userRepository.findByEmailIgnoreCase(reviewerEmail)
-                .orElseThrow(() -> new AccountUnavailableException("REVIEWER_NOT_FOUND", "Reviewer account not found."));
+        TrackSubmission submission = findSubmission(id);
+        requireStatus(submission, SubmissionStatus.APPROVED, "Only approved tracks can be taken down.");
+        AppUser reviewer = findReviewer(reviewerEmail);
 
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         String reason = request.takedownReason().trim();
@@ -236,17 +225,87 @@ public class ModerationService {
                 "/studio"
         );
 
+        ParticipantContext participants = loadParticipants(submission, reviewer);
+        if (participants.submitter() != null) {
+            mailService.sendTrackTakenDownEmail(
+                    participants.submitter().getEmail(),
+                    participants.submitterDisplayName(),
+                    track.getTitle(),
+                    reason
+            );
+        }
+        return toDetailResponse(submission, track, participants);
+    }
+
+    private TrackSubmission findSubmission(Long id) {
+        return submissionRepository.findById(id).orElseThrow(() -> new SubmissionNotFoundException(id));
+    }
+
+    private AppUser findReviewer(String reviewerEmail) {
+        return userRepository.findByEmailIgnoreCase(reviewerEmail)
+                .orElseThrow(() -> new AccountUnavailableException("REVIEWER_NOT_FOUND", "Reviewer account not found."));
+    }
+
+    private void requireStatus(TrackSubmission submission, SubmissionStatus expectedStatus, String message) {
+        if (submission.getStatus() != expectedStatus) {
+            throw new InvalidSubmissionStateException(message + " Current status: " + submission.getStatus());
+        }
+    }
+
+    private SubmissionDetailResponse buildDetailResponse(TrackSubmission submission, AppUser knownReviewer) {
+        Track track = catalogService.findTrackById(submission.getTrackId()).orElse(null);
+        AppUser reviewer = knownReviewer;
+        if (reviewer == null && submission.getReviewerUserId() != null) {
+            reviewer = userRepository.findById(submission.getReviewerUserId()).orElse(null);
+        }
+        return toDetailResponse(submission, track, loadParticipants(submission, reviewer));
+    }
+
+    private ParticipantContext loadParticipants(TrackSubmission submission, AppUser reviewer) {
         AppUser submitter = userRepository.findById(submission.getSubmittedByUserId()).orElse(null);
         UserProfile submitterProfile = profileRepository.findByUserId(submission.getSubmittedByUserId()).orElse(null);
-        String submitterDisplayName = submitterProfile != null && submitterProfile.getDisplayName() != null && !submitterProfile.getDisplayName().isBlank()
-                ? submitterProfile.getDisplayName() : (submitter != null ? submitter.getEmail() : "Creator");
+        UserProfile reviewerProfile = reviewer == null
+                ? null
+                : profileRepository.findByUserId(reviewer.getId()).orElse(null);
+        return new ParticipantContext(
+                submitter,
+                submitterProfile,
+                reviewer,
+                reviewerProfile,
+                resolveDisplayName(submitter, submitterProfile)
+        );
+    }
 
-        if (submitter != null) {
-            mailService.sendTrackTakenDownEmail(submitter.getEmail(), submitterDisplayName, track.getTitle(), reason);
+    private SubmissionDetailResponse toDetailResponse(
+            TrackSubmission submission,
+            Track track,
+            ParticipantContext participants
+    ) {
+        String lyrics = track == null ? null : officialLyricService.findLyricContentByTrackId(track.getId());
+        return mapper.toDetailResponse(
+                submission,
+                track,
+                participants.submitter(),
+                participants.submitterProfile(),
+                participants.reviewer(),
+                participants.reviewerProfile(),
+                lyrics
+        );
+    }
+
+    private String resolveDisplayName(AppUser user, UserProfile profile) {
+        if (profile != null && profile.getDisplayName() != null && !profile.getDisplayName().isBlank()) {
+            return profile.getDisplayName();
         }
+        return user == null ? DEFAULT_CREATOR_NAME : user.getEmail();
+    }
 
-        UserProfile reviewerProfile = profileRepository.findByUserId(reviewer.getId()).orElse(null);
-        String lyrics = track != null ? officialLyricService.findLyricContentByTrackId(track.getId()) : null;
-        return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile, lyrics);
+    private record ParticipantContext(
+            AppUser submitter,
+            UserProfile submitterProfile,
+            AppUser reviewer,
+            UserProfile reviewerProfile,
+            String submitterDisplayName
+    ) {
     }
 }

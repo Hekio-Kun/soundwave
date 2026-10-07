@@ -1,22 +1,14 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { tracks } from "../data";
+import { useState, type ReactNode } from "react";
 import {
   ActivityIcon,
-  AlertIcon,
-  ChartIcon,
   CheckIcon,
-  ClockIcon,
-  CloseIcon,
-  DashboardIcon,
   DiscIcon,
-  EyeIcon,
   FlagIcon,
   ShieldIcon,
   TrendingUpIcon,
   UserIcon,
   UsersIcon,
 } from "../icons";
-import { ModeratePendingTracks } from "../components/ModeratePendingTracks";
 
 type DashboardProps = {
   onNavigate: (route: string) => void;
@@ -31,67 +23,6 @@ type MetricProps = {
   note: string;
   tone?: "cyan" | "violet" | "green" | "amber" | "red";
 };
-
-type ReviewStatus = "PENDING" | "REVIEWING" | "APPROVED" | "REJECTED";
-
-type ReviewSubmission = {
-  id: number;
-  title: string;
-  artist: string;
-  coverUrl: string | null;
-  genre: string;
-  submittedAt: string;
-  ageMinutes: number;
-  priority: "NORMAL" | "HIGH";
-  status: ReviewStatus;
-};
-
-const initialSubmissions: ReviewSubmission[] = [
-  {
-    id: 401,
-    title: "Chạm Vào Khoảng Không",
-    artist: "Yên Chi",
-    coverUrl: tracks[6].coverUrl,
-    genre: "R&B",
-    submittedAt: "08:42 today",
-    ageMinutes: 138,
-    priority: "HIGH",
-    status: "PENDING",
-  },
-  {
-    id: 402,
-    title: "Gọi Nắng Về",
-    artist: "Kai Vũ",
-    coverUrl: tracks[7].coverUrl,
-    genre: "Rap / Hip-hop",
-    submittedAt: "09:15 today",
-    ageMinutes: 105,
-    priority: "NORMAL",
-    status: "REVIEWING",
-  },
-  {
-    id: 403,
-    title: "Một Khoảng Bình Yên",
-    artist: "Minh An",
-    coverUrl: tracks[5].coverUrl,
-    genre: "Acoustic",
-    submittedAt: "09:48 today",
-    ageMinutes: 72,
-    priority: "NORMAL",
-    status: "PENDING",
-  },
-  {
-    id: 404,
-    title: "Đêm Trôi Rất Khẽ",
-    artist: "Lâm Mộc",
-    coverUrl: tracks[4].coverUrl,
-    genre: "Ballad",
-    submittedAt: "10:12 today",
-    ageMinutes: 48,
-    priority: "NORMAL",
-    status: "PENDING",
-  },
-];
 
 function DashboardMetric({ icon, label, value, change, note, tone = "cyan" }: MetricProps) {
   return (

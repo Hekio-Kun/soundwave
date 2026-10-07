@@ -21,7 +21,11 @@ import org.example.soundwavebackend.media.service.CloudMediaService;
 import org.example.soundwavebackend.track.dto.request.CreateTrackRequest;
 import org.example.soundwavebackend.track.dto.request.SubmitTrackForReviewRequest;
 import org.example.soundwavebackend.track.dto.request.UpdateTrackRequest;
-import org.example.soundwavebackend.track.dto.response.*;
+import org.example.soundwavebackend.track.dto.response.AlbumOptionResponse;
+import org.example.soundwavebackend.track.dto.response.GenreOptionResponse;
+import org.example.soundwavebackend.track.dto.response.StudioDashboardStatsResponse;
+import org.example.soundwavebackend.track.dto.response.StudioTrackResponse;
+import org.example.soundwavebackend.track.dto.response.TrackRejectionDetailsResponse;
 import org.example.soundwavebackend.track.exception.AlbumNotFoundException;
 import org.example.soundwavebackend.track.exception.GenreNotFoundException;
 import org.example.soundwavebackend.track.exception.TrackNotFoundException;
@@ -429,7 +433,7 @@ public class StudioTrackService {
         String nowhitespace = WHITESPACE.matcher(input.trim()).replaceAll("-");
         String normalized = Normalizer.normalize(nowhitespace, Normalizer.Form.NFD);
         String slug = NON_LATIN.matcher(normalized).replaceAll("");
-        return slug.toLowerCase(Locale.ENGLISH).replaceAll("-+", "-");
+        return slug.toLowerCase(Locale.ROOT).replaceAll("-+", "-");
     }
 
     private LocalDateTime nowUtc() {
@@ -437,7 +441,9 @@ public class StudioTrackService {
     }
 
     private Integer resolveDurationMs(Integer cloudDurationMs, Integer requestedDurationMs) {
-        if (cloudDurationMs != null && cloudDurationMs > 0) return cloudDurationMs;
+        if (cloudDurationMs != null && cloudDurationMs > 0) {
+            return cloudDurationMs;
+        }
         return requestedDurationMs != null && requestedDurationMs > 0 ? requestedDurationMs : 1;
     }
 

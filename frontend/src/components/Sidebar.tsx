@@ -1,4 +1,4 @@
-import { CompassIcon, DashboardIcon, DiscIcon, FilterIcon, HeartIcon, LibraryIcon, PlusIcon, SearchIcon, ShieldIcon, UploadIcon } from "../icons";
+import { CompassIcon, DashboardIcon, FilterIcon, HeartIcon, LibraryIcon, PlusIcon, SearchIcon, ShieldIcon, UploadIcon } from "../icons";
 import type { CurrentUser } from "../types";
 
 type Props = {

@@ -27,7 +27,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +41,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PlaylistService {
+    private static final String DEFAULT_OWNER_NAME = "User";
+    private static final int TEMPORARY_POSITION_OFFSET = 100_000;
+
     private final PlaylistRepository playlistRepository;
     private final PlaylistTrackRepository playlistTrackRepository;
     private final CatalogPublicService catalogPublicService;
@@ -60,15 +68,11 @@ public class PlaylistService {
     public PlaylistResponse createPlaylist(CreatePlaylistRequest request, String currentUserEmail) {
         UserProfileSummary currentUser = userAccountPublicService.getUserSummaryByEmail(currentUserEmail);
 
-        PlaylistVisibility visibility = Boolean.TRUE.equals(request.isPrivate())
-                ? PlaylistVisibility.PRIVATE
-                : PlaylistVisibility.PUBLIC;
-
         Playlist playlist = new Playlist(currentUser.userId(), request.title().trim());
         playlist.update(
                 request.title().trim(),
                 request.description(),
-                visibility,
+                resolveVisibility(request.isPrivate()),
                 null,
                 request.coverUrl(),
                 LocalDateTime.now(ZoneOffset.UTC)
@@ -87,11 +91,7 @@ public class PlaylistService {
         List<Playlist> playlists = playlistRepository.findByOwnerUserIdOrderByUpdatedAtDesc(currentUser.userId());
 
         return playlists.stream().map(playlist -> {
-            List<Long> trackIds = playlistTrackRepository.findByPlaylistIdOrderByPositionAsc(playlist.getId()).stream()
-                    .map(PlaylistTrack::getTrackId)
-                    .toList();
-            List<TrackResponse> tracks = catalogPublicService.getTracksByIds(trackIds);
-            return mapper.toResponse(playlist, currentUser.displayName(), trackIds, tracks);
+            return toResponse(playlist, currentUser.displayName());
         }).toList();
     }
 
@@ -106,12 +106,8 @@ public class PlaylistService {
 
         return playlists.stream().map(playlist -> {
             UserProfileSummary owner = userProfiles.get(playlist.getOwnerUserId());
-            String ownerName = owner != null ? owner.displayName() : "User";
-            List<Long> trackIds = playlistTrackRepository.findByPlaylistIdOrderByPositionAsc(playlist.getId()).stream()
-                    .map(PlaylistTrack::getTrackId)
-                    .toList();
-            List<TrackResponse> tracks = catalogPublicService.getTracksByIds(trackIds);
-            return mapper.toResponse(playlist, ownerName, trackIds, tracks);
+            String ownerName = owner != null ? owner.displayName() : DEFAULT_OWNER_NAME;
+            return toResponse(playlist, ownerName);
         }).toList();
     }
 
@@ -120,16 +116,8 @@ public class PlaylistService {
      */
     @Transactional(readOnly = true)
     public PlaylistResponse getPlaylistById(Long id, String currentUserEmail) {
-        Playlist playlist = playlistRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("PLAYLIST_NOT_FOUND", "Playlist not found with ID: " + id));
-
-        Long currentUserId = null;
-        if (currentUserEmail != null && !currentUserEmail.isBlank()) {
-            try {
-                currentUserId = userAccountPublicService.getUserIdByEmail(currentUserEmail);
-            } catch (Exception ignored) {
-            }
-        }
+        Playlist playlist = findPlaylist(id);
+        Long currentUserId = resolveCurrentUserId(currentUserEmail).orElse(null);
 
         if (playlist.getVisibility() == PlaylistVisibility.PRIVATE) {
             if (currentUserId == null || !currentUserId.equals(playlist.getOwnerUserId())) {
@@ -137,30 +125,16 @@ public class PlaylistService {
             }
         }
 
-        UserProfileSummary owner = null;
-        try {
-            owner = userAccountPublicService.getUserSummaryById(playlist.getOwnerUserId());
-        } catch (Exception ignored) {
-        }
-        String ownerName = owner != null ? owner.displayName() : "User";
-
-        List<PlaylistTrack> playlistTracks = playlistTrackRepository.findByPlaylistIdOrderByPositionAsc(id);
-        List<Long> trackIds = playlistTracks.stream().map(PlaylistTrack::getTrackId).toList();
-        List<TrackResponse> tracks = catalogPublicService.getTracksByIds(trackIds);
-
-        return mapper.toResponse(playlist, ownerName, trackIds, tracks);
+        return toResponse(playlist, resolveOwnerName(playlist.getOwnerUserId()));
     }
 
     private boolean canManagePlaylist(Playlist playlist, Long currentUserId) {
         if (currentUserId.equals(playlist.getOwnerUserId())) {
             return true;
         }
-        try {
-            UserProfileSummary userSummary = userAccountPublicService.getUserSummaryById(currentUserId);
-            return userSummary != null && "ADMIN".equalsIgnoreCase(userSummary.role());
-        } catch (Exception ignored) {
-            return false;
-        }
+        return userAccountPublicService.findUserSummaryById(currentUserId)
+                .map(user -> "ADMIN".equalsIgnoreCase(user.role()))
+                .orElse(false);
     }
 
     /**
@@ -168,28 +142,23 @@ public class PlaylistService {
      */
     @Transactional
     public PlaylistResponse updatePlaylist(Long id, UpdatePlaylistRequest request, String currentUserEmail) {
-        Playlist playlist = playlistRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("PLAYLIST_NOT_FOUND", "Playlist not found with ID: " + id));
+        Playlist playlist = findPlaylist(id);
 
         Long currentUserId = userAccountPublicService.getUserIdByEmail(currentUserEmail);
         if (!canManagePlaylist(playlist, currentUserId)) {
             throw new ForbiddenOperationException("FORBIDDEN", "Only the owner can modify this playlist.");
         }
 
-        PlaylistVisibility visibility = Boolean.TRUE.equals(request.isPrivate())
-                ? PlaylistVisibility.PRIVATE
-                : PlaylistVisibility.PUBLIC;
-
         playlist.update(
                 request.title().trim(),
                 request.description(),
-                visibility,
+                resolveVisibility(request.isPrivate()),
                 null,
                 request.coverUrl(),
                 LocalDateTime.now(ZoneOffset.UTC)
         );
 
-        return getPlaylistById(id, currentUserEmail);
+        return toResponse(playlist, resolveOwnerName(playlist.getOwnerUserId()));
     }
 
     /**
@@ -197,8 +166,7 @@ public class PlaylistService {
      */
     @Transactional
     public void deletePlaylist(Long id, String currentUserEmail) {
-        Playlist playlist = playlistRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("PLAYLIST_NOT_FOUND", "Playlist not found with ID: " + id));
+        Playlist playlist = findPlaylist(id);
 
         Long currentUserId = userAccountPublicService.getUserIdByEmail(currentUserEmail);
         if (!canManagePlaylist(playlist, currentUserId)) {
@@ -214,8 +182,7 @@ public class PlaylistService {
      */
     @Transactional
     public PlaylistResponse addTrackToPlaylist(Long playlistId, AddTrackToPlaylistRequest request, String currentUserEmail) {
-        Playlist playlist = playlistRepository.findById(playlistId)
-                .orElseThrow(() -> new ResourceNotFoundException("PLAYLIST_NOT_FOUND", "Playlist not found with ID: " + playlistId));
+        Playlist playlist = findPlaylist(playlistId);
 
         Long currentUserId = userAccountPublicService.getUserIdByEmail(currentUserEmail);
         if (!canManagePlaylist(playlist, currentUserId)) {
@@ -234,16 +201,9 @@ public class PlaylistService {
         PlaylistTrack entry = new PlaylistTrack(playlistId, request.trackId(), currentUserId, nextPosition);
         playlistTrackRepository.save(entry);
 
-        playlist.update(
-                playlist.getName(),
-                playlist.getDescription(),
-                playlist.getVisibility(),
-                playlist.getCoverPublicId(),
-                playlist.getCoverUrl(),
-                LocalDateTime.now(ZoneOffset.UTC)
-        );
+        touch(playlist);
 
-        return getPlaylistById(playlistId, currentUserEmail);
+        return toResponse(playlist, resolveOwnerName(playlist.getOwnerUserId()));
     }
 
     /**
@@ -251,8 +211,7 @@ public class PlaylistService {
      */
     @Transactional
     public PlaylistResponse removeTrackFromPlaylist(Long playlistId, Long trackId, String currentUserEmail) {
-        Playlist playlist = playlistRepository.findById(playlistId)
-                .orElseThrow(() -> new ResourceNotFoundException("PLAYLIST_NOT_FOUND", "Playlist not found with ID: " + playlistId));
+        Playlist playlist = findPlaylist(playlistId);
 
         Long currentUserId = userAccountPublicService.getUserIdByEmail(currentUserEmail);
         if (!canManagePlaylist(playlist, currentUserId)) {
@@ -266,7 +225,7 @@ public class PlaylistService {
         playlistTrackRepository.flush();
 
         List<PlaylistTrack> remaining = playlistTrackRepository.findByPlaylistIdOrderByPositionAsc(playlistId);
-        int tempPos = 100000;
+        int tempPos = TEMPORARY_POSITION_OFFSET;
         for (PlaylistTrack pt : remaining) {
             pt.moveTo(tempPos++);
         }
@@ -277,16 +236,9 @@ public class PlaylistService {
         }
         playlistTrackRepository.saveAll(remaining);
 
-        playlist.update(
-                playlist.getName(),
-                playlist.getDescription(),
-                playlist.getVisibility(),
-                playlist.getCoverPublicId(),
-                playlist.getCoverUrl(),
-                LocalDateTime.now(ZoneOffset.UTC)
-        );
+        touch(playlist);
 
-        return getPlaylistById(playlistId, currentUserEmail);
+        return toResponse(playlist, resolveOwnerName(playlist.getOwnerUserId()));
     }
 
     /**
@@ -294,8 +246,7 @@ public class PlaylistService {
      */
     @Transactional
     public PlaylistResponse reorderPlaylistTracks(Long playlistId, ReorderPlaylistTracksRequest request, String currentUserEmail) {
-        Playlist playlist = playlistRepository.findById(playlistId)
-                .orElseThrow(() -> new ResourceNotFoundException("PLAYLIST_NOT_FOUND", "Playlist not found with ID: " + playlistId));
+        Playlist playlist = findPlaylist(playlistId);
 
         Long currentUserId = userAccountPublicService.getUserIdByEmail(currentUserEmail);
         if (!canManagePlaylist(playlist, currentUserId)) {
@@ -308,7 +259,7 @@ public class PlaylistService {
             Map<Long, PlaylistTrack> trackMap = currentTracks.stream()
                     .collect(Collectors.toMap(PlaylistTrack::getTrackId, pt -> pt, (a, b) -> a));
 
-            int temp = 100000;
+            int temp = TEMPORARY_POSITION_OFFSET;
             for (PlaylistTrack pt : currentTracks) {
                 pt.moveTo(temp++);
             }
@@ -332,7 +283,7 @@ public class PlaylistService {
             }
 
             if (targetIdx != -1) {
-                String dir = request.direction().trim().toUpperCase();
+                String dir = request.direction().trim().toUpperCase(Locale.ROOT);
                 int swapIdx = "UP".equals(dir) ? targetIdx - 1 : targetIdx + 1;
                 if (swapIdx >= 0 && swapIdx < currentTracks.size()) {
                     PlaylistTrack a = currentTracks.get(targetIdx);
@@ -340,7 +291,7 @@ public class PlaylistService {
                     int aPos = a.getPosition();
                     int bPos = b.getPosition();
 
-                    a.moveTo(100000 + aPos);
+                    a.moveTo(TEMPORARY_POSITION_OFFSET + aPos);
                     playlistTrackRepository.saveAndFlush(a);
 
                     b.moveTo(aPos);
@@ -352,6 +303,50 @@ public class PlaylistService {
             }
         }
 
-        return getPlaylistById(playlistId, currentUserEmail);
+        return toResponse(playlist, resolveOwnerName(playlist.getOwnerUserId()));
+    }
+
+    private Playlist findPlaylist(Long playlistId) {
+        return playlistRepository.findById(playlistId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "PLAYLIST_NOT_FOUND",
+                        "Playlist not found with ID: " + playlistId
+                ));
+    }
+
+    private Optional<Long> resolveCurrentUserId(String currentUserEmail) {
+        if (currentUserEmail == null || currentUserEmail.isBlank()) {
+            return Optional.empty();
+        }
+        return userAccountPublicService.findUserIdByEmail(currentUserEmail);
+    }
+
+    private String resolveOwnerName(Long ownerUserId) {
+        return userAccountPublicService.findUserSummaryById(ownerUserId)
+                .map(UserProfileSummary::displayName)
+                .orElse(DEFAULT_OWNER_NAME);
+    }
+
+    private PlaylistVisibility resolveVisibility(Boolean isPrivate) {
+        return Boolean.TRUE.equals(isPrivate) ? PlaylistVisibility.PRIVATE : PlaylistVisibility.PUBLIC;
+    }
+
+    private PlaylistResponse toResponse(Playlist playlist, String ownerName) {
+        List<Long> trackIds = playlistTrackRepository.findByPlaylistIdOrderByPositionAsc(playlist.getId()).stream()
+                .map(PlaylistTrack::getTrackId)
+                .toList();
+        List<TrackResponse> tracks = catalogPublicService.getTracksByIds(trackIds);
+        return mapper.toResponse(playlist, ownerName, trackIds, tracks);
+    }
+
+    private void touch(Playlist playlist) {
+        playlist.update(
+                playlist.getName(),
+                playlist.getDescription(),
+                playlist.getVisibility(),
+                playlist.getCoverPublicId(),
+                playlist.getCoverUrl(),
+                LocalDateTime.now(ZoneOffset.UTC)
+        );
     }
 }

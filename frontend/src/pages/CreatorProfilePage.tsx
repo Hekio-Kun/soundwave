@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { albums, featuredCreators, tracks } from "../data";
-import { HeadphonesIcon, PauseIcon, PlayIcon, UserIcon } from "../icons";
+import { HeadphonesIcon, PauseIcon, PlayIcon } from "../icons";
 import type { LandingTrack } from "../types";
 
 type Props = {

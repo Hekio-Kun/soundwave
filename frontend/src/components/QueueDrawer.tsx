@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CloseIcon, PauseIcon, PlayIcon, TrashIcon } from "../icons";
+import { useEffect, useState } from "react";
+import { CloseIcon, PlayIcon, TrashIcon } from "../icons";
 import type { LandingTrack } from "../types";
 
 type Props = {
@@ -32,10 +32,29 @@ export function QueueDrawer({
 }: Props) {
   const [tab, setTab] = useState<"queue" | "recent">("queue");
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   const nextTracks = currentTrack ? queue.filter((t) => t.id !== currentTrack.id) : queue;
 
   return (
-    <aside className={`queue-drawer ${isOpen ? "queue-drawer--open" : ""}`} aria-label="Playback queue">
+    <>
+      <div
+        className={`queue-drawer-backdrop ${isOpen ? "queue-drawer-backdrop--open" : ""}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <aside
+        className={`queue-drawer ${isOpen ? "queue-drawer--open" : ""}`}
+        aria-label="Playback queue"
+        aria-hidden={!isOpen}
+      >
       <div className="queue-drawer-header">
         <div className="queue-drawer-tabs">
           <button
@@ -64,7 +83,7 @@ export function QueueDrawer({
             <div className="queue-track-card queue-track-card--active">
               <div className="queue-track-cover">
                 <img src={currentTrack.coverUrl ?? undefined} alt="" />
-                <span className="queue-playing-indicator" aria-label="Now playing">
+                <span className={`queue-playing-indicator ${playing ? "is-playing" : "is-paused"}`} aria-label={playing ? "Now playing" : "Paused"}>
                   <i /><i /><i />
                 </span>
               </div>
@@ -121,5 +140,6 @@ export function QueueDrawer({
         </div>
       </div>
     </aside>
-  );
+  </>
+);
 }

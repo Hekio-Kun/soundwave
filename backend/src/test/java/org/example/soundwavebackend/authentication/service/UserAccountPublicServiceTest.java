@@ -88,6 +88,16 @@ class UserAccountPublicServiceTest {
     }
 
     @Test
+    void findUserSummaryById_WhenUserDoesNotExist_ShouldReturnEmptyOptional() {
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        Optional<UserProfileSummary> summary = userAccountPublicService.findUserSummaryById(999L);
+
+        assertTrue(summary.isEmpty());
+        verifyNoInteractions(userProfileRepository);
+    }
+
+    @Test
     void getUserSummariesByIds_ShouldBatchFetchProfilesWithoutNPlusOne() {
         Role role = new Role("LISTENER", "Listener", "Standard");
         AppUser user1 = new AppUser(role, "u1@soundwave.com", "h1");

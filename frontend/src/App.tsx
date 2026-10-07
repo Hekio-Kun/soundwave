@@ -5,7 +5,7 @@ import { clearAccessToken, setAccessToken } from "./api/client";
 import { favoriteApi } from "./api/favorites";
 import type { ProfileDetails } from "./api/profile";
 import { playlistApi } from "./api/playlists";
-import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
+import { demoPlaylists, initialStudioTracks, tracks } from "./data";
 import { GuestLoginPrompt } from "./components/GuestLoginPrompt";
 import { LogoutConfirmationDialog } from "./components/LogoutConfirmationDialog";
 import { MusicPlayer } from "./components/MusicPlayer";
@@ -574,7 +574,8 @@ export default function App() {
     }
 
     if (pathname.startsWith("/track/") || pathname.startsWith("/tracks/")) {
-      const trackId = Number(pathname.split("/")[2]) || 1;
+      const parsedId = Number(pathname.split("/")[2]);
+      const trackId = Number.isFinite(parsedId) && parsedId > 0 ? parsedId : 1;
       return (
         <TrackDetailsPage
           trackId={trackId}

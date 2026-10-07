@@ -4,8 +4,15 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.example.soundwavebackend.authentication.dto.request.*;
-import org.example.soundwavebackend.authentication.dto.response.*;
+import lombok.extern.slf4j.Slf4j;
+import org.example.soundwavebackend.authentication.dto.request.EmailOtpRequest;
+import org.example.soundwavebackend.authentication.dto.request.EmailRequest;
+import org.example.soundwavebackend.authentication.dto.request.LoginRequest;
+import org.example.soundwavebackend.authentication.dto.request.RegisterRequest;
+import org.example.soundwavebackend.authentication.dto.request.ResetPasswordRequest;
+import org.example.soundwavebackend.authentication.dto.response.AuthResponse;
+import org.example.soundwavebackend.authentication.dto.response.LoginResult;
+import org.example.soundwavebackend.authentication.dto.response.MessageResponse;
 import org.example.soundwavebackend.authentication.exception.InvalidRefreshTokenException;
 import org.example.soundwavebackend.authentication.service.AuthenticationService;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,11 +20,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Arrays;
-
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController

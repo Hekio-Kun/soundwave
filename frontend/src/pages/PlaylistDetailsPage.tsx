@@ -3,7 +3,6 @@ import { covers, tracks } from "../data";
 import { playlistApi } from "../api/playlists";
 import {
   ArrowDownIcon,
-  ArrowIcon,
   ArrowUpIcon,
   ClockIcon,
   EditIcon,

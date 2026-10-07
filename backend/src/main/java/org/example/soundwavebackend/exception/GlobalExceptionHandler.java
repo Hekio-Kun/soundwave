@@ -2,9 +2,19 @@ package org.example.soundwavebackend.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.example.soundwavebackend.authentication.exception.*;
+import org.example.soundwavebackend.authentication.exception.AccountBannedException;
+import org.example.soundwavebackend.authentication.exception.AccountUnavailableException;
+import org.example.soundwavebackend.authentication.exception.AuthenticationException;
+import org.example.soundwavebackend.authentication.exception.EmailAlreadyExistsException;
+import org.example.soundwavebackend.authentication.exception.EmailNotVerifiedException;
+import org.example.soundwavebackend.authentication.exception.InvalidCredentialsException;
+import org.example.soundwavebackend.authentication.exception.InvalidOtpException;
+import org.example.soundwavebackend.authentication.exception.InvalidRefreshTokenException;
+import org.example.soundwavebackend.authentication.exception.ProfileNotFoundException;
+import org.example.soundwavebackend.authentication.exception.UsernameAlreadyExistsException;
 import org.example.soundwavebackend.media.exception.InvalidAvatarFileException;
 import org.example.soundwavebackend.media.exception.CloudStorageUnavailableException;
+import org.example.soundwavebackend.media.exception.MediaException;
 import org.example.soundwavebackend.media.exception.InvalidTrackAudioException;
 import org.example.soundwavebackend.media.exception.InvalidTrackCoverException;
 import org.example.soundwavebackend.moderation.exception.InvalidSubmissionStateException;
@@ -93,7 +103,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({InvalidTrackAudioException.class, InvalidTrackCoverException.class, InvalidAvatarFileException.class})
     public ResponseEntity<ApiErrorResponse> handleInvalidMediaFile(
-            org.example.soundwavebackend.media.exception.MediaException exception,
+            MediaException exception,
             HttpServletRequest request
     ) {
         return build(HttpStatus.BAD_REQUEST, exception.getCode(), exception.getMessage(), request, Map.of());

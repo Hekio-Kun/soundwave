@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { genres as staticGenres, tracks as staticTracks } from "../data";
 import { catalogApi } from "../api/catalog";
-import { SectionHeader, TrackCard } from "../components/MusicCards";
+import { TrackCard } from "../components/MusicCards";
 import { SortDropdown } from "../components/SortDropdown";
-import { ArrowIcon, FilterIcon, HeadphonesIcon } from "../icons";
+import { HeadphonesIcon } from "../icons";
 import type { Genre, LandingTrack } from "../types";
 
 type Props = {

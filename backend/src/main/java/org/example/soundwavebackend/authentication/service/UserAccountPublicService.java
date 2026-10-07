@@ -10,7 +10,12 @@ import org.example.soundwavebackend.exception.ResourceNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -44,9 +49,16 @@ public class UserAccountPublicService {
      */
     @Transactional(readOnly = true)
     public UserProfileSummary getUserSummaryByEmail(String email) {
-        AppUser user = userRepository.findByEmailIgnoreCase(email)
+        return findUserSummaryByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User was not found with email: " + email));
-        return buildUserSummary(user);
+    }
+
+    /**
+     * Tìm thông tin tóm tắt theo email mà không dùng exception để điều khiển luồng xử lý.
+     */
+    @Transactional(readOnly = true)
+    public Optional<UserProfileSummary> findUserSummaryByEmail(String email) {
+        return userRepository.findByEmailIgnoreCase(email).map(this::buildUserSummary);
     }
 
     /**
@@ -54,9 +66,16 @@ public class UserAccountPublicService {
      */
     @Transactional(readOnly = true)
     public UserProfileSummary getUserSummaryById(Long userId) {
-        AppUser user = userRepository.findById(userId)
+        return findUserSummaryById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("USER_NOT_FOUND", "User was not found with ID: " + userId));
-        return buildUserSummary(user);
+    }
+
+    /**
+     * Tìm thông tin tóm tắt theo ID mà không dùng exception để điều khiển luồng xử lý.
+     */
+    @Transactional(readOnly = true)
+    public Optional<UserProfileSummary> findUserSummaryById(Long userId) {
+        return userRepository.findById(userId).map(this::buildUserSummary);
     }
 
     /**

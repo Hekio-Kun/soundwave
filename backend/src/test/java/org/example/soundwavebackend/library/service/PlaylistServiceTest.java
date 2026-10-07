@@ -82,7 +82,7 @@ class PlaylistServiceTest {
         Playlist playlist = new Playlist(10L, "Secret Playlist");
         ReflectionTestUtils.setField(playlist, "id", 100L);
         when(playlistRepository.findById(100L)).thenReturn(Optional.of(playlist));
-        when(userAccountPublicService.getUserIdByEmail("other@soundwave.com")).thenReturn(20L);
+        when(userAccountPublicService.findUserIdByEmail("other@soundwave.com")).thenReturn(Optional.of(20L));
 
         assertThrows(ForbiddenOperationException.class, () ->
                 playlistService.getPlaylistById(100L, "other@soundwave.com"));
@@ -132,8 +132,14 @@ class PlaylistServiceTest {
         ReflectionTestUtils.setField(playlist, "id", 1L);
         when(playlistRepository.findById(1L)).thenReturn(Optional.of(playlist));
         when(userAccountPublicService.getUserIdByEmail("legacy@soundwave.com")).thenReturn(5L);
-        when(userAccountPublicService.getUserSummaryById(5L))
-                .thenReturn(new UserProfileSummary(5L, "legacy@soundwave.com", "Legacy", null, "LISTENER"));
+        when(userAccountPublicService.findUserSummaryById(5L))
+                .thenReturn(Optional.of(new UserProfileSummary(
+                        5L,
+                        "legacy@soundwave.com",
+                        "Legacy",
+                        null,
+                        "LISTENER"
+                )));
 
         assertThrows(ForbiddenOperationException.class,
                 () -> playlistService.deletePlaylist(1L, "legacy@soundwave.com"));
