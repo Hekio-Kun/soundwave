@@ -204,14 +204,14 @@ export const heroCovers = [covers.dawn, covers.city, covers.blue];
 export const demoPlaylists: import("./types").Playlist[] = [
   {
     id: 1,
-    title: "Giai điệu sớm mai",
+    title: "Ngọt band",
     description: "Start the day with positive energy.",
     coverUrl: covers.dawn,
     trackCount: 3,
     isPrivate: false,
-    ownerId: 1,
-    ownerName: "Lê An",
-    trackIds: [1, 4, 6],
+    ownerId: 5,
+    ownerName: "Anh Tuan",
+    trackIds: [1, 2, 10],
   },
   {
     id: 2,
@@ -220,8 +220,8 @@ export const demoPlaylists: import("./types").Playlist[] = [
     coverUrl: covers.night,
     trackCount: 3,
     isPrivate: true,
-    ownerId: 1,
-    ownerName: "Lê An",
+    ownerId: 5,
+    ownerName: "Anh Tuan",
     trackIds: [2, 3, 5],
   },
 ];

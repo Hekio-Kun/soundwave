@@ -15,6 +15,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.util.List;
+
 /**
  * Controller xử lý các yêu cầu HTTP liên quan đến danh mục bài hát (Catalog Tracks).
  */
@@ -48,46 +50,14 @@ public class TrackCatalogController {
     }
 
     /**
-     * Stream dữ liệu âm thanh bài hát có hỗ trợ HTTP 206 Partial Content và Range Header (UC-07).
+     * Lấy danh sách bài hát gợi ý liên quan đến bài hát hiện tại.
      */
-    @GetMapping("/{id}/stream")
-    public ResponseEntity<StreamingResponseBody> streamTrackAudio(
-            @PathVariable Long id,
-            @RequestHeader(value = HttpHeaders.RANGE, required = false) String rangeHeader
+    @GetMapping("/{idOrSlug}/recommendations")
+    public ResponseEntity<List<TrackResponse>> getRecommendations(
+            @PathVariable String idOrSlug,
+            @RequestParam(required = false, defaultValue = "5") int limit
     ) {
-        AudioStreamInfo streamInfo = trackCatalogService.streamTrackAudio(id, rangeHeader);
-
-        var responseBuilder = ResponseEntity.status(streamInfo.statusCode())
-                .header(HttpHeaders.ACCEPT_RANGES, "bytes");
-
-        if (streamInfo.contentType() != null) {
-            responseBuilder.contentType(MediaType.parseMediaType(streamInfo.contentType()));
-        }
-        if (streamInfo.contentRange() != null) {
-            responseBuilder.header(HttpHeaders.CONTENT_RANGE, streamInfo.contentRange());
-        }
-        if (streamInfo.contentLength() != null) {
-            responseBuilder.contentLength(streamInfo.contentLength());
-        }
-
-        return responseBuilder.body(streamInfo.body());
-    }
-
-    /**
-     * Ghi nhận lượt nghe hợp lệ cho một bài hát đã phát hành (UC-07, BR-08).
-     * Cho phép cả Guest và User đã đăng nhập.
-     */
-    @PostMapping("/{id}/play")
-    public ResponseEntity<RecordPlayResponse> recordTrackPlay(
-            @PathVariable Long id,
-            @Valid @RequestBody RecordPlayRequest request,
-            Authentication authentication
-    ) {
-        String email = (authentication != null && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal()))
-                ? authentication.getName()
-                : null;
-        return ResponseEntity.ok(trackCatalogService.recordTrackPlay(id, request, email));
+        return ResponseEntity.ok(trackCatalogService.getRecommendations(idOrSlug, limit));
     }
 }
 

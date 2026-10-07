@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { authApi, type AuthSession } from "./api/auth";
 import { catalogApi } from "./api/catalog";
+import { clearAccessToken, setAccessToken } from "./api/client";
+import { favoriteApi } from "./api/favorites";
+import type { ProfileDetails } from "./api/profile";
 import { playlistApi } from "./api/playlists";
 import type { ProfileDetails } from "./api/profile";
 import { demoPlaylists, demoUser, initialStudioTracks, tracks } from "./data";
@@ -14,6 +17,7 @@ import { AlbumDetailsPage } from "./pages/AlbumDetailsPage";
 import { ForgotPasswordPage, LoginPage, RegisterPage, ResetPasswordPage } from "./pages/AuthPages";
 import { CreatorProfilePage } from "./pages/CreatorProfilePage";
 import { ExplorePage } from "./pages/ExplorePage";
+import { FilteredCatalogPage } from "./pages/FilteredCatalogPage";
 import { GenresPage } from "./pages/GenresPage";
 import { LibraryPage } from "./pages/LibraryPage";
 import { PlaylistDetailsPage } from "./pages/PlaylistDetailsPage";
@@ -21,6 +25,7 @@ import { PlaylistFormModal } from "./components/PlaylistFormModal";
 import { AddTrackToPlaylistModal } from "./components/AddTrackToPlaylistModal";
 import { DeleteConfirmationModal } from "./components/DeleteConfirmationModal";
 import { AdminDashboardPage, DashboardAccessDenied, StaffDashboardPage } from "./pages/OperationsDashboardPage";
+import { AdminGenreManagementPage } from "./pages/AdminGenreManagementPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { SearchPage } from "./pages/SearchPage";
 import { StudioPage } from "./pages/StudioPage";
@@ -31,18 +36,8 @@ import type { CurrentUser, LandingTrack, Playlist } from "./types";
 
 export default function App() {
   // 1. Authentication State
-  const [user, setUser] = useState<CurrentUser | null>(() => {
-    const saved = localStorage.getItem("soundwave_user") ?? sessionStorage.getItem("soundwave_user");
-    const accessToken = localStorage.getItem("soundwave_access_token") ?? sessionStorage.getItem("soundwave_access_token");
-    if (saved && accessToken) {
-      try {
-        return JSON.parse(saved) as CurrentUser;
-      } catch {
-        // ignore parse error
-      }
-    }
-    return null;
-  });
+  const [user, setUser] = useState<CurrentUser | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   const isAuthenticated = Boolean(user);
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
@@ -50,24 +45,46 @@ export default function App() {
   const [logoutNotice, setLogoutNotice] = useState("");
 
   useEffect(() => {
+    let active = true;
+    localStorage.removeItem("soundwave_user");
+    localStorage.removeItem("soundwave_access_token");
+    sessionStorage.removeItem("soundwave_user");
+    sessionStorage.removeItem("soundwave_access_token");
+
+    void authApi.refresh()
+      .then((session) => {
+        if (active) setUser(session.user);
+      })
+      .catch(() => {
+        clearAccessToken();
+        if (active) setUser(null);
+      })
+      .finally(() => {
+        if (active) setAuthReady(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!logoutNotice) return;
     const timeoutId = window.setTimeout(() => setLogoutNotice(""), 3500);
     return () => window.clearTimeout(timeoutId);
   }, [logoutNotice]);
 
-  const handleLoginSuccess = (session: AuthSession, rememberMe: boolean) => {
+  const handleLoginSuccess = (session: AuthSession, _rememberMe: boolean) => {
     const loggedInUser: CurrentUser = {
       ...session.user,
       avatarUrl: session.user.avatarUrl,
     };
+    setAccessToken(session.accessToken);
     setUser(loggedInUser);
     localStorage.removeItem("soundwave_user");
     localStorage.removeItem("soundwave_access_token");
     sessionStorage.removeItem("soundwave_user");
     sessionStorage.removeItem("soundwave_access_token");
-    const storage = rememberMe ? localStorage : sessionStorage;
-    storage.setItem("soundwave_user", JSON.stringify(loggedInUser));
-    storage.setItem("soundwave_access_token", session.accessToken);
     window.location.hash = session.user.role === "ADMIN" ? "#/admin/dashboard" : session.user.role === "STAFF" ? "#/staff/dashboard" : "#/";
   };
 
@@ -87,8 +104,6 @@ export default function App() {
         dateOfBirth: profile.dateOfBirth ?? undefined,
         countryCode: profile.countryCode ?? undefined,
       };
-      const storage = localStorage.getItem("soundwave_access_token") ? localStorage : sessionStorage;
-      storage.setItem("soundwave_user", JSON.stringify(updatedUser));
       return updatedUser;
     });
   }, []);
@@ -103,6 +118,7 @@ export default function App() {
       serverSessionRevoked = false;
     } finally {
       setUser(null);
+      clearAccessToken();
       localStorage.removeItem("soundwave_user");
       localStorage.removeItem("soundwave_access_token");
       sessionStorage.removeItem("soundwave_user");
@@ -244,22 +260,15 @@ export default function App() {
   }, []);
 
   // 3. Library & Favorites & Playlists State
-  const [favoriteIds, setFavoriteIds] = useState<number[]>(() => {
-    const saved = localStorage.getItem("soundwave_favorite_ids");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {}
-    }
-    return [1, 2];
-  });
+  const [favoriteTracks, setFavoriteTracks] = useState<LandingTrack[]>([]);
+  const favoriteIds = useMemo(() => favoriteTracks.map((track) => track.id), [favoriteTracks]);
 
   const [playlists, setPlaylists] = useState<Playlist[]>(() => {
     const saved = localStorage.getItem("soundwave_playlists");
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch {}
+      } catch { }
     }
     return demoPlaylists;
   });
@@ -268,60 +277,63 @@ export default function App() {
   useEffect(() => {
     const loadPlaylists = async () => {
       try {
-        if (isAuthenticated) {
+        if (user?.role === "LISTENER") {
           const myPlaylists = await playlistApi.getMyPlaylists();
-          if (myPlaylists) {
-            setPlaylists(myPlaylists);
-          }
-        } else {
+          setPlaylists(myPlaylists ?? []);
+        } else if (!isAuthenticated) {
           const publicPlaylists = await playlistApi.getPublicPlaylists();
-          if (publicPlaylists && publicPlaylists.length > 0) {
-            setPlaylists(publicPlaylists);
-          }
+          setPlaylists(publicPlaylists ?? []);
+        } else {
+          setPlaylists([]);
         }
       } catch {
         // Fallback to local storage or demo playlists
       }
     };
     loadPlaylists();
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.role]);
 
   useEffect(() => {
     localStorage.setItem("soundwave_playlists", JSON.stringify(playlists));
   }, [playlists]);
 
   useEffect(() => {
-    localStorage.setItem("soundwave_favorite_ids", JSON.stringify(favoriteIds));
-  }, [favoriteIds]);
+    let active = true;
+    if (!authReady || user?.role !== "LISTENER") {
+      setFavoriteTracks([]);
+      return () => { active = false; };
+    }
+
+    void favoriteApi.getFavorites()
+      .then((items) => {
+        if (active) setFavoriteTracks(items);
+      })
+      .catch(() => {
+        if (active) setFavoriteTracks([]);
+      });
+
+    return () => { active = false; };
+  }, [authReady, user?.id, user?.role]);
 
   const [playlistFormOpen, setPlaylistFormOpen] = useState(false);
   const [editingPlaylist, setEditingPlaylist] = useState<Playlist | null>(null);
   const [addTrackPlaylistId, setAddTrackPlaylistId] = useState<number | null>(null);
   const [deletePlaylistId, setDeletePlaylistId] = useState<number | null>(null);
 
-  const toggleFavorite = (trackId: number) => {
-    const isCurrentlyFavorited = favoriteIds.includes(trackId);
-    setFavoriteIds((prev) =>
-      isCurrentlyFavorited ? prev.filter((id) => id !== trackId) : [...prev, trackId]
-    );
-
-    // Dynamic Queue Sync for favorites context
-    if (playbackContextKey === "favorites") {
-      if (isCurrentlyFavorited) {
-        // Unfavorited -> remove from active queue
-        setQueue((prevQueue) => prevQueue.filter((t) => t.id !== trackId));
-      } else {
-        // Favorited -> append to active queue
-        const trackToAdd =
-          allCatalogTracks.find((t) => t.id === trackId) ||
-          tracks.find((t) => t.id === trackId);
-        if (trackToAdd) {
-          setQueue((prevQueue) =>
-            prevQueue.some((t) => t.id === trackId) ? prevQueue : [...prevQueue, trackToAdd]
-          );
-        }
-      }
+  const toggleFavorite = async (trackId: number) => {
+    if (user?.role !== "LISTENER") {
+      throw new Error("Log in with a Listener account to manage favorites.");
     }
+
+    if (favoriteIds.includes(trackId)) {
+      await favoriteApi.removeFavorite(trackId);
+      setFavoriteTracks((previous) => previous.filter((track) => track.id !== trackId));
+      return;
+    }
+
+    await favoriteApi.addFavorite(trackId);
+    const favoriteTrack = await catalogApi.getTrackById(trackId);
+    setFavoriteTracks((previous) => [favoriteTrack, ...previous.filter((track) => track.id !== trackId)]);
   };
 
   const handleOpenCreatePlaylist = () => {
@@ -352,12 +364,12 @@ export default function App() {
           prev.map((p) =>
             p.id === editingPlaylist.id
               ? {
-                  ...p,
-                  title: data.title,
-                  description: data.description,
-                  isPrivate: data.isPrivate,
-                  coverUrl: data.coverUrl,
-                }
+                ...p,
+                title: data.title,
+                description: data.description,
+                isPrivate: data.isPrivate,
+                coverUrl: data.coverUrl,
+              }
               : p
           )
         );
@@ -414,35 +426,10 @@ export default function App() {
   };
 
   const handleAddToPlaylist = async (playlistId: number, trackId: number) => {
-    try {
-      const updated = await playlistApi.addTrackToPlaylist(playlistId, trackId);
-      setPlaylists((prev) =>
-        prev.map((pl) => (pl.id === playlistId ? updated : pl))
-      );
-    } catch {
-      // Fallback local
-      setPlaylists((prev) =>
-        prev.map((pl) => {
-          if (pl.id === playlistId && !pl.trackIds.includes(trackId)) {
-            const nextTracks = [...pl.trackIds, trackId];
-            return { ...pl, trackIds: nextTracks, trackCount: nextTracks.length };
-          }
-          return pl;
-        })
-      );
-    }
-
-    // Dynamic Queue Sync: append to queue if currently playing this playlist
-    if (playbackContextKey === `playlist-${playlistId}`) {
-      const trackToAdd =
-        allCatalogTracks.find((t) => t.id === trackId) ||
-        tracks.find((t) => t.id === trackId);
-      if (trackToAdd) {
-        setQueue((prevQueue) =>
-          prevQueue.some((t) => t.id === trackId) ? prevQueue : [...prevQueue, trackToAdd]
-        );
-      }
-    }
+    const updated = await playlistApi.addTrackToPlaylist(playlistId, trackId);
+    setPlaylists((prev) =>
+      prev.map((pl) => (pl.id === playlistId ? updated : pl))
+    );
   };
 
   const handleRemoveTrackFromPlaylist = async (playlistId: number, trackId: number) => {
@@ -451,17 +438,23 @@ export default function App() {
       setPlaylists((prev) =>
         prev.map((pl) => (pl.id === playlistId ? updated : pl))
       );
-    } catch {
+    } catch (err) {
       // Fallback local
       setPlaylists((prev) =>
         prev.map((pl) => {
           if (pl.id === playlistId) {
             const nextTracks = pl.trackIds.filter((id) => id !== trackId);
-            return { ...pl, trackIds: nextTracks, trackCount: nextTracks.length };
+            return {
+              ...pl,
+              trackIds: nextTracks,
+              tracks: pl.tracks ? pl.tracks.filter((t) => t.id !== trackId) : undefined,
+              trackCount: nextTracks.length,
+            };
           }
           return pl;
         })
       );
+      throw err;
     }
 
     // Dynamic Queue Sync: remove from active queue if currently playing this playlist
@@ -484,8 +477,7 @@ export default function App() {
       setPlaylists((prev) =>
         prev.map((pl) => (pl.id === playlistId ? updated : pl))
       );
-      nextTrackIds = updated.trackIds;
-    } catch {
+    } catch (err) {
       // Fallback local
       setPlaylists((prev) =>
         prev.map((pl) => {
@@ -497,12 +489,19 @@ export default function App() {
             const copy = [...pl.trackIds];
             const [moved] = copy.splice(idx, 1);
             copy.splice(targetIdx, 0, moved);
-            nextTrackIds = copy;
-            return { ...pl, trackIds: copy };
+
+            let nextTracks = pl.tracks ? [...pl.tracks] : undefined;
+            if (nextTracks && nextTracks.length === pl.trackIds.length) {
+              const [movedTrack] = nextTracks.splice(idx, 1);
+              nextTracks.splice(targetIdx, 0, movedTrack);
+            }
+
+            return { ...pl, trackIds: copy, tracks: nextTracks };
           }
           return pl;
         })
       );
+      throw err;
     }
 
     // Dynamic Queue Sync: reorder active queue immediately if currently playing this playlist
@@ -528,8 +527,6 @@ export default function App() {
   // 4. Routing State
   const [route, setRoute] = useState(() => window.location.hash || "#/");
 
-  useMotionReveal(route);
-
   useEffect(() => {
     const handleHashChange = () => {
       setRoute(window.location.hash || "#/");
@@ -547,6 +544,8 @@ export default function App() {
   const cleanRoute = route.startsWith("#") ? route.slice(1) : route;
   const [pathname, queryString] = cleanRoute.split("?");
   const queryParams = useMemo(() => new URLSearchParams(queryString || ""), [queryString]);
+
+  useMotionReveal(pathname);
 
   // Determine layout type
   const isAuthRoute =
@@ -572,6 +571,11 @@ export default function App() {
   }, [audio, isDashboardRoute]);
 
   useEffect(() => {
+    if (!authReady) return;
+    if (!isAuthenticated && pathname.startsWith("/studio")) {
+      window.location.hash = "#/login";
+      return;
+    }
     if (user?.role === "STAFF") {
       if (
         pathname === "/login" ||
@@ -591,7 +595,7 @@ export default function App() {
         window.location.hash = "#/admin/dashboard";
       }
     }
-  }, [user, pathname]);
+  }, [authReady, isAuthenticated, user, pathname]);
 
   // Render Page Content
   const renderContent = () => {
@@ -619,11 +623,22 @@ export default function App() {
 
     // App Routes
     if (isExploreRoute) {
-      const initialGenre = queryParams.get("genre") || undefined;
-      const sort = queryParams.get("sort");
-      const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : undefined;
       return (
         <ExplorePage
+          currentTrack={currentTrack}
+          playing={playing}
+          onPlayTrack={playTrack}
+          onNavigate={navigate}
+        />
+      );
+    }
+
+    if (pathname === "/browse" || pathname === "/catalog" || pathname === "/filter") {
+      const initialGenre = queryParams.get("genre") || undefined;
+      const sort = queryParams.get("sort");
+      const initialSort = sort === "newest" ? "newest" : sort === "trending" ? "trending" : sort === "title" ? "title" : undefined;
+      return (
+        <FilteredCatalogPage
           currentTrack={currentTrack}
           playing={playing}
           onPlayTrack={playTrack}
@@ -651,7 +666,7 @@ export default function App() {
       return <GenresPage onNavigate={navigate} />;
     }
 
-    if (pathname.startsWith("/track/")) {
+    if (pathname.startsWith("/track/") || pathname.startsWith("/tracks/")) {
       const trackId = Number(pathname.split("/")[2]) || 1;
       return (
         <TrackDetailsPage
@@ -664,6 +679,7 @@ export default function App() {
           isFavorited={favoriteIds.includes(trackId)}
           playlists={playlists}
           onAddToPlaylist={handleAddToPlaylist}
+          canManageLibrary={user?.role === "LISTENER"}
         />
       );
     }
@@ -737,7 +753,7 @@ export default function App() {
           onPlayTrack={playTrack}
           onPlayAll={handlePlayAllTracks}
           onNavigate={navigate}
-          favoriteIds={favoriteIds}
+          favoriteTracks={favoriteTracks}
           onToggleFavorite={toggleFavorite}
           playlists={playlists}
           onCreatePlaylist={handleOpenCreatePlaylist}
@@ -757,7 +773,7 @@ export default function App() {
           onPlayTrack={playTrack}
           onPlayAll={handlePlayAllTracks}
           onNavigate={navigate}
-          favoriteIds={favoriteIds}
+          favoriteTracks={favoriteTracks}
           onToggleFavorite={toggleFavorite}
           playlists={playlists}
           onCreatePlaylist={handleOpenCreatePlaylist}
@@ -770,6 +786,7 @@ export default function App() {
     }
 
     if (pathname === "/studio/upload") {
+      if (!authReady || !isAuthenticated) return null;
       return (
         <UploadTrackPage
           isAuthenticated={isAuthenticated}
@@ -780,12 +797,19 @@ export default function App() {
     }
 
     if (pathname === "/studio") {
+      if (!authReady || !isAuthenticated) return null;
       return (
         <StudioPage
           tracks={initialStudioTracks}
           onNavigate={navigate}
         />
       );
+    }
+
+    if (pathname === "/admin/genres") {
+      return user?.role === "ADMIN"
+        ? <AdminGenreManagementPage />
+        : <DashboardAccessDenied onNavigate={navigate} requiredRole="Administrator" />;
     }
 
     if (pathname === "/admin" || pathname === "/admin/dashboard") {
@@ -824,7 +848,7 @@ export default function App() {
   return (
     <div className={isMusicRoute ? "app-root app-root--has-player" : "app-root"}>
       {isAuthRoute ? (
-        <div key={route} className="app-route-stage app-route-stage--auth">
+        <div key={pathname} className="app-route-stage app-route-stage--auth">
           {renderContent()}
         </div>
       ) : isDashboardRoute ? (
@@ -834,7 +858,7 @@ export default function App() {
           onNavigate={navigate}
           onLogout={handleLogout}
         >
-          <div key={route} className="app-route-stage app-route-stage--dashboard">
+          <div key={pathname} className="app-route-stage app-route-stage--dashboard">
             {renderContent()}
           </div>
         </DashboardLayout>
@@ -858,7 +882,7 @@ export default function App() {
           hasPlayer
           showFooter={isExploreRoute}
         >
-          <div key={route} className="app-route-stage app-route-stage--music">
+          <div key={pathname} className="app-route-stage app-route-stage--music">
             {renderContent()}
           </div>
         </MusicAppShell>

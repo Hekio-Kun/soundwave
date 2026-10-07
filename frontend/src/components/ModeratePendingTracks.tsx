@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
-import { createPortal } from "react-dom";
-import { useModalScrollLock } from "../hooks/useModalScrollLock";
 import {
   moderationApi,
   type PageResponse,
   type SubmissionQueueItem,
   type SubmissionStats,
 } from "../api/moderation";
-import { PendingTrackDetailModal } from "./PendingTrackDetailModal";
+import { PendingTrackDetailView } from "./PendingTrackDetailView";
 import {
   AlertIcon,
   CheckIcon,
@@ -62,19 +60,17 @@ function formatRelativeTime(isoString?: string | null): string {
   }
 }
 
-const REJECTION_PRESETS = [
-  "Audio clipping or severe distortion detected in master stream.",
-  "Incomplete or placeholder metadata (title, artist or artwork).",
-  "Unlicensed sample, beat, or suspected copyright infringement.",
-  "Audio file corrupted or encoding does not meet platform standards.",
-];
-
 type Props = {
   onNavigate: (route: string) => void;
   initialSubmissionId?: number | null;
+  onSelectionChange?: (id: number | null) => void;
 };
 
-export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissionId }: Props) {
+export function ModeratePendingTracks({
+  onNavigate,
+  initialSubmissionId,
+  onSelectionChange,
+}: Props) {
   const [stats, setStats] = useState<SubmissionStats | null>(null);
   const [queuePage, setQueuePage] = useState<PageResponse<SubmissionQueueItem> | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -86,16 +82,24 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
   const activeRequestIdRef = useRef<number>(0);
   const toastTimerRef = useRef<number | null>(null);
 
-  // Dedicated Pending Track Detail Modal State
+  // Dedicated Pending Track Detail View State
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<number | null>(
     initialSubmissionId ?? null
   );
 
   useEffect(() => {
-    if (initialSubmissionId) {
-      setSelectedSubmissionId(initialSubmissionId);
-    }
+    setSelectedSubmissionId(initialSubmissionId ?? null);
   }, [initialSubmissionId]);
+
+  const handleSelectSubmission = (id: number | null) => {
+    setSelectedSubmissionId(id);
+    onSelectionChange?.(id);
+    if (id) {
+      onNavigate(`/staff/submissions/${id}`);
+    } else {
+      onNavigate("/staff/dashboard");
+    }
+  };
 
   // Filters & Pagination
   const [statusFilter, setStatusFilter] = useState<string>("PENDING");
@@ -103,32 +107,6 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [page, setPage] = useState<number>(0);
   const pageSize = 10;
-
-  // Approval Modal State
-  const [approvingTarget, setApprovingTarget] = useState<SubmissionQueueItem | null>(null);
-  const [approveNote, setApproveNote] = useState<string>("");
-  const [isSubmittingApprove, setIsSubmittingApprove] = useState<boolean>(false);
-
-  // Rejection Modal State
-  const [rejectingTarget, setRejectingTarget] = useState<SubmissionQueueItem | null>(null);
-  const [rejectionReason, setRejectionReason] = useState<string>("");
-  const [rejectNote, setRejectNote] = useState<string>("");
-  const [isSubmittingReject, setIsSubmittingReject] = useState<boolean>(false);
-
-  // Rule 4.7: Scroll Lock when confirmation modals are open with proper restoration across all scroll containers
-  useModalScrollLock(Boolean(approvingTarget || rejectingTarget));
-
-  // Rule 4.7: Escape Key Listener for confirmation modals
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (approvingTarget) setApprovingTarget(null);
-        if (rejectingTarget) setRejectingTarget(null);
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [approvingTarget, rejectingTarget]);
 
   // Safe toast notifier with timer cleanup
   const showToast = (message: string, type: "success" | "error" = "success") => {
@@ -216,59 +194,44 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
     void loadQueue(true);
   };
 
-  // Quick Approve action
-  const handleConfirmApprove = async () => {
-    if (!approvingTarget) return;
-    const targetId = approvingTarget.id;
-    const title = approvingTarget.trackTitle;
+  // Render Dedicated Detail View if a submission is selected
+  if (selectedSubmissionId) {
+    return (
+      <div className="mod-track-view">
+        {toast ? (
+          <div
+            className={`staff-floating-toast is-${toast.type}`}
+            role="status"
+            aria-live="polite"
+          >
+            {toast.type === "success" ? (
+              <CheckIcon width={16} height={16} />
+            ) : (
+              <AlertIcon width={16} height={16} />
+            )}
+            <span>{toast.message}</span>
+          </div>
+        ) : null}
 
-    setIsSubmittingApprove(true);
-    try {
-      await moderationApi.approveSubmission(targetId, approveNote.trim() || undefined);
-      showToast(`Track "${title}" has been published to the catalog!`);
-      setApprovingTarget(null);
-      setApproveNote("");
-      void loadStats();
-      void loadQueue();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to approve track.";
-      showToast(msg, "error");
-    } finally {
-      setIsSubmittingApprove(false);
-    }
-  };
-
-  // Quick Reject action
-  const handleConfirmReject = async () => {
-    if (!rejectingTarget) return;
-    if (rejectionReason.trim().length < 10) {
-      showToast("Rejection reason must be at least 10 characters.", "error");
-      return;
-    }
-
-    const targetId = rejectingTarget.id;
-    const title = rejectingTarget.trackTitle;
-
-    setIsSubmittingReject(true);
-    try {
-      await moderationApi.rejectSubmission(
-        targetId,
-        rejectionReason.trim(),
-        rejectNote.trim() || undefined
-      );
-      showToast(`Track "${title}" has been rejected. Feedback delivered to creator.`);
-      setRejectingTarget(null);
-      setRejectionReason("");
-      setRejectNote("");
-      void loadStats();
-      void loadQueue();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to reject track.";
-      showToast(msg, "error");
-    } finally {
-      setIsSubmittingReject(false);
-    }
-  };
+        <PendingTrackDetailView
+          submissionId={selectedSubmissionId}
+          onBack={() => handleSelectSubmission(null)}
+          onApproveSuccess={() => {
+            showToast("Track approved and published successfully!");
+            handleSelectSubmission(null);
+            void loadStats();
+            void loadQueue();
+          }}
+          onRejectSuccess={() => {
+            showToast("Track submission rejected.");
+            handleSelectSubmission(null);
+            void loadStats();
+            void loadQueue();
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="mod-track-view">
@@ -591,8 +554,8 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                   <button
                     type="button"
                     className="staff-thumb-inspect-btn"
-                    onClick={() => setSelectedSubmissionId(item.id)}
-                    title="Inspect & listen to audio stream"
+                    onClick={() => handleSelectSubmission(item.id)}
+                    title="Inspect track details"
                     aria-label={`Inspect ${item.trackTitle}`}
                   >
                     <EyeIcon width={17} height={17} />
@@ -605,7 +568,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                     <button
                       type="button"
                       className="staff-track-title-btn"
-                      onClick={() => setSelectedSubmissionId(item.id)}
+                      onClick={() => handleSelectSubmission(item.id)}
                       title={`Inspect ${item.trackTitle}`}
                     >
                       {item.trackTitle}
@@ -664,47 +627,17 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
                   </span>
                 </div>
 
-                {/* Action Buttons */}
+                {/* Action Buttons: Only 1 Inspect button */}
                 <div className="staff-track-actions-col">
                   <button
                     type="button"
                     className="staff-btn-review"
-                    onClick={() => setSelectedSubmissionId(item.id)}
-                    title="Open full inspector and audio preview"
+                    onClick={() => handleSelectSubmission(item.id)}
+                    title="Inspect track details and audio"
                   >
                     <EyeIcon width={15} height={15} />
                     <span>Inspect</span>
                   </button>
-
-                  {item.status === "PENDING" ? (
-                    <>
-                      <button
-                        type="button"
-                        className="staff-btn-quick-approve"
-                        onClick={() => {
-                          setApprovingTarget(item);
-                          setApproveNote("");
-                        }}
-                        title="Quick approve and publish"
-                      >
-                        <CheckIcon width={14} height={14} />
-                        <span>Approve</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="staff-btn-quick-reject"
-                        onClick={() => {
-                          setRejectingTarget(item);
-                          setRejectionReason("");
-                          setRejectNote("");
-                        }}
-                        title="Quick reject with feedback"
-                      >
-                        <CloseIcon width={14} height={14} />
-                        <span>Reject</span>
-                      </button>
-                    </>
-                  ) : null}
                 </div>
               </article>
             ))}
@@ -738,244 +671,7 @@ export function ModeratePendingTracks({ onNavigate: _onNavigate, initialSubmissi
           </div>
         ) : null}
       </section>
-
-      {/* Approve Confirmation Modal */}
-      {approvingTarget ? createPortal(
-        <div
-          className="modal-overlay"
-          role="presentation"
-          onClick={() => !isSubmittingApprove && setApprovingTarget(null)}
-        >
-          <div
-            className="modal-card staff-action-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="approve-dialog-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <div className="staff-dialog-header-info">
-                <span className="staff-dialog-badge is-green">
-                  <CheckIcon width={18} height={18} />
-                </span>
-                <div>
-                  <h2 id="approve-dialog-title" className="staff-dialog-title">
-                    Approve Track
-                  </h2>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => setApprovingTarget(null)}
-                aria-label="Close dialog"
-                disabled={isSubmittingApprove}
-              >
-                <CloseIcon width={18} height={18} />
-              </button>
-            </div>
-
-            <div className="staff-dialog-body">
-              <p className="staff-dialog-prompt">
-                Approve <b>“{approvingTarget.trackTitle}”</b> by <b>{approvingTarget.submitterDisplayName || "the creator"}</b> for public streaming?
-              </p>
-
-              <form
-                noValidate
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void handleConfirmApprove();
-                }}
-              >
-                <label className="staff-input-group" htmlFor="approve-reviewer-note">
-                  <span className="staff-input-label">Internal Note (Optional)</span>
-                  <textarea
-                    id="approve-reviewer-note"
-                    rows={2}
-                    placeholder="Staff notes for operations record..."
-                    value={approveNote}
-                    onChange={(e) => setApproveNote(e.target.value)}
-                    disabled={isSubmittingApprove}
-                    className="staff-textarea"
-                  />
-                </label>
-
-                <div className="staff-dialog-footer-actions">
-                  <button
-                    type="button"
-                    className="button button-ghost"
-                    onClick={() => setApprovingTarget(null)}
-                    disabled={isSubmittingApprove}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="button staff-btn-confirm-approve"
-                    disabled={isSubmittingApprove}
-                  >
-                    {isSubmittingApprove ? "Publishing..." : "Confirm & Publish"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>,
-        document.body
-      ) : null}
-
-      {/* Reject Confirmation Modal */}
-      {rejectingTarget ? createPortal(
-        <div
-          className="modal-overlay"
-          role="presentation"
-          onClick={() => !isSubmittingReject && setRejectingTarget(null)}
-        >
-          <div
-            className="modal-card staff-action-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="reject-dialog-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="modal-header">
-              <div className="staff-dialog-header-info">
-                <span className="staff-dialog-badge is-red">
-                  <AlertIcon width={18} height={18} />
-                </span>
-                <div>
-                  <h2 id="reject-dialog-title" className="staff-dialog-title">
-                    Reject Submission
-                  </h2>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => setRejectingTarget(null)}
-                aria-label="Close dialog"
-                disabled={isSubmittingReject}
-              >
-                <CloseIcon width={18} height={18} />
-              </button>
-            </div>
-
-            <div className="staff-dialog-body">
-              <p className="staff-dialog-prompt">
-                Provide rejection reason for <b>“{rejectingTarget.trackTitle}”</b>:
-              </p>
-
-              {/* Quick Preset Buttons */}
-              <div className="staff-preset-chips-section">
-                <span className="staff-preset-title">Presets:</span>
-                <div className="staff-preset-chips">
-                  {REJECTION_PRESETS.map((preset, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className="staff-preset-btn"
-                      onClick={() => setRejectionReason(preset)}
-                      disabled={isSubmittingReject}
-                    >
-                      {preset}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <form
-                noValidate
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void handleConfirmReject();
-                }}
-              >
-                <label className="staff-input-group" htmlFor="reject-reason-input">
-                  <span className="staff-input-label">
-                    Reason <span className="staff-text-danger">*</span> (Min 10 characters)
-                  </span>
-                  <textarea
-                    id="reject-reason-input"
-                    rows={2}
-                    autoFocus
-                    placeholder="Specific defect or copyright violation..."
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    disabled={isSubmittingReject}
-                    className="staff-textarea"
-                    aria-invalid={
-                      rejectionReason.trim().length > 0 && rejectionReason.trim().length < 10
-                    }
-                    aria-describedby="reject-char-counter"
-                  />
-                  <div className="staff-counter-row">
-                    <span
-                      id="reject-char-counter"
-                      className={
-                        rejectionReason.trim().length >= 10
-                          ? "staff-text-success font-medium"
-                          : "staff-text-muted"
-                      }
-                    >
-                      {rejectionReason.trim().length} / 10 characters min
-                    </span>
-                  </div>
-                </label>
-
-                <label className="staff-input-group" htmlFor="reject-internal-note">
-                  <span className="staff-input-label">Internal Note (Optional)</span>
-                  <textarea
-                    id="reject-internal-note"
-                    rows={2}
-                    placeholder="Staff notes for operations record..."
-                    value={rejectNote}
-                    onChange={(e) => setRejectNote(e.target.value)}
-                    disabled={isSubmittingReject}
-                    className="staff-textarea"
-                  />
-                </label>
-
-                <div className="staff-dialog-footer-actions">
-                  <button
-                    type="button"
-                    className="button button-ghost"
-                    onClick={() => setRejectingTarget(null)}
-                    disabled={isSubmittingReject}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="button staff-btn-confirm-reject"
-                    disabled={rejectionReason.trim().length < 10 || isSubmittingReject}
-                  >
-                    {isSubmittingReject ? "Processing..." : "Confirm Rejection"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>,
-        document.body
-      ) : null}
-
-      {/* Full Track Inspector Modal */}
-      {selectedSubmissionId ? (
-        <PendingTrackDetailModal
-          submissionId={selectedSubmissionId}
-          onClose={() => setSelectedSubmissionId(null)}
-          onApproveSuccess={() => {
-            showToast("Track approved successfully!");
-            void loadStats();
-            void loadQueue();
-          }}
-          onRejectSuccess={() => {
-            showToast("Track submission rejected.");
-            void loadStats();
-            void loadQueue();
-          }}
-        />
-      ) : null}
     </div>
   );
 }
+

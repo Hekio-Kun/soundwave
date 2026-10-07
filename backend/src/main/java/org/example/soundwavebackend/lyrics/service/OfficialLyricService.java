@@ -70,6 +70,38 @@ public class OfficialLyricService {
     }
 
     /**
+     * Xuất bản (Publish) lời bài hát chính thức khi duyệt bài hát thành công.
+     *
+     * @param trackId ID của bài hát
+     * @param publishedAt Thời điểm duyệt/xuất bản
+     */
+    @Transactional
+    public void publishLyricForTrack(Long trackId, LocalDateTime publishedAt) {
+        officialLyricRepository.findByTrackIdAndLanguage_Code(trackId, DEFAULT_LANGUAGE_CODE)
+                .ifPresent(lyric -> {
+                    lyric.publish(publishedAt);
+                    officialLyricRepository.save(lyric);
+                    log.info("Đã xuất bản lyric cho bài hát ID: {}", trackId);
+                });
+    }
+
+    /**
+     * Hủy xuất bản (Unpublish/Draft) lời bài hát khi bài hát bị gỡ hoặc từ chối.
+     *
+     * @param trackId ID của bài hát
+     * @param updatedAt Thời điểm cập nhật
+     */
+    @Transactional
+    public void unpublishLyricForTrack(Long trackId, LocalDateTime updatedAt) {
+        officialLyricRepository.findByTrackIdAndLanguage_Code(trackId, DEFAULT_LANGUAGE_CODE)
+                .ifPresent(lyric -> {
+                    lyric.unpublish(updatedAt);
+                    officialLyricRepository.save(lyric);
+                    log.info("Đã chuyển lyric về DRAFT cho bài hát ID: {}", trackId);
+                });
+    }
+
+    /**
      * Xóa lời bài hát liên kết với một bài hát khi bài hát bị xóa.
      *
      * @param trackId ID của bài hát

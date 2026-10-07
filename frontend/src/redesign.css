@@ -6,8 +6,12 @@
   --sw-bg: #f7f8fa;
   --sw-surface: #ffffff;
   --sw-text: #101828;
+  --sw-text-secondary: #475467;
   --sw-muted: #667085;
   --sw-border: #e4e7ec;
+  --sw-danger: #dc2626;
+  --sw-danger-dark: #b91c1c;
+  --sw-danger-light: #fef2f2;
   --sw-shadow-sm: 0 8px 24px rgba(16, 24, 40, 0.06);
   --sw-shadow-md: 0 18px 48px rgba(16, 24, 40, 0.11);
 }
@@ -98,6 +102,15 @@ body { overflow-x: hidden; }
 .discover-feature-info strong { overflow: hidden; color: var(--sw-text); font-size: 16px; text-overflow: ellipsis; white-space: nowrap; }
 .discover-feature-info em { overflow: hidden; color: var(--sw-muted); font-size: 11px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
 .discover-feature-play { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--sw-primary); color: #fff; box-shadow: 0 8px 20px rgba(8, 145, 178, .24); }
+.discover-feature--skeleton, .discover-feature--state { min-height: 146px; }
+.discover-feature--skeleton:hover, .discover-feature--state:hover { transform: none; box-shadow: var(--sw-shadow-md); }
+.discover-feature--skeleton::after, .discover-feature--state::after { display: none; }
+.discover-feature-skeleton-copy { display: flex; flex-direction: column; gap: 10px; }
+.discover-feature-skeleton-copy i { display: block; width: 100%; height: 12px; }
+.discover-feature-skeleton-copy i:nth-child(1) { width: 48%; }
+.discover-feature-skeleton-copy i:nth-child(2) { width: 86%; height: 18px; }
+.discover-feature-skeleton-copy i:nth-child(3) { width: 68%; }
+.discover-feature--state { display: flex; justify-content: center; color: var(--sw-muted); font-size: 13px; font-weight: 700; text-align: center; }
 
 .sw-section { scroll-margin-top: 92px; }
 .sw-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 21px; }
@@ -107,6 +120,15 @@ body { overflow-x: hidden; }
 .sw-section-heading > button:hover svg { transform: translateX(3px); }
 
 .sw-track-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(13px, 1.5vw, 20px); }
+.explore-track-skeleton { min-width: 0; }
+.explore-track-skeleton > span { display: block; width: 100%; aspect-ratio: 1; margin-bottom: 12px; }
+.explore-track-skeleton > i { display: block; width: 82%; height: 13px; margin-top: 8px; }
+.explore-track-skeleton > i:last-child { width: 58%; height: 10px; }
+.explore-track-state { min-height: 160px; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 8px; padding: 24px; border: 1px dashed var(--sw-border); border-radius: 16px; background: var(--sw-surface); color: var(--sw-muted); text-align: center; }
+.explore-track-state strong { color: var(--sw-text); font-size: 15px; }
+.explore-track-state span { max-width: 440px; font-size: 12px; line-height: 1.6; }
+.explore-track-state .button { margin-top: 6px; }
+.explore-track-state.is-error { border-color: #fecdca; background: var(--sw-error-bg, #fef3f2); }
 .sw-track-card, .sw-album-card { min-width: 0; padding: 10px 10px 14px; border: 1px solid transparent; border-radius: 17px; background: var(--sw-surface); transition: transform .2s, box-shadow .2s, border-color .2s; }
 .sw-track-card:hover, .sw-album-card:hover { transform: translateY(-4px); border-color: var(--sw-border); box-shadow: var(--sw-shadow-sm); }
 .sw-track-card--active { border-color: #a5f3fc; background: #f3feff; }
@@ -130,6 +152,8 @@ body { overflow-x: hidden; }
 .sw-section--split { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(370px, .9fr); gap: 22px; }
 .sw-release-panel, .sw-genre-panel { padding: 24px; border: 1px solid var(--sw-border); border-radius: 21px; background: var(--sw-surface); box-shadow: 0 8px 26px rgba(16, 24, 40, .04); }
 .sw-release-list { display: flex; flex-direction: column; }
+.explore-release-skeletons { display: flex; flex-direction: column; gap: 10px; padding-block: 4px; }
+.explore-release-skeletons > span { display: block; width: 100%; height: 58px; }
 .sw-release-row { width: 100%; display: grid; grid-template-columns: 26px 48px minmax(0, 1fr) 42px 34px; align-items: center; gap: 12px; padding: 9px 10px; border: 0; border-top: 1px solid #f0f2f5; background: transparent; color: var(--sw-text); text-align: left; border-radius: 10px; }
 .sw-release-row:hover, .sw-release-row.is-active { background: #f0fdff; }
 .sw-release-row img { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; }

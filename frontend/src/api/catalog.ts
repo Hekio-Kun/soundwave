@@ -42,18 +42,7 @@ export const catalogApi = {
     return apiFetch<LandingTrack>(`/tracks/${idOrSlug}`);
   },
 
-  recordPlay: async (
-    trackId: number,
-    listenedDurationMs: number,
-    completed: boolean = false
-  ): Promise<RecordPlayResponse> => {
-    return apiFetch<RecordPlayResponse>(`/tracks/${trackId}/play`, {
-      method: "POST",
-      body: JSON.stringify({ listenedDurationMs, completed }),
-    });
-  },
-
-  getStreamUrl: (trackId: number | string): string => {
-    return `${API_BASE_URL}/tracks/${trackId}/stream`;
+  getRecommendations: async (idOrSlug: string | number, limit = 5): Promise<LandingTrack[]> => {
+    return apiFetch<LandingTrack[]>(`/tracks/${idOrSlug}/recommendations?limit=${limit}`);
   },
 };

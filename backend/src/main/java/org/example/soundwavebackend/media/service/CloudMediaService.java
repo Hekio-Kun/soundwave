@@ -64,6 +64,15 @@ public class CloudMediaService {
     }
 
     /**
+     * Kiểm tra và tải ảnh bìa danh sách phát (Playlist Cover) lên Cloudinary.
+     */
+    public StoredMediaResponse uploadPlaylistCover(MultipartFile file, Long userId) {
+        byte[] content = readValidTrackCover(file);
+        Map<?, ?> result = upload(content, "soundwave/playlists/covers", "user-" + userId + "-playlist-cover", "image");
+        return toStoredMedia(result);
+    }
+
+    /**
      * Xóa ảnh cũ khỏi Cloudinary sau khi hồ sơ đã dùng ảnh mới.
      */
     public void deleteImageQuietly(String publicId) {

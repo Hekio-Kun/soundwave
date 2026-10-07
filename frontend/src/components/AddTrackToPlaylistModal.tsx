@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useModalScrollLock } from "../hooks/useModalScrollLock";
-import { tracks } from "../data";
+import { tracks as staticTracks } from "../data";
+import { catalogApi } from "../api/catalog";
 import { CloseIcon, PlusIcon, SearchIcon, CheckIcon } from "../icons";
 import type { LandingTrack } from "../types";
 
@@ -23,10 +24,22 @@ export function AddTrackToPlaylistModal({
   allTracks,
 }: Props) {
   const [search, setSearch] = useState("");
+  const [availableTracks, setAvailableTracks] = useState<LandingTrack[]>(staticTracks);
+
+  useEffect(() => {
+    if (!open) return;
+    catalogApi.getTracks({ size: 100 })
+      .then((res) => {
+        if (res && res.content && res.content.length > 0) {
+          setAvailableTracks(res.content);
+        }
+      })
+      .catch(() => {});
+  }, [open]);
 
   const availableTracks = allTracks && allTracks.length > 0 ? allTracks : tracks;
   const approvedTracks = useMemo(
-    () => availableTracks.filter((t) => t.publicationStatus === "APPROVED" || t.publicationStatus === "PUBLISHED"),
+    () => availableTracks.filter((t) => t.publicationStatus === "APPROVED" || (t.publicationStatus as string) === "PUBLISHED"),
     [availableTracks]
   );
 

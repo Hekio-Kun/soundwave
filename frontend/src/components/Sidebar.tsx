@@ -103,13 +103,15 @@ export function Sidebar({ activeRoute, onNavigate, onCreatePlaylist, isAuthentic
             <LibraryIcon />
             <span>Playlists</span>
           </button>
-          <button
-            className={`nav-item ${isCurrent("/studio") ? "nav-item--active" : ""}`}
-            onClick={() => onNavigate("/studio")}
-          >
-            <UploadIcon />
-            <span>Content Studio</span>
-          </button>
+          {isAuthenticated && (
+            <button
+              className={`nav-item ${isCurrent("/studio") ? "nav-item--active" : ""}`}
+              onClick={() => onNavigate("/studio")}
+            >
+              <UploadIcon />
+              <span>Content Studio</span>
+            </button>
+          )}
         </div>
       </nav>
 

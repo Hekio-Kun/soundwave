@@ -112,11 +112,15 @@ public class Track {
     }
 
     public boolean isEditable() {
-        return publicationStatus == TrackPublicationStatus.DRAFT || publicationStatus == TrackPublicationStatus.REJECTED;
+        return publicationStatus == TrackPublicationStatus.DRAFT
+                || publicationStatus == TrackPublicationStatus.REJECTED
+                || publicationStatus == TrackPublicationStatus.TAKEN_DOWN;
     }
 
     public boolean isDeletable() {
-        return publicationStatus == TrackPublicationStatus.DRAFT || publicationStatus == TrackPublicationStatus.REJECTED;
+        return publicationStatus == TrackPublicationStatus.DRAFT
+                || publicationStatus == TrackPublicationStatus.REJECTED
+                || publicationStatus == TrackPublicationStatus.TAKEN_DOWN;
     }
 
     public void updateDraftDetails(String title, String slug, Genre genre, Album album,
@@ -144,6 +148,7 @@ public class Track {
 
     public void submitForReview(LocalDateTime submittedAt) {
         this.publicationStatus = TrackPublicationStatus.PENDING;
+        this.latestRejectionReason = null;
         this.updatedAt = submittedAt;
     }
 

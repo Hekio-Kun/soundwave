@@ -79,7 +79,7 @@ export function MusicAppShell({
           </main>
           {showFooter && (
             <div className="app-shell-footer">
-              <SoundWaveFooter hasPlayer={false} />
+              <SoundWaveFooter hasPlayer={false} isAuthenticated={isAuthenticated} />
             </div>
           )}
         </div>
@@ -99,7 +99,12 @@ export function MusicAppShell({
       />
 
       {/* 4. Mobile Bottom Navigation */}
-      <MobileBottomNav activeRoute={activeRoute} onNavigate={onNavigate} userRole={user?.role} />
+      <MobileBottomNav
+        activeRoute={activeRoute}
+        onNavigate={onNavigate}
+        isAuthenticated={isAuthenticated}
+        userRole={user?.role}
+      />
     </div>
   );
 }

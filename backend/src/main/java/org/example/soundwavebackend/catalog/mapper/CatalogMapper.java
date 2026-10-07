@@ -1,6 +1,7 @@
 package org.example.soundwavebackend.catalog.mapper;
 
 import org.example.soundwavebackend.catalog.dto.response.AlbumSummary;
+import org.example.soundwavebackend.catalog.dto.response.AdminGenreResponse;
 import org.example.soundwavebackend.catalog.dto.response.CreatorSummary;
 import org.example.soundwavebackend.catalog.dto.response.GenreResponse;
 import org.example.soundwavebackend.catalog.dto.response.TrackResponse;
@@ -37,7 +38,24 @@ public class CatalogMapper {
         );
     }
 
+    public AdminGenreResponse toAdminGenreResponse(Genre genre) {
+        return new AdminGenreResponse(
+                genre.getId(),
+                genre.getName(),
+                genre.getSlug(),
+                genre.getDescription(),
+                genre.isActive(),
+                genre.getCreatedByUserId(),
+                genre.getCreatedAt(),
+                genre.getUpdatedAt()
+        );
+    }
+
     public TrackResponse toTrackResponse(Track track, CreatorSummary creator) {
+        return toTrackResponse(track, creator, null);
+    }
+
+    public TrackResponse toTrackResponse(Track track, CreatorSummary creator, String lyrics) {
         AlbumSummary albumSummary = track.getAlbum() != null
                 ? new AlbumSummary(track.getAlbum().getId(), track.getAlbum().getTitle())
                 : null;
@@ -60,7 +78,8 @@ public class CatalogMapper {
                 creator,
                 albumSummary,
                 track.getDescription(),
-                track.getCreatedAt()
+                track.getCreatedAt(),
+                lyrics
         );
     }
 }

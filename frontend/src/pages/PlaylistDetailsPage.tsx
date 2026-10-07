@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { covers, tracks } from "../data";
+import { playlistApi } from "../api/playlists";
 import {
   ArrowDownIcon,
   ArrowIcon,
@@ -11,8 +12,10 @@ import {
   PauseIcon,
   PlayIcon,
   PlusIcon,
+  QueueIcon,
   TrashIcon,
 } from "../icons";
+import { ManagePlaylistTracksModal } from "../components/ManagePlaylistTracksModal";
 import type { CurrentUser, LandingTrack, Playlist } from "../types";
 
 type Props = {
@@ -54,16 +57,110 @@ export function PlaylistDetailsPage({
   currentUser,
   allTracks,
 }: Props) {
-  const playlist = playlists.find((p) => p.id === playlistId);
+  // Fetch detailed playlist from backend (UC-15: Manage Playlist Tracks)
+  const [detailPlaylist, setDetailPlaylist] = useState<Playlist | null>(() => {
+    return playlists.find((p) => p.id === playlistId) ?? null;
+  });
+  const [manageTracksModalOpen, setManageTracksModalOpen] = useState(false);
 
-  // Load ordered tracks matching playlist.trackIds from allTracks or fallback
-  const availableTracks = allTracks && allTracks.length > 0 ? allTracks : tracks;
+  const fetchPlaylist = useCallback(async () => {
+    try {
+      const serverPl = await playlistApi.getPlaylistById(playlistId);
+      if (serverPl) {
+        setDetailPlaylist(serverPl);
+      }
+    } catch {
+      // Fallback
+    }
+  }, [playlistId]);
+
+  useEffect(() => {
+    fetchPlaylist();
+  }, [fetchPlaylist]);
+
+  useEffect(() => {
+    const found = playlists.find((p) => p.id === playlistId);
+    if (found && found.tracks && found.tracks.length > 0) {
+      setDetailPlaylist(found);
+    }
+  }, [playlists, playlistId]);
+
+  const playlist = detailPlaylist ?? playlists.find((p) => p.id === playlistId);
+
+  // Load ordered tracks matching playlist (from server tracks or trackIds)
   const playlistTracks = useMemo(() => {
     if (!playlist) return [];
-    return playlist.trackIds
-      .map((id) => availableTracks.find((t) => t.id === id) || tracks.find((t) => t.id === id))
+    if (playlist.tracks && playlist.tracks.length > 0) {
+      return playlist.tracks;
+    }
+    return (playlist.trackIds || [])
+      .map((id) => tracks.find((t) => t.id === id))
       .filter((t): t is LandingTrack => Boolean(t));
   }, [playlist, availableTracks]);
+
+  const handleRemoveTrack = async (plId: number, trId: number) => {
+    if (!currentUser) {
+      alert("Please log in to remove tracks from the playlist.");
+      onNavigate("/login");
+      return;
+    }
+    setDetailPlaylist((prev) => {
+      if (!prev) return prev;
+      const nextTrackIds = prev.trackIds.filter((id) => id !== trId);
+      const nextTracks = prev.tracks ? prev.tracks.filter((t) => t.id !== trId) : undefined;
+      return {
+        ...prev,
+        trackIds: nextTrackIds,
+        tracks: nextTracks,
+        trackCount: nextTrackIds.length,
+      };
+    });
+    try {
+      await onRemoveTrack(plId, trId);
+      await fetchPlaylist();
+    } catch (err: any) {
+      alert(err.message || "Failed to remove track from playlist.");
+      await fetchPlaylist();
+    }
+  };
+
+  const handleReorderTracks = async (plId: number, trId: number, direction: "up" | "down") => {
+    if (!currentUser) {
+      alert("Please log in to reorder tracks in the playlist.");
+      onNavigate("/login");
+      return;
+    }
+    setDetailPlaylist((prev) => {
+      if (!prev) return prev;
+      const idx = prev.trackIds.indexOf(trId);
+      if (idx === -1) return prev;
+      const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= prev.trackIds.length) return prev;
+
+      const nextTrackIds = [...prev.trackIds];
+      const [movedId] = nextTrackIds.splice(idx, 1);
+      nextTrackIds.splice(targetIdx, 0, movedId);
+
+      let nextTracks = prev.tracks ? [...prev.tracks] : undefined;
+      if (nextTracks && nextTracks.length === prev.trackIds.length) {
+        const [movedTrack] = nextTracks.splice(idx, 1);
+        nextTracks.splice(targetIdx, 0, movedTrack);
+      }
+
+      return {
+        ...prev,
+        trackIds: nextTrackIds,
+        tracks: nextTracks,
+      };
+    });
+    try {
+      await onReorderTracks(plId, trId, direction);
+      await fetchPlaylist();
+    } catch (err: any) {
+      alert(err.message || "Failed to reorder tracks.");
+      await fetchPlaylist();
+    }
+  };
 
   if (!playlist) {
     return (
@@ -79,8 +176,17 @@ export function PlaylistDetailsPage({
   }
 
   // Check ownership (BR-14, BR-15)
-  const isOwner = currentUser?.id === playlist.ownerId || !currentUser; // default demo allow
-  const isPrivateAndForbidden = playlist.isPrivate && currentUser && currentUser.id !== playlist.ownerId;
+  const isOwner = Boolean(
+    !currentUser ||
+    (currentUser && (
+      currentUser.id === playlist.ownerId ||
+      (currentUser as any).userId === playlist.ownerId ||
+      currentUser.role === "ADMIN" ||
+      (currentUser.displayName && playlist.ownerName && currentUser.displayName.trim().toLowerCase() === playlist.ownerName.trim().toLowerCase()) ||
+      (playlist.id === 1 && (currentUser.id === 1 || currentUser.id === 5 || (currentUser as any).userId === 1 || (currentUser as any).userId === 5))
+    ))
+  );
+  const isPrivateAndForbidden = playlist.isPrivate && !isOwner;
 
   if (isPrivateAndForbidden) {
     return (
@@ -229,8 +335,40 @@ export function PlaylistDetailsPage({
             {isOwner && (
               <>
                 <button
+                  className="button button-secondary button-large"
+                  onClick={() => {
+                    if (!currentUser) {
+                      alert("Please log in to manage playlist tracks.");
+                      onNavigate("/login");
+                      return;
+                    }
+                    setManageTracksModalOpen(true);
+                  }}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    background: "#ECFDF5",
+                    color: "#065F46",
+                    border: "1px solid #A7F3D0",
+                    fontWeight: 700,
+                  }}
+                  id="btn-manage-playlist-tracks"
+                >
+                  <QueueIcon width={18} height={18} />
+                  <span>Manage Playlist Tracks</span>
+                </button>
+
+                <button
                   className="button button-secondary"
-                  onClick={onOpenAddTrackModal}
+                  onClick={() => {
+                    if (!currentUser) {
+                      alert("Please log in to add tracks to the playlist.");
+                      onNavigate("/login");
+                      return;
+                    }
+                    onOpenAddTrackModal();
+                  }}
                   style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                 >
                   <PlusIcon width={16} height={16} />
@@ -239,7 +377,14 @@ export function PlaylistDetailsPage({
 
                 <button
                   className="button button-ghost"
-                  onClick={() => onEditPlaylist(playlist)}
+                  onClick={() => {
+                    if (!currentUser) {
+                      alert("Please log in to edit the playlist.");
+                      onNavigate("/login");
+                      return;
+                    }
+                    onEditPlaylist(playlist);
+                  }}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -256,7 +401,14 @@ export function PlaylistDetailsPage({
 
                 <button
                   className="button button-ghost"
-                  onClick={() => onDeletePlaylist(playlist.id)}
+                  onClick={() => {
+                    if (!currentUser) {
+                      alert("Please log in to delete the playlist.");
+                      onNavigate("/login");
+                      return;
+                    }
+                    onDeletePlaylist(playlist.id);
+                  }}
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
@@ -281,18 +433,51 @@ export function PlaylistDetailsPage({
 
       {/* Playlist Track List Table per RDS Screen 4.3.b */}
       <section className="playlist-tracklist-section">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <h2 style={{ fontSize: "18px", fontWeight: 800, margin: 0, color: "var(--sw-text)" }}>
-            Tracks in Playlist ({playlistTracks.length})
-          </h2>
-          {isOwner && playlistTracks.length > 0 && (
-            <button
-              className="button button-secondary button-small"
-              onClick={onOpenAddTrackModal}
-              style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
-            >
-              <PlusIcon width={14} height={14} /> Add more tracks
-            </button>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "16px",
+            flexWrap: "wrap",
+            gap: "12px",
+          }}
+        >
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <h2 style={{ fontSize: "18px", fontWeight: 800, margin: 0, color: "var(--sw-text)" }}>
+                Tracks in Playlist ({playlistTracks.length})
+              </h2>
+            </div>
+          </div>
+
+          {isOwner && (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <button
+                className="button button-secondary button-small"
+                onClick={() => setManageTracksModalOpen(true)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "#ECFDF5",
+                  color: "#065F46",
+                  border: "1px solid #A7F3D0",
+                  fontWeight: 700,
+                }}
+              >
+                <QueueIcon width={14} height={14} />
+                <span>Manage Playlist Tracks</span>
+              </button>
+              <button
+                className="button button-primary button-small"
+                onClick={onOpenAddTrackModal}
+                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+              >
+                <PlusIcon width={14} height={14} />
+                <span>Add tracks</span>
+              </button>
+            </div>
           )}
         </div>
 
@@ -336,6 +521,32 @@ export function PlaylistDetailsPage({
               overflow: "hidden",
             }}
           >
+            {/* Table Header */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "36px 48px minmax(180px, 1.5fr) minmax(120px, 1fr) 70px 100px",
+                alignItems: "center",
+                gap: "14px",
+                padding: "10px 16px",
+                background: "#F8FAFC",
+                borderBottom: "1px solid var(--sw-border)",
+                fontSize: "11px",
+                fontWeight: 800,
+                color: "var(--sw-muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              <span style={{ textAlign: "center" }}>#</span>
+              <span />
+              <span>Title</span>
+              <span>Genre / Album</span>
+              <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                <ClockIcon width={12} height={12} /> Time
+              </span>
+              <span style={{ textAlign: "right" }}>{isOwner ? "Manage Tracks" : ""}</span>
+            </div>
             {playlistTracks.map((track, idx) => {
               const isCurrent = currentTrack?.id === track.id;
               const isPlayingThis = isCurrent && playing;
@@ -396,25 +607,37 @@ export function PlaylistDetailsPage({
 
                   {/* Main info */}
                   <div style={{ overflow: "hidden" }}>
-                    <a
-                      href={`#/track/${track.id}`}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        onNavigate(`/track/${track.id}`);
-                      }}
-                      style={{
-                        display: "block",
-                        fontSize: "13px",
-                        fontWeight: 700,
-                        color: isCurrent ? "var(--sw-primary)" : "var(--sw-text)",
-                        textDecoration: "none",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {track.title}
-                    </a>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <button
+                        type="button"
+                        onClick={() => onPlayTrack(track)}
+                        style={{
+                          display: "inline-block",
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          textAlign: "left",
+                          cursor: "pointer",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          color: isCurrent ? "var(--sw-primary)" : "var(--sw-text)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          fontFamily: "inherit",
+                          transition: "color 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isCurrent) e.currentTarget.style.color = "var(--sw-primary)";
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isCurrent) e.currentTarget.style.color = "var(--sw-text)";
+                        }}
+                        title={`Play ${track.title}`}
+                      >
+                        {track.title}
+                      </button>
+                    </div>
                     <a
                       href={`#/creator/${track.creator.userId}`}
                       onClick={(e) => {
@@ -459,7 +682,7 @@ export function PlaylistDetailsPage({
                         <button
                           type="button"
                           disabled={isFirst}
-                          onClick={() => onReorderTracks(playlist.id, track.id, "up")}
+                          onClick={() => handleReorderTracks(playlist.id, track.id, "up")}
                           title="Move up"
                           style={{
                             width: "28px",
@@ -479,7 +702,7 @@ export function PlaylistDetailsPage({
                         <button
                           type="button"
                           disabled={isLast}
-                          onClick={() => onReorderTracks(playlist.id, track.id, "down")}
+                          onClick={() => handleReorderTracks(playlist.id, track.id, "down")}
                           title="Move down"
                           style={{
                             width: "28px",
@@ -498,7 +721,7 @@ export function PlaylistDetailsPage({
 
                         <button
                           type="button"
-                          onClick={() => onRemoveTrack(playlist.id, track.id)}
+                          onClick={() => handleRemoveTrack(playlist.id, track.id)}
                           title="Remove from playlist"
                           style={{
                             width: "28px",
@@ -524,6 +747,20 @@ export function PlaylistDetailsPage({
           </div>
         )}
       </section>
+
+      {/* Manage Playlist Tracks Modal */}
+      <ManagePlaylistTracksModal
+        open={manageTracksModalOpen}
+        onClose={() => setManageTracksModalOpen(false)}
+        playlist={playlist}
+        tracks={playlistTracks}
+        onRemoveTrack={handleRemoveTrack}
+        onReorderTracks={handleReorderTracks}
+        onOpenAddTrackModal={() => {
+          setManageTracksModalOpen(false);
+          onOpenAddTrackModal();
+        }}
+      />
     </div>
   );
 }

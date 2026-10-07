@@ -4,6 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,13 +19,36 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AuthRateLimiterService {
     public static final int MAX_FAILED_OTP_ATTEMPTS = 5;
     public static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
+    public static final int MAX_REGISTRATION_ATTEMPTS = 5;
     private static final long LOGIN_LOCKOUT_SECONDS = 600; // 10 phút khóa tạm thời
+    private static final long REGISTRATION_WINDOW_MINUTES = 10;
 
     private final ConcurrentHashMap<String, OtpAttemptTracker> otpAttempts = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, LoginAttemptTracker> loginAttempts = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Deque<Instant>> registrationAttempts = new ConcurrentHashMap<>();
 
     private record OtpAttemptTracker(int failedCount, Instant lastAttempt) {}
     private record LoginAttemptTracker(int failedCount, Instant lockedUntil) {}
+
+    /**
+     * Ghi nhận lần đăng ký nếu cả email và địa chỉ IP vẫn còn trong giới hạn cho phép.
+     */
+    public synchronized boolean tryAcquireRegistrationAttempt(String email, String ipAddress) {
+        Instant now = Instant.now();
+        String emailKey = "email:" + normalize(email);
+        String ipKey = "ip:" + normalizeIp(ipAddress);
+        Deque<Instant> emailHistory = activeRegistrationAttempts(emailKey, now);
+        Deque<Instant> ipHistory = activeRegistrationAttempts(ipKey, now);
+
+        if (emailHistory.size() >= MAX_REGISTRATION_ATTEMPTS
+                || ipHistory.size() >= MAX_REGISTRATION_ATTEMPTS) {
+            return false;
+        }
+
+        emailHistory.addLast(now);
+        ipHistory.addLast(now);
+        return true;
+    }
 
     /**
      * Ghi nhận một lần nhập sai OTP cho tài khoản email.
@@ -110,7 +136,23 @@ public class AuthRateLimiterService {
         return tracker.lockedUntil() != null && tracker.lockedUntil().isBefore(Instant.now());
     }
 
+    private Deque<Instant> activeRegistrationAttempts(String key, Instant now) {
+        Deque<Instant> history = registrationAttempts.computeIfAbsent(key, ignored -> new ArrayDeque<>());
+        Instant windowStart = now.minus(REGISTRATION_WINDOW_MINUTES, ChronoUnit.MINUTES);
+        while (!history.isEmpty() && history.peekFirst().isBefore(windowStart)) {
+            history.removeFirst();
+        }
+        return history;
+    }
+
     private String normalize(String email) {
         return email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String normalizeIp(String ipAddress) {
+        if (ipAddress == null || ipAddress.isBlank()) {
+            return "unknown";
+        }
+        return ipAddress.trim().toLowerCase(Locale.ROOT);
     }
 }

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { covers, tracks } from "../data";
-import { EditIcon, HeadphonesIcon, HeartIcon, PauseIcon, PlayIcon, PlusIcon, TrashIcon } from "../icons";
+import { covers } from "../data";
+import { EditIcon, HeadphonesIcon, HeartIcon, PauseIcon, PlayIcon, PlusIcon, QueueIcon, TrashIcon } from "../icons";
 import type { LandingTrack, Playlist } from "../types";
 
 type Props = {
@@ -9,8 +9,8 @@ type Props = {
   onPlayTrack: (track: LandingTrack, contextQueue?: LandingTrack[], contextTitle?: string, contextKey?: string) => void;
   onPlayAll?: (tracksToPlay: LandingTrack[], contextTitle?: string, contextKey?: string) => void;
   onNavigate: (route: string) => void;
-  favoriteIds: number[];
-  onToggleFavorite: (trackId: number) => void;
+  favoriteTracks: LandingTrack[];
+  onToggleFavorite: (trackId: number) => Promise<void>;
   playlists: Playlist[];
   onCreatePlaylist: () => void;
   onEditPlaylist?: (playlist: Playlist) => void;
@@ -31,7 +31,7 @@ export function LibraryPage({
   onPlayTrack,
   onPlayAll,
   onNavigate,
-  favoriteIds,
+  favoriteTracks,
   onToggleFavorite,
   playlists,
   onCreatePlaylist,
@@ -41,9 +41,6 @@ export function LibraryPage({
   allTracks,
 }: Props) {
   const [tab, setTab] = useState<"favorites" | "playlists">(initialTab);
-
-  const availableTracks = allTracks && allTracks.length > 0 ? allTracks : tracks;
-  const favoriteTracks = availableTracks.filter((t) => favoriteIds.includes(t.id));
 
   return (
     <div className="library-page">
@@ -222,6 +219,27 @@ export function LibraryPage({
               </div>
 
               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                <button
+                  className="icon-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNavigate(`/playlist/${pl.id}`);
+                  }}
+                  title="Manage Playlist Tracks"
+                  style={{
+                    width: "32px",
+                    height: "32px",
+                    borderRadius: "8px",
+                    border: "1px solid #A7F3D0",
+                    background: "#ECFDF5",
+                    color: "#065F46",
+                    cursor: "pointer",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
+                  <QueueIcon width={15} height={15} />
+                </button>
                 {onEditPlaylist && (
                   <button
                     className="icon-button"

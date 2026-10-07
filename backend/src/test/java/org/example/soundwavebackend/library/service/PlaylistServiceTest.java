@@ -13,6 +13,7 @@ import org.example.soundwavebackend.library.entity.Playlist;
 import org.example.soundwavebackend.library.mapper.PlaylistMapper;
 import org.example.soundwavebackend.library.repository.PlaylistRepository;
 import org.example.soundwavebackend.library.repository.PlaylistTrackRepository;
+import org.example.soundwavebackend.media.service.CloudMediaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,6 +39,8 @@ class PlaylistServiceTest {
     private CatalogPublicService catalogPublicService;
     @Mock
     private UserAccountPublicService userAccountPublicService;
+    @Mock
+    private CloudMediaService cloudMediaService;
 
     private PlaylistMapper mapper;
     private PlaylistService playlistService;
@@ -49,7 +53,8 @@ class PlaylistServiceTest {
                 playlistTrackRepository,
                 catalogPublicService,
                 userAccountPublicService,
-                mapper
+                mapper,
+                cloudMediaService
         );
     }
 
@@ -122,6 +127,36 @@ class PlaylistServiceTest {
     }
 
     @Test
+    void deletePlaylist_DoesNotGrantHardcodedUserAccessToPlaylistOne() {
+        Playlist playlist = new Playlist(99L, "Protected Playlist");
+        ReflectionTestUtils.setField(playlist, "id", 1L);
+        when(playlistRepository.findById(1L)).thenReturn(Optional.of(playlist));
+        when(userAccountPublicService.getUserIdByEmail("legacy@soundwave.com")).thenReturn(5L);
+        when(userAccountPublicService.getUserSummaryById(5L))
+                .thenReturn(new UserProfileSummary(5L, "legacy@soundwave.com", "Legacy", null, "LISTENER"));
+
+        assertThrows(ForbiddenOperationException.class,
+                () -> playlistService.deletePlaylist(1L, "legacy@soundwave.com"));
+
+        verify(playlistRepository, never()).delete(any());
+    }
+
+    @Test
+    void getMyPlaylists_ReturnsOnlyPlaylistsOwnedByCurrentUser() {
+        UserProfileSummary user = new UserProfileSummary(5L, "listener@soundwave.com", "Listener", null, "LISTENER");
+        Playlist owned = new Playlist(5L, "Owned Playlist");
+        ReflectionTestUtils.setField(owned, "id", 20L);
+        when(userAccountPublicService.getUserSummaryByEmail(user.email())).thenReturn(user);
+        when(playlistRepository.findByOwnerUserIdOrderByUpdatedAtDesc(5L)).thenReturn(List.of(owned));
+
+        List<PlaylistResponse> result = playlistService.getMyPlaylists(user.email());
+
+        assertEquals(1, result.size());
+        assertEquals(20L, result.getFirst().id());
+        verify(playlistRepository, never()).findById(1L);
+    }
+
+    @Test
     void deletePlaylist_WhenOwner_ShouldSucceed() {
         Playlist playlist = new Playlist(10L, "My Playlist");
         ReflectionTestUtils.setField(playlist, "id", 100L);
@@ -132,5 +167,90 @@ class PlaylistServiceTest {
 
         verify(playlistTrackRepository).deleteByPlaylistId(100L);
         verify(playlistRepository).delete(playlist);
+    }
+
+    @Test
+    void removeTrackFromPlaylist_WhenNotOwner_ShouldThrowForbidden() {
+        Playlist playlist = new Playlist(10L, "My Playlist");
+        ReflectionTestUtils.setField(playlist, "id", 100L);
+        when(playlistRepository.findById(100L)).thenReturn(Optional.of(playlist));
+        when(userAccountPublicService.getUserIdByEmail("stranger@soundwave.com")).thenReturn(999L);
+
+        assertThrows(ForbiddenOperationException.class, () ->
+                playlistService.removeTrackFromPlaylist(100L, 5L, "stranger@soundwave.com"));
+    }
+
+    @Test
+    void removeTrackFromPlaylist_WhenOwner_ShouldDeleteAndReindex() {
+        Playlist playlist = new Playlist(10L, "My Playlist");
+        ReflectionTestUtils.setField(playlist, "id", 100L);
+        when(playlistRepository.findById(100L)).thenReturn(Optional.of(playlist));
+        when(userAccountPublicService.getUserIdByEmail("owner@soundwave.com")).thenReturn(10L);
+
+        org.example.soundwavebackend.library.entity.PlaylistTrack track1 =
+                new org.example.soundwavebackend.library.entity.PlaylistTrack(100L, 1L, 10L, 1);
+        org.example.soundwavebackend.library.entity.PlaylistTrack track2 =
+                new org.example.soundwavebackend.library.entity.PlaylistTrack(100L, 2L, 10L, 2);
+
+        when(playlistTrackRepository.findByPlaylistIdAndTrackId(100L, 1L)).thenReturn(Optional.of(track1));
+        when(playlistTrackRepository.findByPlaylistIdOrderByPositionAsc(100L)).thenReturn(new java.util.ArrayList<>(java.util.List.of(track2)));
+
+        PlaylistResponse response = playlistService.removeTrackFromPlaylist(100L, 1L, "owner@soundwave.com");
+
+        assertNotNull(response);
+        verify(playlistTrackRepository).delete(track1);
+        verify(playlistTrackRepository).flush();
+        verify(playlistTrackRepository, atLeastOnce()).saveAll(any());
+        assertEquals(1, track2.getPosition());
+    }
+
+    @Test
+    void reorderPlaylistTracks_WhenOwnerSwapUp_ShouldSwapPositions() {
+        Playlist playlist = new Playlist(10L, "My Playlist");
+        ReflectionTestUtils.setField(playlist, "id", 100L);
+        when(playlistRepository.findById(100L)).thenReturn(Optional.of(playlist));
+        when(userAccountPublicService.getUserIdByEmail("owner@soundwave.com")).thenReturn(10L);
+
+        org.example.soundwavebackend.library.entity.PlaylistTrack pt1 =
+                new org.example.soundwavebackend.library.entity.PlaylistTrack(100L, 1L, 10L, 1);
+        org.example.soundwavebackend.library.entity.PlaylistTrack pt2 =
+                new org.example.soundwavebackend.library.entity.PlaylistTrack(100L, 2L, 10L, 2);
+
+        when(playlistTrackRepository.findByPlaylistIdOrderByPositionAsc(100L))
+                .thenReturn(new java.util.ArrayList<>(java.util.List.of(pt1, pt2)));
+
+        org.example.soundwavebackend.library.dto.request.ReorderPlaylistTracksRequest req =
+                new org.example.soundwavebackend.library.dto.request.ReorderPlaylistTracksRequest(2L, "UP", null);
+
+        PlaylistResponse response = playlistService.reorderPlaylistTracks(100L, req, "owner@soundwave.com");
+
+        assertNotNull(response);
+        assertEquals(2, pt1.getPosition());
+        assertEquals(1, pt2.getPosition());
+    }
+
+    @Test
+    void reorderPlaylistTracks_WhenOwnerWithList_ShouldReorderCorrectly() {
+        Playlist playlist = new Playlist(10L, "My Playlist");
+        ReflectionTestUtils.setField(playlist, "id", 100L);
+        when(playlistRepository.findById(100L)).thenReturn(Optional.of(playlist));
+        when(userAccountPublicService.getUserIdByEmail("owner@soundwave.com")).thenReturn(10L);
+
+        org.example.soundwavebackend.library.entity.PlaylistTrack pt1 =
+                new org.example.soundwavebackend.library.entity.PlaylistTrack(100L, 1L, 10L, 1);
+        org.example.soundwavebackend.library.entity.PlaylistTrack pt2 =
+                new org.example.soundwavebackend.library.entity.PlaylistTrack(100L, 2L, 10L, 2);
+
+        when(playlistTrackRepository.findByPlaylistIdOrderByPositionAsc(100L))
+                .thenReturn(new java.util.ArrayList<>(java.util.List.of(pt1, pt2)));
+
+        org.example.soundwavebackend.library.dto.request.ReorderPlaylistTracksRequest req =
+                new org.example.soundwavebackend.library.dto.request.ReorderPlaylistTracksRequest(null, null, java.util.List.of(2L, 1L));
+
+        PlaylistResponse response = playlistService.reorderPlaylistTracks(100L, req, "owner@soundwave.com");
+
+        assertNotNull(response);
+        assertEquals(1, pt2.getPosition());
+        assertEquals(2, pt1.getPosition());
     }
 }

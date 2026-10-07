@@ -56,8 +56,13 @@ public class AuthenticationService {
      * Tạo tài khoản Listener ở trạng thái chờ và gửi OTP xác thực email.
      */
     @Transactional
-    public MessageResponse register(RegisterRequest request) {
+    public MessageResponse register(RegisterRequest request, String clientIpAddress) {
         String email = normalizeEmail(request.email());
+        if (!authRateLimiterService.tryAcquireRegistrationAttempt(email, clientIpAddress)) {
+            throw new AccountUnavailableException(
+                    "REGISTRATION_RATE_LIMITED",
+                    "Too many registration attempts. Please wait a few minutes before trying again.");
+        }
         if (!request.password().equals(request.confirmPassword())) {
             throw new AccountUnavailableException("PASSWORD_MISMATCH", "Password confirmation does not match.");
         }

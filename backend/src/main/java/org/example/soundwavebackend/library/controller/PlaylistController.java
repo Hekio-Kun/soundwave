@@ -9,11 +9,14 @@ import org.example.soundwavebackend.library.dto.request.UpdatePlaylistRequest;
 import org.example.soundwavebackend.library.dto.response.PlaylistResponse;
 import org.example.soundwavebackend.library.service.PlaylistService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controller xử lý các yêu cầu HTTP liên quan đến quản lý danh sách phát (Playlist CRUD).
@@ -23,6 +26,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PlaylistController {
     private final PlaylistService playlistService;
+
+    /**
+     * Tải lên ảnh bìa cho Playlist từ file JPG/PNG lên Cloudinary (UC-15).
+     */
+    @PostMapping(value = "/upload-cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, String>> uploadPlaylistCover(
+            @RequestPart("cover") MultipartFile cover,
+            Principal principal
+    ) {
+        String coverUrl = playlistService.uploadPlaylistCover(cover, principal.getName());
+        return ResponseEntity.ok(Map.of("coverUrl", coverUrl));
+    }
 
     /**
      * Tạo mới danh sách phát.
@@ -52,8 +67,11 @@ public class PlaylistController {
             @RequestParam(required = false, defaultValue = "false") boolean myOnly,
             Principal principal
     ) {
+        if (myOnly && principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         if (myOnly || principal != null) {
-            return ResponseEntity.ok(playlistService.getMyPlaylists(principal != null ? principal.getName() : ""));
+            return ResponseEntity.ok(playlistService.getMyPlaylists(principal.getName()));
         }
         return ResponseEntity.ok(playlistService.getPublicPlaylists());
     }

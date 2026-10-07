@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api/v1";
+import { ApiError, apiFetch } from "./client";
 
 export type ApiTrack = {
   id: number;
@@ -95,47 +95,23 @@ export class TrackApiError extends Error {
   }
 }
 
-function getAuthToken(): string | null {
-  return localStorage.getItem("soundwave_access_token") ?? sessionStorage.getItem("soundwave_access_token");
-}
-
 async function studioRequest<T>(
   path: string,
   method: "GET" | "POST" | "PUT" | "DELETE" = "GET",
   body?: unknown | FormData
 ): Promise<T> {
-  const token = getAuthToken();
-  if (!token) {
-    throw new TrackApiError({
-      code: "AUTH_REQUIRED",
-      message: "Please log in before managing your tracks.",
-    }, 401);
+  try {
+    return await apiFetch<T>(path, { method, body });
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw new TrackApiError({
+        code: error.code,
+        message: error.message,
+        fieldErrors: error.fieldErrors,
+      }, error.status);
+    }
+    throw error;
   }
-
-  const headers: Record<string, string> = {};
-  headers["Authorization"] = `Bearer ${token}`;
-  const isMultipart = body instanceof FormData;
-  if (body !== undefined && !isMultipart) {
-    headers["Content-Type"] = "application/json";
-  }
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method,
-    headers,
-    credentials: "include",
-    body: body === undefined ? undefined : isMultipart ? body : JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    const errorPayload = await response.json().catch(() => ({})) as TrackApiErrorPayload;
-    throw new TrackApiError(errorPayload, response.status);
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json() as Promise<T>;
 }
 
 function buildTrackFormData(
@@ -165,6 +141,8 @@ export const studioApi = {
     studioRequest<void>(`/studio/tracks/${id}`, "DELETE"),
   submitForReview: (id: number, submitterNote?: string) =>
     studioRequest<ApiTrack>(`/studio/tracks/${id}/submit`, "POST", { submitterNote }),
+  withdrawSubmission: (id: number) =>
+    studioRequest<ApiTrack>(`/studio/tracks/${id}/withdraw`, "POST"),
   getRejectionDetails: (id: number) =>
     studioRequest<RejectionDetails>(`/studio/tracks/${id}/rejection`),
   getStats: () =>

@@ -24,7 +24,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/studio")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('LISTENER')")
+@PreAuthorize("isAuthenticated()")
 public class StudioTrackController {
     private final StudioTrackService studioTrackService;
 
@@ -88,6 +88,14 @@ public class StudioTrackController {
                                                                @RequestBody(required = false) SubmitTrackForReviewRequest request,
                                                                Principal principal) {
         return ResponseEntity.ok(studioTrackService.submitForReview(id, request, principal.getName()));
+    }
+
+    /**
+     * Rút lại bài hát đang chờ duyệt về trạng thái DRAFT (UC-19.4 Extension).
+     */
+    @PostMapping("/tracks/{id}/withdraw")
+    public ResponseEntity<StudioTrackResponse> withdrawSubmission(@PathVariable Long id, Principal principal) {
+        return ResponseEntity.ok(studioTrackService.cancelSubmission(id, principal.getName()));
     }
 
     /**
