@@ -34,6 +34,28 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * ===================================================================================================
+ * [MODERATION SERVICE LAYER - OOP ORCHESTRATION & STATE MANAGEMENT]
+ * Service điều phối quy trình kiểm duyệt nội dung (Track Moderation) trong Vòng đời bài hát (Track Lifecycle).
+ * Phục vụ cho vai trò Nhân viên kiểm duyệt (Staff) và Quản trị viên (Admin).
+ *
+ * <h3>Các nguyên lý thiết kế hướng đối tượng (OOP Principles áp dụng):</h3>
+ * <ul>
+ *   <li><b>Single Responsibility Principle (SRP):</b> Chuyên biệt hóa toàn bộ nghiệp vụ kiểm duyệt nội dung:
+ *       Quản lý hàng đợi xét duyệt (Moderation Queue), phê duyệt (Approve), từ chối (Reject),
+ *       và gỡ bỏ bài hát vi phạm bản quyền / chính sách (Take Down).</li>
+ *   <li><b>State Machine & Invariant Validation:</b> Kiểm tra nghiêm ngặt điều kiện tiền đề (Preconditions)
+ *       của vòng đời trước khi chuyển trạng thái (chỉ bản nộp {@code PENDING} mới được duyệt/từ chối;
+ *       chỉ bài hát đã {@code APPROVED} mới được thực hiện gỡ bỏ {@code TAKEN_DOWN}).</li>
+ *   <li><b>Observer / Event Notification Pattern:</b> Đóng vai trò là Subject phát sinh sự kiện, tự động
+ *       thông báo đến Creator qua 2 kênh liên lạc độc lập: In-App Notification ({@link NotificationService})
+ *       và Thư điện tử ({@link ModerationMailService}).</li>
+ *   <li><b>Delegation Pattern:</b> Phân công trách nhiệm thay đổi trạng thái và dữ liệu bài hát trong danh mục
+ *       xuống cho {@link CatalogService}, giữ cho ModerationService tập trung vào luồng điều phối nghiệp vụ.</li>
+ * </ul>
+ * ===================================================================================================
+ */
 @Service
 @RequiredArgsConstructor
 public class ModerationService {
@@ -45,6 +67,18 @@ public class ModerationService {
     private final AppUserRepository userRepository;
     private final UserProfileRepository profileRepository;
 
+    /**
+     * ===============================================================================================
+     * [TRACK LIFECYCLE - TRUY VẤN HÀNG ĐỢI KIỂM DUYỆT (MODERATION QUEUE)]
+     * ===============================================================================================
+     * Lấy danh sách các bài hát trong hàng đợi kiểm duyệt kèm phân trang, lọc theo trạng thái
+     * (PENDING, APPROVED, REJECTED) và tìm kiếm theo tên bài hát hoặc email của người nộp.
+     *
+     * @param status   Trạng thái bản nộp cần lọc (PENDING, APPROVED, REJECTED)
+     * @param search   Từ khóa tìm kiếm (tên bài hát hoặc email người dùng)
+     * @param pageable Thông tin phân trang và sắp xếp (Sort / Page)
+     * @return Trang kết quả {@link Page} chứa các DTO {@link SubmissionQueueItemResponse}
+     */
     @Transactional(readOnly = true)
     public Page<SubmissionQueueItemResponse> getQueue(SubmissionStatus status, String search, Pageable pageable) {
         boolean searchProvided = search != null && !search.trim().isBlank();
@@ -122,6 +156,33 @@ public class ModerationService {
         return new SubmissionStatsResponse(pending, approved, rejected, total);
     }
 
+    /**
+     * ===============================================================================================
+     * [TRACK LIFECYCLE - PHÊ DUYỆT BÀI HÁT XUẤT BẢN] (Moderation Approve Flow)
+     * ===============================================================================================
+     * <p><b>Quy trình chuyển đổi trạng thái vòng đời & Nghiệp vụ (State Transition & Side Effects):</b></p>
+     * <ol>
+     *   <li><b>Precondition Validation:</b> Kiểm tra bản nộp bắt buộc phải đang ở trạng thái {@link SubmissionStatus#PENDING}.
+     *       Nếu không thuộc trạng thái này sẽ ném {@link InvalidSubmissionStateException}.</li>
+     *   <li><b>Submission Status Transition:</b> Chuyển bản nộp sang {@link SubmissionStatus#APPROVED},
+     *       ghi nhận Reviewer ID, ghi chú và mốc thời gian UTC.</li>
+     *   <li><b>Track Publication State Update:</b> Ủy quyền cho {@link CatalogService#approveTrack} chuyển trạng thái
+     *       Entity {@link Track} sang {@link TrackPublicationStatus#PUBLISHED}, lưu mốc thời gian {@code approvedAt}.
+     *       Đồng thời tự động kích hoạt xuất bản (Publish) Album liên quan nếu Album đang ở trạng thái DRAFT.</li>
+     *   <li><b>Observer - In-App Notification:</b> Tạo thông báo hệ thống loại {@link NotificationType#TRACK_APPROVED}
+     *       gửi đến tài khoản của Creator kèm đường dẫn đến bài hát.</li>
+     *   <li><b>Observer - Email Dispatch:</b> Kích hoạt {@link ModerationMailService#sendTrackApprovedEmail}
+     *       để gửi thư điện tử chúc mừng trực tiếp đến hòm thư Creator.</li>
+     * </ol>
+     *
+     * @param id            ID của bản nộp (TrackSubmission ID)
+     * @param request       DTO chứa ghi chú nội bộ của Reviewer (reviewerNote)
+     * @param reviewerEmail Email của nhân viên kiểm duyệt thực hiện thao tác
+     * @return {@link SubmissionDetailResponse} DTO chi tiết kết quả sau khi duyệt thành công
+     * @throws SubmissionNotFoundException    nếu không tìm thấy bản nộp theo ID
+     * @throws InvalidSubmissionStateException nếu bản nộp không ở trạng thái PENDING
+     * @throws AccountUnavailableException    nếu tài khoản Reviewer không tồn tại
+     */
     @Transactional
     public SubmissionDetailResponse approveSubmission(Long id, ApproveTrackRequest request, String reviewerEmail) {
         TrackSubmission submission = submissionRepository.findById(id)
@@ -161,6 +222,32 @@ public class ModerationService {
         return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile);
     }
 
+    /**
+     * ===============================================================================================
+     * [TRACK LIFECYCLE - TỪ CHỐI BẢN NỘP BÀI HÁT] (Moderation Reject Flow)
+     * ===============================================================================================
+     * <p><b>Quy trình chuyển đổi trạng thái vòng đời & Nghiệp vụ (State Transition & Side Effects):</b></p>
+     * <ol>
+     *   <li><b>Precondition Validation:</b> Kiểm tra bản nộp bắt buộc phải đang ở trạng thái {@link SubmissionStatus#PENDING}.</li>
+     *   <li><b>Submission Status Transition:</b> Chuyển bản nộp sang {@link SubmissionStatus#REJECTED},
+     *       lưu lý do từ chối (rejectionReason), ghi chú reviewerNote và thời điểm xử lý.</li>
+     *   <li><b>Track Publication State Update:</b> Ủy quyền cho {@link CatalogService#rejectTrack} chuyển trạng thái
+     *       Entity {@link Track} sang {@link TrackPublicationStatus#REJECTED}, đồng thời cập nhật trường
+     *       {@code latestRejectionReason} trên Entity để Creator có thể tra cứu nhanh từ Studio.</li>
+     *   <li><b>Observer - In-App Notification:</b> Tạo thông báo hệ thống loại {@link NotificationType#TRACK_REJECTED}
+     *       thông báo lý do từ chối và hướng dẫn Creator quay lại Content Studio chỉnh sửa.</li>
+     *   <li><b>Observer - Email Dispatch:</b> Kích hoạt {@link ModerationMailService#sendTrackRejectedEmail}
+     *       gửi thư điện tử chi tiết về nguyên nhân từ chối đến hòm thư Creator.</li>
+     * </ol>
+     *
+     * @param id            ID của bản nộp (TrackSubmission ID)
+     * @param request       DTO chứa lý do từ chối bắt buộc (rejectionReason) và ghi chú (reviewerNote)
+     * @param reviewerEmail Email của nhân viên kiểm duyệt thực hiện thao tác
+     * @return {@link SubmissionDetailResponse} DTO chi tiết kết quả sau khi từ chối
+     * @throws SubmissionNotFoundException    nếu không tìm thấy bản nộp theo ID
+     * @throws InvalidSubmissionStateException nếu bản nộp không ở trạng thái PENDING
+     * @throws AccountUnavailableException    nếu tài khoản Reviewer không tồn tại
+     */
     @Transactional
     public SubmissionDetailResponse rejectSubmission(Long id, RejectTrackRequest request, String reviewerEmail) {
         TrackSubmission submission = submissionRepository.findById(id)
@@ -201,6 +288,33 @@ public class ModerationService {
         return mapper.toDetailResponse(submission, track, submitter, submitterProfile, reviewer, reviewerProfile);
     }
 
+    /**
+     * ===============================================================================================
+     * [TRACK LIFECYCLE - GỠ BỎ KHẨN CẤP BÀI HÁT ĐÃ PHÁT HÀNH] (Take Down Violation Flow)
+     * ===============================================================================================
+     * <p><b>Quy trình chuyển đổi trạng thái vòng đời & Nghiệp vụ (State Transition & Side Effects):</b></p>
+     * <ol>
+     *   <li><b>Precondition Validation:</b> Kiểm tra bản nộp bắt buộc phải đang ở trạng thái {@link SubmissionStatus#APPROVED}.
+     *       Chỉ bài hát đã được phát hành mới có thể bị gỡ bỏ (Take Down).</li>
+     *   <li><b>Submission Status Transition:</b> Đánh dấu bản nộp là REJECTED kèm lý do vi phạm (takedownReason)
+     *       và ghi chú của người kiểm duyệt.</li>
+     *   <li><b>Track Publication State Update:</b> Ủy quyền cho {@link CatalogService#takeDownTrack} chuyển trạng thái
+     *       Entity {@link Track} sang {@link TrackPublicationStatus#TAKEN_DOWN}. Bài hát lập tức bị thu hồi
+     *       và ẩn hoàn toàn khỏi Catalog công cộng, ngắt quyền nghe nhạc trực tuyến.</li>
+     *   <li><b>Observer - In-App Notification:</b> Tạo thông báo hệ thống loại {@link NotificationType#TRACK_TAKEN_DOWN}
+     *       thông báo lý do gỡ bài đến Creator.</li>
+     *   <li><b>Observer - Email Dispatch:</b> Kích hoạt {@link ModerationMailService#sendTrackTakenDownEmail}
+     *       gửi thư cảnh báo vi phạm bản quyền / chính sách đến email Creator.</li>
+     * </ol>
+     *
+     * @param id            ID của bản nộp (TrackSubmission ID)
+     * @param request       DTO chứa lý do gỡ bỏ bắt buộc (takedownReason) và ghi chú (reviewerNote)
+     * @param reviewerEmail Email của nhân viên kiểm duyệt thực hiện thao tác
+     * @return {@link SubmissionDetailResponse} DTO chi tiết kết quả sau khi gỡ bài
+     * @throws SubmissionNotFoundException    nếu không tìm thấy bản nộp theo ID
+     * @throws InvalidSubmissionStateException nếu bản nộp không ở trạng thái APPROVED
+     * @throws AccountUnavailableException    nếu tài khoản Reviewer không tồn tại
+     */
     @Transactional
     public SubmissionDetailResponse takeDownSubmission(Long id, TakeDownTrackRequest request, String reviewerEmail) {
         TrackSubmission submission = submissionRepository.findById(id)
