@@ -1,45 +1,76 @@
-# Operating System Files
+# Operating system files
 .DS_Store
 Thumbs.db
 desktop.ini
+$RECYCLE.BIN/
+.Spotlight-V100/
+.Trashes/
 
-# IDE Files
+# IDE and editor metadata
 .idea/
+**/.idea/
 .vscode/
+**/.vscode/
 *.iml
 *.iws
 *.ipr
+.settings/
+.classpath
+.project
+.factorypath
+.apt_generated/
+.sts4-cache/
 
-# Application Configuration & Secrets
+# Application configuration and secrets
 **/application.properties
 **/application-*.properties
-**/application-local.properties
 **/*.properties.local
-
-# Frontend Environment
-frontend/.env
-frontend/.env.local
-frontend/.env.*.local
-
-# General Environment & Secrets
-*.env
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
 !**/.env.example
 
-# Logs & Crash Dumps
+# Dependencies, build outputs, and test coverage
+**/target/
+**/build/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+**/.vite/
+coverage/
+**/coverage/
+*.tsbuildinfo
+.eslintcache
+
+# Logs and JVM crash dumps
 *.log
 **/*.log
 hs_err_pid*.log
 **/hs_err_pid*.log
+replay_pid*.log
+**/replay_pid*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# AI Agent Rules & Tools (.ecc & AGENTS.md)
-.ecc/
-AGENTS.md
+# Temporary files and automatic backups
+tmp/
+**/tmp/
+*.tmp
+*.temp
+*.bak
+*.bkp
+*.swp
+*.swo
+*~
+~$*
 
-# Build Artifacts
-*.tsbuildinfo
+# Local AI-agent and migration tooling
+/.ecc/
+/AGENTS.md
+/.github/modernize/
