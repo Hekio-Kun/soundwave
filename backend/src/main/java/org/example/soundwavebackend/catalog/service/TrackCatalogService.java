@@ -1,0 +1,158 @@
+package org.example.soundwavebackend.catalog.service;
+
+import lombok.RequiredArgsConstructor;
+import org.example.soundwavebackend.authentication.dto.response.UserProfileSummary;
+import org.example.soundwavebackend.authentication.service.UserAccountPublicService;
+import org.example.soundwavebackend.catalog.dto.response.CreatorSummary;
+import org.example.soundwavebackend.catalog.dto.response.TrackResponse;
+import org.example.soundwavebackend.catalog.entity.Track;
+import org.example.soundwavebackend.catalog.entity.TrackPublicationStatus;
+import org.example.soundwavebackend.catalog.mapper.CatalogMapper;
+import org.example.soundwavebackend.catalog.repository.TrackRepository;
+import org.example.soundwavebackend.catalog.specification.TrackSpecification;
+import org.example.soundwavebackend.exception.ResourceNotFoundException;
+import org.example.soundwavebackend.lyrics.service.OfficialLyricService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/**
+ * Service xử lý việc tìm kiếm, lọc và xem chi tiết bài hát trong danh mục phát hành.
+ */
+@Service
+@RequiredArgsConstructor
+public class TrackCatalogService {
+    private static final int MAX_PAGE_SIZE = 100;
+    private static final int MAX_RECOMMENDATIONS = 20;
+    private static final String UNKNOWN_CREATOR_NAME = "Unknown Artist";
+
+    private final TrackRepository trackRepository;
+    private final UserAccountPublicService userAccountPublicService;
+    private final CatalogMapper mapper;
+    private final OfficialLyricService officialLyricService;
+
+    /**
+     * Lọc và tìm kiếm danh sách bài hát đã phát hành theo thể loại, từ khóa và sắp xếp.
+     */
+    @Transactional(readOnly = true)
+    public Page<TrackResponse> getPublishedTracks(String genre, String search, String sortType, int page, int size) {
+        Sort sort = resolveSort(sortType);
+        Pageable pageable = PageRequest.of(Math.max(0, page), Math.min(MAX_PAGE_SIZE, Math.max(1, size)), sort);
+
+        Specification<Track> spec = TrackSpecification.filterCatalog(
+                TrackPublicationStatus.PUBLISHED,
+                genre,
+                search
+        );
+
+        Page<Track> trackPage = trackRepository.findAll(spec, pageable);
+
+        Set<Long> uploaderIds = trackPage.getContent().stream()
+                .map(Track::getUploaderUserId)
+                .collect(Collectors.toSet());
+
+        Map<Long, UserProfileSummary> userProfiles = userAccountPublicService.getUserSummariesByIds(uploaderIds);
+
+        return trackPage.map(track -> {
+            return mapper.toTrackResponse(track, toCreatorSummary(track, userProfiles.get(track.getUploaderUserId())));
+        });
+    }
+
+    /**
+     * Xem thông tin chi tiết một bài hát theo ID hoặc Slug.
+     */
+    @Transactional(readOnly = true)
+    public TrackResponse getTrackByIdOrSlug(String idOrSlug) {
+        Track track = findPublishedTrack(idOrSlug);
+
+        UserProfileSummary uploader = userAccountPublicService.findUserSummaryById(track.getUploaderUserId()).orElse(null);
+        CreatorSummary creator = toCreatorSummary(track, uploader);
+
+        String lyrics = officialLyricService.findLyricContentByTrackId(track.getId());
+        return mapper.toTrackResponse(track, creator, lyrics);
+    }
+
+    /**
+     * Gợi ý các bài hát đã phát hành theo thể loại, người đăng và mức độ phổ biến.
+     */
+    @Transactional(readOnly = true)
+    public List<TrackResponse> getRecommendations(String idOrSlug, int requestedLimit) {
+        Track source = findPublishedTrack(idOrSlug);
+        int limit = Math.min(MAX_RECOMMENDATIONS, Math.max(1, requestedLimit));
+        Pageable candidates = PageRequest.of(0, limit);
+        Map<Long, Track> recommended = new LinkedHashMap<>();
+
+        if (source.getGenre() != null) {
+            addCandidates(recommended, trackRepository.findByGenre_IdAndPublicationStatusAndIdNotOrderByPlayCountDesc(
+                    source.getGenre().getId(), TrackPublicationStatus.PUBLISHED, source.getId(), candidates), limit);
+        }
+        addCandidates(recommended, trackRepository.findByUploaderUserIdAndPublicationStatusAndIdNotOrderByPlayCountDesc(
+                source.getUploaderUserId(), TrackPublicationStatus.PUBLISHED, source.getId(), candidates), limit);
+        addCandidates(recommended, trackRepository.findByPublicationStatusAndIdNotOrderByPlayCountDesc(
+                TrackPublicationStatus.PUBLISHED, source.getId(), candidates), limit);
+
+        return mapTracks(recommended.values().stream().limit(limit).toList());
+    }
+
+    private Track findPublishedTrack(String idOrSlug) {
+        Track track = null;
+        try {
+            Long id = Long.parseLong(idOrSlug);
+            track = trackRepository.findByIdAndPublicationStatus(id, TrackPublicationStatus.PUBLISHED).orElse(null);
+        } catch (NumberFormatException ignored) {
+            // Giá trị không phải ID nên tiếp tục tìm theo slug.
+        }
+
+        if (track == null) {
+            track = trackRepository.findBySlugIgnoreCaseAndPublicationStatus(idOrSlug, TrackPublicationStatus.PUBLISHED)
+                    .orElseThrow(() -> new ResourceNotFoundException("TRACK_NOT_FOUND", "Track not found: " + idOrSlug));
+        }
+        return track;
+    }
+
+    private void addCandidates(Map<Long, Track> target, List<Track> candidates, int limit) {
+        for (Track candidate : candidates) {
+            if (target.size() >= limit) {
+                return;
+            }
+            target.putIfAbsent(candidate.getId(), candidate);
+        }
+    }
+
+    private List<TrackResponse> mapTracks(List<Track> tracks) {
+        Set<Long> uploaderIds = tracks.stream().map(Track::getUploaderUserId).collect(Collectors.toSet());
+        Map<Long, UserProfileSummary> userProfiles = userAccountPublicService.getUserSummariesByIds(uploaderIds);
+        return tracks.stream().map(track -> {
+            return mapper.toTrackResponse(track, toCreatorSummary(track, userProfiles.get(track.getUploaderUserId())));
+        }).toList();
+    }
+
+    private CreatorSummary toCreatorSummary(Track track, UserProfileSummary uploader) {
+        if (uploader == null) {
+            return new CreatorSummary(track.getUploaderUserId(), UNKNOWN_CREATOR_NAME, null);
+        }
+        return new CreatorSummary(uploader.userId(), uploader.displayName(), uploader.avatarUrl());
+    }
+
+    private Sort resolveSort(String sortType) {
+        if (sortType == null) {
+            return Sort.by(Sort.Direction.DESC, "createdAt");
+        }
+        return switch (sortType.toLowerCase().trim()) {
+            case "trending", "plays" -> Sort.by(Sort.Direction.DESC, "playCount").and(Sort.by(Sort.Direction.DESC, "id"));
+            case "title", "name" -> Sort.by(Sort.Direction.ASC, "title");
+            case "oldest" -> Sort.by(Sort.Direction.ASC, "createdAt");
+            default -> Sort.by(Sort.Direction.DESC, "createdAt");
+        };
+    }
+}

@@ -1,16 +1,28 @@
-# React + Vite
+# SoundWave Landing Page
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Frontend prototype độc lập cho landing page SoundWave, xây bằng React, TypeScript và Vite.
 
-Currently, two official plugins are available:
+## Chạy local
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Mở `http://127.0.0.1:4174/`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Kiểm tra
 
-## Expanding the Oxlint configuration
+```bash
+npm run typecheck
+npm run build
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Dữ liệu demo
+
+- Dữ liệu landing page nằm trong `src/data.ts` và có thể được thay bằng API mà không đổi cấu trúc component.
+- Audio demo cục bộ nằm trong `public/audio/soundwave-demo.wav` để player hoạt động khi không có Cloudinary.
+- Đặt `localStorage.soundwave_demo_user = "authenticated"` để mô phỏng User đã đăng nhập; mặc định trang chạy ở chế độ Guest.
+- Dùng `?state=error` hoặc `?state=empty` để xem trạng thái lỗi và không có dữ liệu.
+
+Các liên kết chi tiết hiện dùng hash route, ví dụ `#/track/1`, để sẵn sàng thay bằng React Router khi các màn hình còn lại được triển khai.
